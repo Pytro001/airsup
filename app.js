@@ -2237,7 +2237,7 @@
 
   function toggleModeFromHeader() {
     if (appMode === "supplier") openCustomer();
-    else openSupplier();
+    else requireAuth(() => openSupplier());
   }
 
   const logoHome = $("logo-home");

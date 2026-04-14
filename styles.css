@@ -4177,6 +4177,11 @@ body.msg-mobile-chat .btn-back-msg {
   font-weight: 600;
 }
 
+.account-dropdown-item--text-only {
+  gap: 0;
+  padding-left: 16px;
+}
+
 @media (max-width: 480px) {
   .auth-modal-panel {
     max-width: 100%;
