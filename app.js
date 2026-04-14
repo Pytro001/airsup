@@ -45,6 +45,314 @@
     window.AIRSUP = { getSupabase: () => supabaseClient };
   }
 
+  /* ── Auth state ── */
+  let currentUser = null;
+  let pendingAuthCallback = null;
+  let authModalTab = "login";
+
+  /* ── Auth modal helpers ── */
+  function openAuthModal(tab, callback) {
+    authModalTab = tab || "login";
+    pendingAuthCallback = callback || null;
+    const modal = document.getElementById("auth-modal");
+    if (!modal) return;
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    syncAuthModalTab();
+    const nameField = document.getElementById("auth-name-field");
+    if (nameField) nameField.hidden = authModalTab !== "signup";
+    document.getElementById("auth-error")?.setAttribute("hidden", "");
+    document.getElementById("auth-email")?.focus();
+  }
+
+  function closeAuthModal() {
+    const modal = document.getElementById("auth-modal");
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.style.overflow = "";
+    document.getElementById("auth-form")?.reset();
+    document.getElementById("auth-error")?.setAttribute("hidden", "");
+  }
+
+  function syncAuthModalTab() {
+    document.querySelectorAll(".auth-tab").forEach((t) => {
+      const tab = t.getAttribute("data-auth-tab");
+      t.classList.toggle("active", tab === authModalTab);
+      t.setAttribute("aria-selected", String(tab === authModalTab));
+    });
+    const nameField = document.getElementById("auth-name-field");
+    if (nameField) nameField.hidden = authModalTab !== "signup";
+    const pwdInput = document.getElementById("auth-password");
+    if (pwdInput) pwdInput.autocomplete = authModalTab === "signup" ? "new-password" : "current-password";
+    const submitBtn = document.getElementById("auth-submit");
+    if (submitBtn) submitBtn.textContent = authModalTab === "signup" ? "Sign up" : "Log in";
+  }
+
+  function showAuthError(msg) {
+    const el = document.getElementById("auth-error");
+    if (!el) return;
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  function requireAuth(callback) {
+    if (currentUser) {
+      callback();
+      return;
+    }
+    openAuthModal("login", callback);
+  }
+
+  /* ── Auth actions ── */
+  async function handleEmailAuth(e) {
+    e.preventDefault();
+    if (!supabaseClient) return showAuthError("Supabase not configured.");
+    const email = (document.getElementById("auth-email")?.value || "").trim();
+    const password = document.getElementById("auth-password")?.value || "";
+    if (!email || !password) return showAuthError("Email and password are required.");
+    const submitBtn = document.getElementById("auth-submit");
+    if (submitBtn) submitBtn.disabled = true;
+    document.getElementById("auth-error")?.setAttribute("hidden", "");
+
+    let result;
+    if (authModalTab === "signup") {
+      const name = (document.getElementById("auth-name")?.value || "").trim();
+      result = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name || email.split("@")[0] } },
+      });
+    } else {
+      result = await supabaseClient.auth.signInWithPassword({ email, password });
+    }
+
+    if (submitBtn) submitBtn.disabled = false;
+    if (result.error) return showAuthError(result.error.message);
+    if (authModalTab === "signup" && result.data?.user && !result.data.session) {
+      showAuthError("Check your email to confirm your account, then log in.");
+      authModalTab = "login";
+      syncAuthModalTab();
+      return;
+    }
+    closeAuthModal();
+  }
+
+  async function handleGoogleAuth() {
+    if (!supabaseClient) return showAuthError("Supabase not configured.");
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) showAuthError(error.message);
+  }
+
+  async function handleSignOut() {
+    if (supabaseClient) await supabaseClient.auth.signOut();
+    currentUser = null;
+    savedFactoryIds = [];
+    persistSavedFactoryIds();
+    updateHeaderForAuth();
+    goHome();
+  }
+
+  /* ── Data sync layer ── */
+  async function loadUserDataFromSupabase() {
+    if (!supabaseClient || !currentUser) return;
+    const uid = currentUser.id;
+    try {
+      const { data: profile } = await supabaseClient.from("profiles").select("*").eq("id", uid).single();
+      if (profile) {
+        currentUser.displayName = profile.display_name || currentUser.displayName;
+        currentUser.avatarLetter = profile.avatar_letter || currentUser.avatarLetter;
+        const pid = signedInProfileId();
+        if (profilesById[pid]) {
+          profilesById[pid].displayName = profile.display_name || profilesById[pid].displayName;
+          profilesById[pid].location = profile.location || profilesById[pid].location;
+          profilesById[pid].headline = profile.headline || profilesById[pid].headline;
+          profilesById[pid].bio = profile.bio || profilesById[pid].bio;
+          profilesById[pid].avatarLetter = profile.avatar_letter || profilesById[pid].avatarLetter;
+        }
+      }
+      const { data: settings } = await supabaseClient.from("user_settings").select("*").eq("user_id", uid).single();
+      if (settings) {
+        accountSettings.legalName = settings.legal_name || currentUser.displayName || "";
+        accountSettings.preferredName = settings.preferred_name || "";
+        accountSettings.email = settings.email || currentUser.email || "";
+        accountSettings.phone = settings.phone || "";
+        accountSettings.company = settings.company || "";
+        accountSettings.timezone = settings.timezone || "Europe/Berlin";
+        accountSettings.emailNewMessages = settings.email_new_messages ?? true;
+        accountSettings.emailDigest = settings.email_digest ?? false;
+        accountSettings.profileVisibility = settings.profile_visibility || "matched";
+        accountSettings.showPhoneToMatched = settings.show_phone_to_matched ?? true;
+      }
+      const { data: saved } = await supabaseClient
+        .from("saved_factories")
+        .select("factory_id")
+        .eq("user_id", uid)
+        .order("saved_at", { ascending: false });
+      if (saved) {
+        savedFactoryIds = saved.map((r) => r.factory_id).filter((id) => factories.some((f) => f.id === id));
+        persistSavedFactoryIds();
+      }
+      const { data: msgs } = await supabaseClient
+        .from("messages")
+        .select("*")
+        .eq("sender_id", uid)
+        .order("created_at", { ascending: true });
+      if (msgs && msgs.length) {
+        msgs.forEach((m) => {
+          if (!chatTemplates[m.factory_id]) chatTemplates[m.factory_id] = [];
+          const already = chatTemplates[m.factory_id].some((c) => c._dbId === m.id);
+          if (!already) {
+            chatTemplates[m.factory_id].push({
+              from: m.direction === "sent" ? "me" : "them",
+              time: new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+              dateLabel: new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+              text: m.body,
+              _dbId: m.id,
+            });
+          }
+        });
+        threads = buildThreads();
+      }
+    } catch (err) {
+      console.warn("[Airsup] loadUserData:", err);
+    }
+  }
+
+  async function dbSaveMessage(factoryId, text) {
+    if (!supabaseClient || !currentUser) return;
+    try {
+      await supabaseClient.from("messages").insert({
+        sender_id: currentUser.id,
+        factory_id: factoryId,
+        direction: "sent",
+        body: text,
+      });
+    } catch (err) {
+      console.warn("[Airsup] dbSaveMessage:", err);
+    }
+  }
+
+  async function dbSyncSavedFactory(factoryId, saved) {
+    if (!supabaseClient || !currentUser) return;
+    try {
+      if (saved) {
+        await supabaseClient.from("saved_factories").upsert(
+          { user_id: currentUser.id, factory_id: factoryId },
+          { onConflict: "user_id,factory_id" }
+        );
+      } else {
+        await supabaseClient
+          .from("saved_factories")
+          .delete()
+          .eq("user_id", currentUser.id)
+          .eq("factory_id", factoryId);
+      }
+    } catch (err) {
+      console.warn("[Airsup] dbSyncSaved:", err);
+    }
+  }
+
+  async function dbSaveSettings() {
+    if (!supabaseClient || !currentUser) return;
+    try {
+      await supabaseClient.from("user_settings").upsert({
+        user_id: currentUser.id,
+        legal_name: accountSettings.legalName,
+        preferred_name: accountSettings.preferredName,
+        email: accountSettings.email,
+        phone: accountSettings.phone,
+        company: accountSettings.company,
+        timezone: accountSettings.timezone,
+        email_new_messages: accountSettings.emailNewMessages,
+        email_digest: accountSettings.emailDigest,
+        profile_visibility: accountSettings.profileVisibility,
+        show_phone_to_matched: accountSettings.showPhoneToMatched,
+      });
+    } catch (err) {
+      console.warn("[Airsup] dbSaveSettings:", err);
+    }
+  }
+
+  async function dbSaveProfile() {
+    if (!supabaseClient || !currentUser) return;
+    const p = getDisplayedProfile();
+    if (!p) return;
+    try {
+      await supabaseClient.from("profiles").update({
+        display_name: p.displayName,
+        avatar_letter: p.avatarLetter,
+        location: p.location,
+        headline: p.headline,
+        bio: p.bio,
+        company: accountSettings.company,
+      }).eq("id", currentUser.id);
+    } catch (err) {
+      console.warn("[Airsup] dbSaveProfile:", err);
+    }
+  }
+
+  /* ── Header auth state ── */
+  function updateHeaderForAuth() {
+    const loggedIn = !!currentUser;
+    document.querySelectorAll(".dropdown-logged-out").forEach((el) => { el.hidden = loggedIn; });
+    document.querySelectorAll(".dropdown-logged-in").forEach((el) => { el.hidden = !loggedIn; });
+    const avatar = document.querySelector(".user-avatar");
+    if (avatar) {
+      avatar.textContent = loggedIn ? (currentUser.avatarLetter || "U") : "";
+      avatar.classList.toggle("user-avatar--anon", !loggedIn);
+    }
+  }
+
+  /* ── onAuthStateChange ── */
+  function setupAuthListener() {
+    if (!supabaseClient) return;
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        const u = session.user;
+        currentUser = {
+          id: u.id,
+          email: u.email,
+          displayName: u.user_metadata?.full_name || u.email?.split("@")[0] || "",
+          avatarLetter: (u.user_metadata?.full_name || u.email || "U").charAt(0).toUpperCase(),
+        };
+        updateHeaderForAuth();
+        await loadUserDataFromSupabase();
+        updateHeaderForAuth();
+        if (view === "home") renderGrid();
+        if (view === "saved") renderSaved();
+        if (pendingAuthCallback) {
+          const cb = pendingAuthCallback;
+          pendingAuthCallback = null;
+          cb();
+        }
+      } else if (event === "SIGNED_OUT") {
+        currentUser = null;
+        updateHeaderForAuth();
+      }
+    });
+  }
+
+  async function initAuthState() {
+    if (!supabaseClient) return;
+    const { data } = await supabaseClient.auth.getSession();
+    if (data?.session?.user) {
+      const u = data.session.user;
+      currentUser = {
+        id: u.id,
+        email: u.email,
+        displayName: u.user_metadata?.full_name || u.email?.split("@")[0] || "",
+        avatarLetter: (u.user_metadata?.full_name || u.email || "U").charAt(0).toUpperCase(),
+      };
+      updateHeaderForAuth();
+      await loadUserDataFromSupabase();
+      updateHeaderForAuth();
+      if (view === "home") renderGrid();
+    }
+  }
+
   const factories = [
     {
       id: 1,
@@ -459,9 +767,11 @@
 
   function toggleSavedFactoryId(id) {
     const i = savedFactoryIds.indexOf(id);
-    if (i === -1) savedFactoryIds.unshift(id);
+    const nowSaved = i === -1;
+    if (nowSaved) savedFactoryIds.unshift(id);
     else savedFactoryIds.splice(i, 1);
     persistSavedFactoryIds();
+    dbSyncSavedFactory(id, nowSaved);
   }
 
   function getSavedFactories() {
@@ -522,8 +832,10 @@
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const id = Number(btn.getAttribute("data-fid"));
-        toggleSavedFactoryId(id);
-        syncSaveUiAfterToggle();
+        requireAuth(() => {
+          toggleSavedFactoryId(id);
+          syncSaveUiAfterToggle();
+        });
       });
     });
   }
@@ -1318,6 +1630,7 @@
         });
         profileEditMode = false;
         renderProfile();
+        dbSaveProfile();
       });
     }
 
@@ -1528,6 +1841,7 @@
         if (key === "legalName" || key === "company") syncProfileFromAccountSettings();
         settingsEditingField = null;
         renderSettings();
+        dbSaveSettings();
       });
     });
 
@@ -1544,6 +1858,7 @@
         if (!key || !(key in accountSettings)) return;
         accountSettings[key] = !accountSettings[key];
         renderSettings();
+        dbSaveSettings();
       });
     });
   }
@@ -1777,12 +2092,16 @@
     }
 
     root.querySelector("#detail-message-quote")?.addEventListener("click", () => {
-      detailQuotePrefill = buildQuotePrefill();
-      openMessages(f.id, true);
+      requireAuth(() => {
+        detailQuotePrefill = buildQuotePrefill();
+        openMessages(f.id, true);
+      });
     });
     root.querySelector("#detail-message-quick")?.addEventListener("click", () => {
-      detailQuotePrefill = null;
-      openMessages(f.id, true);
+      requireAuth(() => {
+        detailQuotePrefill = null;
+        openMessages(f.id, true);
+      });
     });
 
     const viewProf = root.querySelector("#detail-view-profile");
@@ -1802,8 +2121,10 @@
     });
 
     root.querySelector("#detail-save-top")?.addEventListener("click", () => {
-      toggleSavedFactoryId(f.id);
-      syncSaveUiAfterToggle();
+      requireAuth(() => {
+        toggleSavedFactoryId(f.id);
+        syncSaveUiAfterToggle();
+      });
     });
   }
 
@@ -1936,7 +2257,7 @@
     e.preventDefault();
     openCustomer();
   });
-  $("nav-messages").addEventListener("click", () => openMessages(activeThreadId));
+  $("nav-messages").addEventListener("click", () => requireAuth(() => openMessages(activeThreadId)));
 
   const hostNavRoot = $("host-nav");
   if (hostNavRoot) {
@@ -2035,7 +2356,7 @@
     closeAccountMenu();
     $("search-what").value = "";
     resetRegionFilters();
-    goHome();
+    handleSignOut();
   });
 
   $("show-all-btn").addEventListener("click", () => {
@@ -2082,6 +2403,7 @@
     input.value = "";
     renderThreadList();
     renderConversation();
+    dbSaveMessage(f.id, text);
   });
 
   function closeInquiryOverlay() {
@@ -2124,17 +2446,48 @@
 
   window.addEventListener("scroll", onWindowScroll, { passive: true });
 
+  /* ── Auth modal event wiring ── */
+  $("auth-modal-close")?.addEventListener("click", closeAuthModal);
+  document.getElementById("auth-modal")?.addEventListener("click", (e) => {
+    if (e.target.id === "auth-modal") closeAuthModal();
+  });
+  document.querySelectorAll(".auth-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      authModalTab = tab.getAttribute("data-auth-tab") || "login";
+      syncAuthModalTab();
+    });
+  });
+  $("auth-form")?.addEventListener("submit", handleEmailAuth);
+  $("auth-google")?.addEventListener("click", handleGoogleAuth);
+
+  $("account-menu-login")?.addEventListener("click", () => {
+    closeAccountMenu();
+    openAuthModal("login");
+  });
+  $("account-menu-signup")?.addEventListener("click", () => {
+    closeAccountMenu();
+    openAuthModal("signup");
+  });
+  $("account-menu-help-out")?.addEventListener("click", () => {
+    closeAccountMenu();
+    document.querySelector(".footer")?.scrollIntoView({ behavior: "smooth", block: "end" });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const modal = document.getElementById("auth-modal");
+      if (modal && !modal.hidden) closeAuthModal();
+    }
+  });
+
   renderWhatSuggestionList();
   renderRegionStepperRows();
   renderGrid();
   setView("home");
   updateModeSwitchLabel();
+  updateHeaderForAuth();
   requestAnimationFrame(() => syncHomeHeaderScroll());
 
-  if (supabaseClient) {
-    supabaseClient.auth.getSession().then(({ error }) => {
-      if (error) console.warn("[Airsup] Supabase getSession:", error.message);
-      else console.info("[Airsup] Supabase connected.");
-    });
-  }
+  setupAuthListener();
+  initAuthState();
 })();
