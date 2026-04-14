@@ -328,6 +328,7 @@ button:focus-visible {
   width: auto;
   max-width: min(140px, 40vw);
   object-fit: contain;
+  background: transparent;
 }
 
 .site-logo:focus-visible {
