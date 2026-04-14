@@ -1,6 +1,50 @@
 (function () {
   "use strict";
 
+  /** Supabase browser client; null until config.js has a valid anon key. */
+  let supabaseClient = null;
+
+  function initSupabase() {
+    const W = typeof window !== "undefined" ? window : null;
+    if (!W) return null;
+    const cfg = W.AIRSUP_CONFIG;
+    const lib = W.supabase;
+    if (!cfg || !cfg.supabaseUrl) {
+      console.warn("[Airsup] Supabase: set window.AIRSUP_CONFIG in config.js.");
+      return null;
+    }
+    const key = String(cfg.supabaseAnonKey || "").trim();
+    if (!key || key === "YOUR_SUPABASE_ANON_KEY") {
+      console.warn(
+        "[Airsup] Supabase: add supabaseAnonKey in config.js (Dashboard → Settings → API → anon public)."
+      );
+      return null;
+    }
+    if (!lib || typeof lib.createClient !== "function") {
+      console.warn("[Airsup] Supabase: UMD bundle missing (check script order in index.html).");
+      return null;
+    }
+    try {
+      const client = lib.createClient(cfg.supabaseUrl, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      });
+      W.__airsupSupabase = client;
+      return client;
+    } catch (err) {
+      console.error("[Airsup] Supabase createClient failed:", err);
+      return null;
+    }
+  }
+
+  supabaseClient = initSupabase();
+  if (typeof window !== "undefined") {
+    window.AIRSUP = { getSupabase: () => supabaseClient };
+  }
+
   const factories = [
     {
       id: 1,
@@ -2086,4 +2130,11 @@
   setView("home");
   updateModeSwitchLabel();
   requestAnimationFrame(() => syncHomeHeaderScroll());
+
+  if (supabaseClient) {
+    supabaseClient.auth.getSession().then(({ error }) => {
+      if (error) console.warn("[Airsup] Supabase getSession:", error.message);
+      else console.info("[Airsup] Supabase connected.");
+    });
+  }
 })();
