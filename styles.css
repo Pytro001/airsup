@@ -6,9 +6,9 @@
   --border-light: #ebebeb;
   --bg: #ffffff;
   --bg-subtle: #f7f7f7;
-  --primary: #7412fd;
-  --primary-hover: #5b0cc9;
-  /** Verification only: vibrant blue (distinct from purple --primary). */
+  --primary: #304f52;
+  --primary-hover: #253d40;
+  /** Verification only: vibrant blue (distinct from teal --primary). */
   --verified-badge-bg: #0b74e8;
   --verified-badge-bg-soft: #3d9eff;
   --radius-pill: 40px;
@@ -307,6 +307,32 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.site-logo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.site-logo img {
+  display: block;
+  height: 32px;
+  width: auto;
+  max-width: min(140px, 40vw);
+  object-fit: contain;
+}
+
+.site-logo:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .btn-back {
@@ -1936,7 +1962,7 @@ html {
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   background: var(--primary);
-  box-shadow: 0 2px 8px rgba(116, 18, 253, 0.35);
+  box-shadow: 0 2px 8px rgba(48, 79, 82, 0.35);
 }
 
 .listing-map-label {
