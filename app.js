@@ -583,7 +583,7 @@
       $("chat-welcome")?.remove();
       container.innerHTML = "";
       console.error("[Airsup] loadChatHistory:", outerErr);
-      appendMessage("assistant", "Could not load chat (" + (outerErr.message || "unknown error") + "). If this persists, run the latest Supabase migration (008_conversations_metadata.sql) and refresh.");
+      appendMessage("assistant", "Could not load chat (" + (outerErr.message || "unknown error") + "). Try refreshing the page. If it keeps happening, check Vercel deployment logs and that Supabase env vars are set for the API.");
     }
   }
 
