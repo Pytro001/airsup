@@ -17,13 +17,18 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const { data: history } = await supabaseAdmin
+    let historyQuery = supabaseAdmin
       .from("conversations")
       .select("role, content")
       .eq("user_id", userId)
-      .eq("project_id", project_id || null)
       .order("created_at", { ascending: true })
       .limit(50);
+    if (project_id) {
+      historyQuery = historyQuery.eq("project_id", project_id);
+    } else {
+      historyQuery = historyQuery.is("project_id", null);
+    }
+    const { data: history } = await historyQuery;
 
     const conversationHistory: MessageParam[] = (history || []).map((row) => ({
       role: row.role as "user" | "assistant",
