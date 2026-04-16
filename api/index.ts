@@ -17,6 +17,7 @@ async function loadRoutes() {
   const { matchesRouter } = await import("../server/dist/routes/matches.js");
   const { paymentsRouter } = await import("../server/dist/routes/payments.js");
   const { visitsRouter } = await import("../server/dist/routes/visits.js");
+  const { connectionChatRouter } = await import("../server/dist/routes/connection-chat.js");
   const { whatsappWebhookRouter } = await import("../server/dist/routes/webhooks/whatsapp.js");
   const { stripeWebhookRouter } = await import("../server/dist/routes/webhooks/stripe.js");
 
@@ -25,6 +26,7 @@ async function loadRoutes() {
   app.use("/api/matches", matchesRouter);
   app.use("/api/payments", paymentsRouter);
   app.use("/api/visits", visitsRouter);
+  app.use("/api/connections", connectionChatRouter);
   app.use("/webhooks/whatsapp", whatsappWebhookRouter);
   app.use("/webhooks/stripe", stripeWebhookRouter);
 

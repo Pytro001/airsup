@@ -6,6 +6,7 @@ import { projectsRouter } from "./routes/projects.js";
 import { matchesRouter } from "./routes/matches.js";
 import { paymentsRouter } from "./routes/payments.js";
 import { visitsRouter } from "./routes/visits.js";
+import { connectionChatRouter } from "./routes/connection-chat.js";
 import { whatsappWebhookRouter } from "./routes/webhooks/whatsapp.js";
 import { stripeWebhookRouter } from "./routes/webhooks/stripe.js";
 import { startWorker } from "./jobs/worker.js";
@@ -23,6 +24,7 @@ app.use("/api/projects", projectsRouter);
 app.use("/api/matches", matchesRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/visits", visitsRouter);
+app.use("/api/connections", connectionChatRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 

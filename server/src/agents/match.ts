@@ -1,6 +1,5 @@
 import { getAnthropicClient } from "../services/anthropic.js";
 import { supabaseAdmin } from "../services/supabase.js";
-import { sendMatchIntro } from "../services/whatsapp.js";
 
 export async function processMatch(matchId: string): Promise<void> {
   const { data: match } = await supabaseAdmin
@@ -9,7 +8,7 @@ export async function processMatch(matchId: string): Promise<void> {
       id, status, quote, context_summary,
       projects(id, title, description, requirements, ai_summary, user_id,
         companies(name)),
-      factories(id, name, location, category, capabilities, contact_info, whatsapp_id)
+      factories(id, name, location, category, capabilities, contact_info)
     `)
     .eq("id", matchId)
     .single();
@@ -22,7 +21,7 @@ export async function processMatch(matchId: string): Promise<void> {
 
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("display_name, phone, whatsapp_id")
+    .select("display_name")
     .eq("id", project.user_id)
     .single();
 
@@ -63,21 +62,8 @@ Generate the introduction context.`,
     intro = { summary: text, next_steps: "Discuss details directly with the engineer.", key_context_for_buyer: "", key_context_for_engineer: "", first_deliverable: "", expected_turnaround: "" };
   }
 
-  const buyerPhone = profile?.whatsapp_id || profile?.phone || "";
-  const factoryPhone = factory.whatsapp_id || factory.contact_info?.phone || "";
-
-  const { buyerSent, factorySent } = await sendMatchIntro(buyerPhone, factoryPhone, {
-    buyerName: profile?.display_name || "Buyer",
-    factoryName: factory.name,
-    projectTitle: project.title,
-    summary: intro.summary,
-    quote: match.quote || {},
-    nextSteps: intro.next_steps,
-  });
-
   await supabaseAdmin.from("matches").update({
     status: "intro_sent",
-    wa_group_id: factoryPhone || buyerPhone || "",
     context_summary: {
       short: intro.summary,
       next_steps: intro.next_steps,
@@ -85,14 +71,34 @@ Generate the introduction context.`,
       engineer_context: intro.key_context_for_engineer,
       first_deliverable: intro.first_deliverable,
       expected_turnaround: intro.expected_turnaround,
-      whatsapp_sent: { buyer: buyerSent, factory: factorySent },
     },
   }).eq("id", matchId);
+
+  const introMsg = `Great news! I found a match for "${project.title}":\n\n**${factory.name}** (${factory.location})\n\n${intro.summary}\n\nQuote: ${match.quote?.unit_price || "See details"} per unit, ${match.quote?.lead_time || "TBD"} lead time.${intro.first_deliverable ? `\n\nFirst deliverable: ${intro.first_deliverable}${intro.expected_turnaround ? ` (${intro.expected_turnaround})` : ""}` : ""}\n\nYou'll be working directly with their designer/engineer — no sales middleman. ${intro.next_steps}\n\nHead to the **Connections** tab to start chatting with them directly.`;
 
   await supabaseAdmin.from("conversations").insert({
     user_id: project.user_id,
     project_id: project.id,
     role: "assistant",
-    content: `Great news! I found a match for "${project.title}":\n\n**${factory.name}** (${factory.location})\n\n${intro.summary}\n\nQuote: ${match.quote?.unit_price || "See details"} per unit, ${match.quote?.lead_time || "TBD"} lead time.\n${intro.first_deliverable ? `\nFirst deliverable: ${intro.first_deliverable}${intro.expected_turnaround ? ` (${intro.expected_turnaround})` : ""}` : ""}\n\nYou'll be working directly with their designer/engineer — no sales middleman. ${intro.next_steps}\n\nCheck the Connections tab for full details.`,
+    content: introMsg,
+    metadata: {
+      action: { action: "navigate", target: "connections", label: "Go to Connections" },
+    },
   });
+
+  if (intro.key_context_for_engineer) {
+    const { data: factoryRecord } = await supabaseAdmin
+      .from("factories")
+      .select("user_id")
+      .eq("id", factory.id)
+      .single();
+
+    if (factoryRecord?.user_id) {
+      await supabaseAdmin.from("connection_messages").insert({
+        match_id: matchId,
+        sender_id: project.user_id,
+        content: `[Airsup AI] Introduction: ${intro.summary}\n\nProject: ${project.title}\nCompany: ${project.companies?.name || "Buyer"}\n\n${intro.key_context_for_engineer}\n\nFirst deliverable expected: ${intro.first_deliverable || "To be discussed"}`,
+      });
+    }
+  }
 }

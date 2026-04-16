@@ -48,12 +48,13 @@
   /* ── State ── */
   let currentUser = null;
   let currentView = "onboarding";
-  let userRole = null; // "startup" | "supplier"
+  let userRole = null;
   let isSending = false;
   let sessionBootstrapLock = false;
   let onboardStep = 0;
   let onboardData = {};
   let pendingFiles = [];
+  let activeConnectionMatchId = null;
 
   function resetOnboardData() {
     onboardData = { role: "", fullName: "", email: "", phone: "", companyName: "", industry: "", location: "", productType: "", quantity: "", timeline: "", capabilities: "", certifications: "", moq: "", specialization: "" };
@@ -251,11 +252,10 @@
     if (!stage || !bar) return;
 
     const steps = getSteps();
-    const totalSteps = steps.length + 2; // role + steps + done
+    const totalSteps = steps.length + 2;
     const pct = ((onboardStep + 1) / totalSteps) * 100;
     bar.style.width = pct + "%";
 
-    // Step 0: role selection
     if (onboardStep === 0) {
       stage.innerHTML = `
         <div class="onboard-question">
@@ -276,7 +276,6 @@
       return;
     }
 
-    // Done screen
     const stepIdx = onboardStep - 1;
     if (stepIdx >= steps.length) {
       const isSupplier = onboardData.role === "supplier";
@@ -301,7 +300,6 @@
       return;
     }
 
-    // Form steps
     const step = steps[stepIdx];
     let html = `<div class="onboard-question"><h1 class="onboard-title">${step.title}</h1>`;
     if (step.sub) html += `<p class="onboard-sub">${step.sub}</p>`;
@@ -413,15 +411,63 @@
     if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
   }
 
-  /* ── Chat ── */
-  function appendMessage(role, text) {
+  /* ══════════════════════════════════════
+     CHAT
+     ══════════════════════════════════════ */
+  function appendMessage(role, text, metadata) {
     $("chat-welcome")?.remove();
     const container = $("chat-messages");
     const bubble = document.createElement("div");
     bubble.className = `chat-bubble chat-bubble--${role}`;
     if (role === "assistant") { bubble.innerHTML = simpleMarkdown(text); } else { bubble.textContent = text; }
     container.appendChild(bubble);
+
+    if (role === "assistant" && metadata) {
+      if (metadata.options && metadata.options.length) {
+        renderOptionButtons(container, metadata.options);
+      }
+      if (metadata.action) {
+        renderActionButton(container, metadata.action);
+      }
+    }
+
     container.scrollTop = container.scrollHeight;
+  }
+
+  function renderOptionButtons(container, options) {
+    const wrap = document.createElement("div");
+    wrap.className = "chat-options";
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "chat-option-btn";
+      btn.textContent = opt.label;
+      btn.addEventListener("click", () => {
+        wrap.querySelectorAll(".chat-option-btn").forEach((b) => { b.disabled = true; b.classList.add("chat-option-btn--used"); });
+        btn.classList.add("chat-option-btn--selected");
+        const input = $("chat-input");
+        if (input) input.value = opt.value;
+        sendMessage();
+      });
+      wrap.appendChild(btn);
+    });
+    container.appendChild(wrap);
+  }
+
+  function renderActionButton(container, action) {
+    const wrap = document.createElement("div");
+    wrap.className = "chat-action-wrap";
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn-primary chat-action-btn";
+    btn.textContent = action.label || "Go";
+    btn.addEventListener("click", () => {
+      if (action.action === "navigate" && action.target) {
+        setView(action.target);
+      }
+    });
+    wrap.appendChild(btn);
+    container.appendChild(wrap);
   }
 
   function appendStatus(text) {
@@ -465,10 +511,10 @@
     showTyping();
 
     try {
-      const { reply } = await apiCall("/api/chat", { method: "POST", body: JSON.stringify({ message: msgText }) });
+      const data = await apiCall("/api/chat", { method: "POST", body: JSON.stringify({ message: msgText }) });
       hideTyping();
       document.querySelectorAll(".chat-status").forEach((el) => el.remove());
-      appendMessage("assistant", reply);
+      appendMessage("assistant", data.reply, { options: data.options, action: data.action });
     } catch (err) {
       hideTyping();
       document.querySelectorAll(".chat-status").forEach((el) => el.remove());
@@ -486,7 +532,26 @@
       const { messages } = await apiCall("/api/chat/history");
       if (messages?.length) {
         container.innerHTML = "";
-        messages.forEach((m) => appendMessage(m.role, m.content));
+        messages.forEach((m) => appendMessage(m.role, m.content, m.metadata));
+      } else {
+        container.innerHTML = "";
+        showTyping();
+        try {
+          const data = await apiCall("/api/chat/init", { method: "POST" });
+          hideTyping();
+          if (data.reply) {
+            appendMessage("assistant", data.reply, { options: data.options, action: data.action });
+          } else if (data.already_initialized) {
+            const retry = await apiCall("/api/chat/history");
+            if (retry.messages?.length) {
+              retry.messages.forEach((m) => appendMessage(m.role, m.content, m.metadata));
+            }
+          }
+        } catch (initErr) {
+          hideTyping();
+          console.error("[Airsup] chat init error:", initErr);
+          container.innerHTML = '<div class="chat-welcome" id="chat-welcome"><h2>Welcome to Airsup</h2><p>Tell me what you need manufactured. I\'ll find the right factory and connect you directly with the engineer who\'ll build it.</p></div>';
+        }
       }
     } catch (_) {}
   }
@@ -524,15 +589,21 @@
     try {
       const { project } = await apiCall(`/api/projects/${id}`);
       if (lead) lead.innerHTML = '<button type="button" class="btn-outline" id="projects-back" style="font-size:13px;padding:8px 16px;">&larr; Back</button>';
-      const s = project.ai_summary || {}, m = project.matches || [];
+      const s = project.ai_summary || {};
       container.innerHTML = `<div><h2 style="font-size:22px;font-weight:600;margin-bottom:4px;">${escapeHtml(project.title)}</h2><p style="color:var(--text-muted);margin-bottom:16px;">${escapeHtml(project.description||"")}</p><span class="project-card-badge badge--${project.status}">${project.status.replace(/_/g," ")}</span>${s.product?`<div style="margin:16px 0;"><strong>Product:</strong> ${escapeHtml(s.product)}</div>`:""}</div>`;
       $("projects-back")?.addEventListener("click", () => { if (lead) lead.textContent = "Sourcing requests created from your conversations."; loadProjects(); });
     } catch (_) {}
   }
 
-  /* ── Connections ── */
+  /* ══════════════════════════════════════
+     CONNECTIONS
+     ══════════════════════════════════════ */
   async function loadConnections() {
     const container = $("connections-list");
+    const chatWrap = $("connection-chat-wrap");
+    if (chatWrap) chatWrap.hidden = true;
+    activeConnectionMatchId = null;
+
     try {
       const { matches } = await apiCall("/api/matches");
       if (!matches?.length) { container.innerHTML = '<div class="connections-empty">No connections yet. Once AI matches you with a factory, you\u2019ll get a direct line to their engineer here.</div>'; return; }
@@ -540,11 +611,92 @@
         const f = m.factories, p = m.projects, ctx = m.context_summary || {};
         const contact = ctx.direct_contact || {};
         const contactLine = contact.name ? `${contact.name}${contact.role ? ` \u00b7 ${contact.role}` : ""}` : "";
-        const iter = ctx.iteration_terms || {};
         const q = m.quote || {};
-        return `<div class="connection-card"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(f?.name||"Factory")}</span><span class="connection-location">${escapeHtml(f?.location||"")}</span></div><span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g," ")}</span></div>${contactLine?`<div class="connection-summary-bar" style="font-weight:500;">Your contact: ${escapeHtml(contactLine)}</div>`:""}<div class="connection-summary-bar">${escapeHtml(ctx.short||"Connection established")}</div><div class="connection-body"><div class="connection-project-line">Project: ${escapeHtml(p?.title||"")}</div>${q.unit_price?`<div class="connection-quote">${escapeHtml(q.unit_price)}/unit \u00b7 ${escapeHtml(q.lead_time||"TBD")}</div>`:""}</div></div>`;
+        return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(f?.name||"Factory")}</span><span class="connection-location">${escapeHtml(f?.location||"")}</span></div><span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g," ")}</span></div>${contactLine?`<div class="connection-summary-bar" style="font-weight:500;">Your contact: ${escapeHtml(contactLine)}</div>`:""}<div class="connection-summary-bar">${escapeHtml(ctx.short||"Connection established")}</div><div class="connection-body"><div class="connection-project-line">Project: ${escapeHtml(p?.title||"")}</div>${q.unit_price?`<div class="connection-quote">${escapeHtml(q.unit_price)}/unit \u00b7 ${escapeHtml(q.lead_time||"TBD")}</div>`:""}</div></div>`;
       }).join("");
+      container.querySelectorAll(".connection-card--clickable").forEach((card) => {
+        card.addEventListener("click", () => {
+          const matchId = card.dataset.matchId;
+          if (matchId) openConnectionChat(matchId, card);
+        });
+      });
     } catch (_) { container.innerHTML = '<div class="connections-empty">Could not load connections.</div>'; }
+  }
+
+  async function openConnectionChat(matchId, cardEl) {
+    activeConnectionMatchId = matchId;
+    const list = $("connections-list");
+    const chatWrap = $("connection-chat-wrap");
+    if (!chatWrap) return;
+
+    const factoryName = cardEl?.querySelector(".connection-factory")?.textContent || "Factory";
+    $("conn-chat-title").textContent = factoryName;
+
+    if (list) list.hidden = true;
+    chatWrap.hidden = false;
+
+    const msgContainer = $("conn-chat-messages");
+    msgContainer.innerHTML = '<div class="chat-status">Loading messages\u2026</div>';
+
+    try {
+      const { messages } = await apiCall(`/api/connections/${matchId}/messages`);
+      msgContainer.innerHTML = "";
+      if (messages?.length) {
+        messages.forEach((m) => {
+          const isMe = m.sender_id === currentUser.id;
+          const div = document.createElement("div");
+          div.className = `chat-bubble chat-bubble--${isMe ? "user" : "assistant"}`;
+          div.textContent = m.content;
+          msgContainer.appendChild(div);
+        });
+      } else {
+        msgContainer.innerHTML = '<div class="chat-status">No messages yet. Say hello to the engineer!</div>';
+      }
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+    } catch (err) {
+      msgContainer.innerHTML = '<div class="chat-status">Could not load messages.</div>';
+    }
+  }
+
+  function closeConnectionChat() {
+    activeConnectionMatchId = null;
+    const list = $("connections-list");
+    const chatWrap = $("connection-chat-wrap");
+    if (list) list.hidden = false;
+    if (chatWrap) chatWrap.hidden = true;
+  }
+
+  async function sendConnectionMessage() {
+    if (!activeConnectionMatchId) return;
+    const input = $("conn-chat-input");
+    const text = input.value.trim();
+    if (!text) return;
+    if (!(await ensureSession())) return;
+
+    input.value = "";
+    input.style.height = "auto";
+
+    const msgContainer = $("conn-chat-messages");
+    const statusEls = msgContainer.querySelectorAll(".chat-status");
+    statusEls.forEach((el) => el.remove());
+
+    const div = document.createElement("div");
+    div.className = "chat-bubble chat-bubble--user";
+    div.textContent = text;
+    msgContainer.appendChild(div);
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+
+    try {
+      await apiCall(`/api/connections/${activeConnectionMatchId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ content: text }),
+      });
+    } catch (err) {
+      const errDiv = document.createElement("div");
+      errDiv.className = "chat-status";
+      errDiv.textContent = "Failed to send message.";
+      msgContainer.appendChild(errDiv);
+    }
   }
 
   /* ── Supplier Dashboard ── */
@@ -586,8 +738,17 @@
         active.innerHTML = matches.map((m) => {
           const p = m.projects;
           const q = m.quote || {};
-          return `<div class="project-card"><div class="project-card-title">${escapeHtml(p?.title || "Project")}</div><div class="project-card-desc">${escapeHtml(m.context_summary?.short || p?.description || "")}</div>${q.unit_price ? `<div class="project-card-reqs">${escapeHtml(q.unit_price)}/unit</div>` : ""}<div class="project-card-meta"><span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g," ")}</span></div></div>`;
+          return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(p?.title || "Project")}</span></div><span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g," ")}</span></div><div class="connection-summary-bar">${escapeHtml(m.context_summary?.short || p?.description || "")}</div>${q.unit_price ? `<div class="connection-body"><div class="connection-quote">${escapeHtml(q.unit_price)}/unit</div></div>` : ""}</div>`;
         }).join("");
+        active.querySelectorAll(".connection-card--clickable").forEach((card) => {
+          card.addEventListener("click", () => {
+            const matchId = card.dataset.matchId;
+            if (matchId) {
+              setView("connections");
+              setTimeout(() => openConnectionChat(matchId, card), 100);
+            }
+          });
+        });
       }
     }
   }
@@ -651,6 +812,17 @@
     e.target.value = "";
     chatSend.disabled = false;
   });
+
+  $("conn-chat-back")?.addEventListener("click", closeConnectionChat);
+
+  const connInput = $("conn-chat-input"), connSend = $("conn-chat-send");
+  connInput?.addEventListener("input", () => {
+    connInput.style.height = "auto";
+    connInput.style.height = Math.min(connInput.scrollHeight, 150) + "px";
+    if (connSend) connSend.disabled = !connInput.value.trim();
+  });
+  connInput?.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendConnectionMessage(); } });
+  connSend?.addEventListener("click", sendConnectionMessage);
 
   /* ── Init ── */
   updateAuthUI();
