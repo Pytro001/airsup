@@ -35,9 +35,14 @@
   async function syncUserProfileFromAuth(user) {
     if (!supabaseClient || !user) return;
     const meta = user.user_metadata || {};
+    const anonymous = user.is_anonymous === true;
     const displayName = String(
-      meta.full_name || meta.name || meta.preferred_username || user.email?.split("@")[0] || ""
-    ).trim() || "User";
+      meta.full_name ||
+        meta.name ||
+        meta.preferred_username ||
+        user.email?.split("@")[0] ||
+        (anonymous ? "Guest" : "")
+    ).trim() || (anonymous ? "Guest" : "User");
     const letter = displayName.charAt(0).toUpperCase();
 
     const { error: pe } = await supabaseClient.from("profiles").upsert(
@@ -52,17 +57,15 @@
     );
     if (se) console.warn("[Airsup] user_settings sync:", se);
 
-    currentUser = { id: user.id, email: user.email, displayName };
+    currentUser = { id: user.id, email: user.email || "", displayName };
     updateAuthUI();
   }
 
   /* ── State ── */
   let currentUser = null;
   let currentView = "landing";
-  let pendingAuthCallback = null;
-  let authModalTab = "login";
   let isSending = false;
-  let authRequestInFlight = false;
+  let sessionBootstrapLock = false;
 
   /* ── Helpers ── */
   function escapeHtml(s) {
@@ -106,139 +109,48 @@
     return res.json();
   }
 
-  /* ── Auth modal ── */
-  function openAuthModal(tab, callback) {
-    authModalTab = tab || "login";
-    pendingAuthCallback = callback || null;
-    $("auth-modal").hidden = false;
-    document.body.style.overflow = "hidden";
-    syncAuthModalTab();
-    const nameField = $("auth-name-field");
-    if (nameField) nameField.hidden = authModalTab !== "signup";
-    $("auth-error")?.setAttribute("hidden", "");
-    $("auth-email")?.focus();
-  }
-
-  function closeAuthModal() {
-    $("auth-modal").hidden = true;
-    document.body.style.overflow = "";
-    $("auth-form")?.reset();
-    $("auth-error")?.setAttribute("hidden", "");
-  }
-
-  function syncAuthModalTab() {
-    document.querySelectorAll(".auth-tab").forEach((t) => {
-      const tab = t.getAttribute("data-auth-tab");
-      t.classList.toggle("active", tab === authModalTab);
-      t.setAttribute("aria-selected", String(tab === authModalTab));
-    });
-    const nameField = $("auth-name-field");
-    if (nameField) nameField.hidden = authModalTab !== "signup";
-    const pwdInput = $("auth-password");
-    if (pwdInput) pwdInput.autocomplete = authModalTab === "signup" ? "new-password" : "current-password";
-    const submitBtn = $("auth-submit");
-    if (submitBtn) submitBtn.textContent = authModalTab === "signup" ? "Sign up" : "Log in";
-  }
-
-  function formatAuthError(err) {
-    const raw = err?.message || String(err || "");
-    const m = raw.toLowerCase();
-    const code = err?.code || "";
-    if (
-      code === "over_email_send_rate_limit" ||
-      code === "too_many_requests" ||
-      m.includes("rate limit") ||
-      m.includes("email rate") ||
-      m.includes("too many requests") ||
-      err?.status === 429
-    ) {
-      return (
-        "Supabase hit its email / auth rate limit (this is not fixed by SQL migrations). Do this:\n\n" +
-        "1) Authentication → Providers → Email → turn OFF “Confirm email” (stops confirmation emails on every sign-up).\n" +
-        "2) Wait 30–60 minutes for the limit to reset, or use “Continue with Google”.\n" +
-        "3) Optional: Authentication → Rate Limits — relax signup / email settings.\n" +
-        "4) For higher email volume long-term, add Custom SMTP in Authentication → Emails."
-      );
-    }
-    return raw;
-  }
-
-  function showAuthError(msg) {
-    const el = $("auth-error");
+  function showAuthBanner(message) {
+    const el = $("auth-banner");
     if (!el) return;
-    el.textContent = msg;
+    el.textContent = message;
     el.hidden = false;
   }
 
-  function requireAuth(callback) {
-    if (currentUser) { callback(); return; }
-    openAuthModal("login", callback);
+  function hideAuthBanner() {
+    const el = $("auth-banner");
+    if (!el) return;
+    el.hidden = true;
+    el.textContent = "";
   }
 
-  async function handleEmailAuth(e) {
-    e.preventDefault();
-    if (authRequestInFlight) return;
-    if (!supabaseClient) return showAuthError("Supabase not configured. Set your anon key in config.js.");
-    const email = ($("auth-email")?.value || "").trim();
-    const password = $("auth-password")?.value || "";
-    if (!email || !password) return showAuthError("Email and password are required.");
-    const submitBtn = $("auth-submit");
-    authRequestInFlight = true;
-    if (submitBtn) submitBtn.disabled = true;
-    $("auth-error")?.setAttribute("hidden", "");
-
-    try {
-      let result;
-      if (authModalTab === "signup") {
-        const name = ($("auth-name")?.value || "").trim();
-        result = await supabaseClient.auth.signUp({
-          email, password,
-          options: {
-            data: { full_name: name || email.split("@")[0] },
-            emailRedirectTo: window.location.origin + window.location.pathname,
-          },
-        });
-      } else {
-        result = await supabaseClient.auth.signInWithPassword({ email, password });
-      }
-
-      if (result.error) return showAuthError(formatAuthError(result.error));
-
-      if (authModalTab === "signup" && result.data?.user && !result.data.session) {
-        showAuthError(
-          "Email confirmation is still on in Supabase. Turn off “Confirm email” under Authentication → Providers → Email, then try again."
-        );
-        authModalTab = "login";
-        syncAuthModalTab();
-        return;
-      }
-      if (result.data?.session?.user) await syncUserProfileFromAuth(result.data.session.user);
-      closeAuthModal();
-    } finally {
-      authRequestInFlight = false;
-      if (submitBtn) submitBtn.disabled = false;
+  /** Ensure a Supabase session without any login UI (anonymous JWT for API + RLS). */
+  async function ensureSession() {
+    hideAuthBanner();
+    if (currentUser) return true;
+    if (!supabaseClient) {
+      showAuthBanner("Add your Supabase anon key in config.js (or config.local.js).");
+      return false;
     }
-  }
-
-  async function handleGoogleAuth() {
-    if (authRequestInFlight) return;
-    if (!supabaseClient) return showAuthError("Supabase not configured. Set your anon key in config.js.");
-    const googleBtn = $("auth-google");
-    authRequestInFlight = true;
-    if (googleBtn) googleBtn.disabled = true;
+    if (sessionBootstrapLock) return false;
+    const { data: sess0 } = await supabaseClient.auth.getSession();
+    if (sess0?.session?.user) {
+      await syncUserProfileFromAuth(sess0.session.user);
+      return true;
+    }
+    sessionBootstrapLock = true;
     try {
-      const redirectTo = window.location.origin + window.location.pathname.replace(/\/$/, "");
-      const { error } = await supabaseClient.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-          queryParams: { prompt: "select_account" },
-        },
-      });
-      if (error) showAuthError(formatAuthError(error));
+      const { data, error } = await supabaseClient.auth.signInAnonymously();
+      if (error) {
+        showAuthBanner(
+          "Could not start a session. In Supabase: Authentication → Providers → enable Anonymous sign-ins, then reload."
+        );
+        console.error("[Airsup] signInAnonymously:", error);
+        return false;
+      }
+      if (data?.user) await syncUserProfileFromAuth(data.user);
+      return true;
     } finally {
-      authRequestInFlight = false;
-      if (googleBtn) googleBtn.disabled = false;
+      sessionBootstrapLock = false;
     }
   }
 
@@ -273,11 +185,6 @@
       if (session?.user) {
         syncUserProfileFromAuth(session.user).then(() => {
           if (currentView === "landing") setView("chat");
-          if (pendingAuthCallback) {
-            const cb = pendingAuthCallback;
-            pendingAuthCallback = null;
-            cb();
-          }
         });
       } else if (event === "SIGNED_OUT") {
         currentUser = null;
@@ -321,14 +228,18 @@
     if (name === "chat") loadChatHistory();
     if (name === "projects") loadProjects();
     if (name === "connections") loadConnections();
-    if (name === "settings") loadSettings();
+    if (name === "settings") void loadSettings();
   }
 
   async function loadSettings() {
     const root = $("settings-root");
     if (!root) return;
-    if (!currentUser || !supabaseClient) {
-      root.innerHTML = '<p class="settings-hint">Log in to manage your profile.</p>';
+    if (!supabaseClient) {
+      root.innerHTML = '<p class="settings-hint">Supabase is not configured.</p>';
+      return;
+    }
+    if (!(await ensureSession())) {
+      root.innerHTML = '<p class="settings-hint">Could not load your session.</p>';
       return;
     }
 
@@ -498,6 +409,7 @@
     const input = $("chat-input");
     const text = input.value.trim();
     if (!text || isSending) return;
+    if (!(await ensureSession())) return;
 
     isSending = true;
     input.value = "";
@@ -662,7 +574,9 @@
   document.querySelectorAll(".nav-link").forEach((btn) => {
     btn.addEventListener("click", () => {
       const view = btn.getAttribute("data-view");
-      if (view) requireAuth(() => setView(view));
+      if (view) {
+        ensureSession().then((ok) => { if (ok) setView(view); });
+      }
     });
   });
 
@@ -686,21 +600,7 @@
 
   // Landing CTA
   $("landing-start")?.addEventListener("click", () => {
-    requireAuth(() => setView("chat"));
-  });
-
-  // Auth modal
-  document.querySelectorAll(".auth-tab").forEach((t) => {
-    t.addEventListener("click", () => {
-      authModalTab = t.getAttribute("data-auth-tab") || "login";
-      syncAuthModalTab();
-    });
-  });
-  $("auth-close")?.addEventListener("click", closeAuthModal);
-  $("auth-form")?.addEventListener("submit", handleEmailAuth);
-  $("auth-google")?.addEventListener("click", handleGoogleAuth);
-  $("auth-modal")?.addEventListener("click", (e) => {
-    if (e.target.id === "auth-modal") closeAuthModal();
+    ensureSession().then((ok) => { if (ok) setView("chat"); });
   });
 
   // Chat composer
@@ -721,14 +621,6 @@
   });
 
   chatSend?.addEventListener("click", sendMessage);
-
-  // Escape key
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      const modal = $("auth-modal");
-      if (modal && !modal.hidden) closeAuthModal();
-    }
-  });
 
   /* ── Init ── */
   updateAuthUI();

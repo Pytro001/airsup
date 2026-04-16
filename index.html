@@ -12,6 +12,7 @@
 <body>
   <!-- ── Header ── -->
   <header class="header" id="site-header">
+    <div id="auth-banner" class="auth-banner" role="status" hidden></div>
     <div class="header-inner">
       <button type="button" id="logo-home" class="site-logo" aria-label="Home">
         <img src="assets/brand/logo-air-sup.png" alt="Airsup" />
@@ -125,39 +126,6 @@
       </div>
     </section>
   </main>
-
-  <!-- ── Auth modal ── -->
-  <div id="auth-modal" class="auth-modal-backdrop" hidden>
-    <div class="auth-modal-panel" role="dialog" aria-modal="true" aria-label="Sign in or sign up">
-      <button type="button" class="auth-modal-close" id="auth-close" aria-label="Close">&times;</button>
-      <h2 class="auth-modal-title">Welcome to Airsup</h2>
-      <div class="auth-tabs" role="tablist">
-        <button type="button" class="auth-tab active" data-auth-tab="login" role="tab" aria-selected="true">Log in</button>
-        <button type="button" class="auth-tab" data-auth-tab="signup" role="tab" aria-selected="false">Sign up</button>
-      </div>
-      <form id="auth-form" class="auth-form" autocomplete="on">
-        <div class="auth-field" id="auth-name-field" hidden>
-          <label for="auth-name">Full name</label>
-          <input type="text" id="auth-name" class="auth-input" autocomplete="name" />
-        </div>
-        <div class="auth-field">
-          <label for="auth-email">Email</label>
-          <input type="email" id="auth-email" class="auth-input" autocomplete="email" required />
-        </div>
-        <div class="auth-field">
-          <label for="auth-password">Password</label>
-          <input type="password" id="auth-password" class="auth-input" autocomplete="current-password" required />
-        </div>
-        <p class="auth-error" id="auth-error" hidden></p>
-        <button type="submit" class="btn-primary auth-submit" id="auth-submit">Log in</button>
-      </form>
-      <div class="auth-divider"><span>or</span></div>
-      <button type="button" class="auth-social-btn" id="auth-google">
-        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 010-9.18l-7.98-6.19a24.03 24.03 0 000 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-        Continue with Google
-      </button>
-    </div>
-  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>

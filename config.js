@@ -3,21 +3,11 @@
  *
  * Set supabaseAnonKey here OR use config.local.js (see config.local.example.js).
  *
- * Google sign-in checklist (dashboard steps you must complete):
- * 1) Supabase → Authentication → Providers → Google: enable, add OAuth Client ID + secret from Google Cloud.
- * 2) Google Cloud Console → Credentials → your OAuth 2.0 Client → Authorized redirect URIs add:
- *    https://fyxqdwhqposxitexydby.supabase.co/auth/v1/callback
- * 3) Supabase → Authentication → URL Configuration: Site URL = your app origin (e.g. https://yoursite.com or http://localhost:5500).
- *    Add the same origin(s) under Redirect URLs.
+ * No login UI — the app uses Supabase Anonymous sign-ins for a silent session:
+ * - Authentication → Providers → Anonymous sign-ins → ON → Save.
+ * - Run SQL migrations (003_platform_pivot.sql, 004_profile_trigger_names.sql) so new users get profiles rows.
  *
- * Sign up without email confirmation (session immediately + rows in public.profiles):
- * - Authentication → Providers → Email → turn OFF “Confirm email” → Save.
- * - If you see “email rate limit exceeded”: that is Supabase’s mail quota, not your SQL. Turn off
- *   confirm email (above), wait ~an hour, or use Google OAuth. Optional: Custom SMTP or Rate Limits.
- * - Run SQL migrations (003_platform_pivot.sql, 004_profile_trigger_names.sql) for profiles trigger.
- *
- * Dev-only fallback: if the key is still the placeholder, you can set
- * localStorage.setItem("airsup_supabase_anon_key", "<anon key>") in the browser console, then reload.
+ * Dev-only: localStorage.setItem("airsup_supabase_anon_key", "<anon key>") then reload.
  */
 window.AIRSUP_CONFIG = {
   supabaseUrl: "https://fyxqdwhqposxitexydby.supabase.co",
