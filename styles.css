@@ -81,7 +81,13 @@ img { max-width: 100%; display: block; }
   display: flex; align-items: center; gap: 12px;
 }
 .site-logo { flex-shrink: 0; background: transparent; height: 24px; }
-.site-logo img { height: 24px; width: auto; object-fit: contain; }
+.site-logo img {
+  height: 28px;
+  width: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+  vertical-align: middle;
+}
 .header-right { position: relative; }
 .avatar-btn {
   width: 30px; height: 30px; border-radius: 50%;
