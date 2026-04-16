@@ -80,13 +80,23 @@ img { max-width: 100%; display: block; }
   height: var(--header-h); padding: 0 20px;
   display: flex; align-items: center; gap: 12px;
 }
-.site-logo { flex-shrink: 0; background: transparent; height: 24px; }
+.site-logo {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  line-height: 0;
+  background: transparent;
+}
 .site-logo img {
-  height: 28px;
-  width: 28px;
+  display: block;
+  height: 24px;
+  width: 24px;
   object-fit: contain;
-  border-radius: 6px;
-  vertical-align: middle;
+  border-radius: 5px;
 }
 .header-right { position: relative; }
 .avatar-btn {
