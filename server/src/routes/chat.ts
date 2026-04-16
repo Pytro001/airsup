@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs";
 import { Router } from "express";
 import type { Response } from "express";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
@@ -6,6 +7,17 @@ import { supabaseAdmin } from "../services/supabase.js";
 import { runIntakeAgent, loadContext, INIT_SYSTEM_INSTRUCTION } from "../agents/intake.js";
 
 export const chatRouter = Router();
+
+// #region agent log
+const DEBUG_LOG = "/Users/pytro/Documents/airsup.ai/.cursor/debug-a202bb.log";
+function dbgHistory(payload: Record<string, unknown>): void {
+  try {
+    appendFileSync(DEBUG_LOG, JSON.stringify({ sessionId: "a202bb", timestamp: Date.now(), ...payload }) + "\n");
+  } catch {
+    /* only works when API runs on same machine as workspace */
+  }
+}
+// #endregion
 
 chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
@@ -157,17 +169,45 @@ chatRouter.get("/history", requireAuth, async (req: AuthRequest, res: Response) 
   const userId = req.userId!;
   const projectId = req.query.project_id as string | undefined;
 
-  let q = supabaseAdmin.from("conversations").select("id, role, content, metadata, created_at").eq("user_id", userId);
-  if (projectId) {
-    q = q.eq("project_id", projectId);
-  } else {
-    q = q.is("project_id", null);
-  }
+  try {
+    let q = supabaseAdmin.from("conversations").select("id, role, content, metadata, created_at").eq("user_id", userId);
+    if (projectId) {
+      q = q.eq("project_id", projectId);
+    } else {
+      q = q.is("project_id", null);
+    }
 
-  const { data, error } = await q.order("created_at", { ascending: true }).limit(100);
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
+    const { data, error } = await q.order("created_at", { ascending: true }).limit(100);
+    if (error) {
+      dbgHistory({
+        hypothesisId: "H5",
+        location: "chat.ts:GET/history",
+        message: "supabase_error",
+        data: {
+          code: (error as { code?: string }).code,
+          msg: error.message,
+          details: (error as { details?: string }).details,
+          hint: (error as { hint?: string }).hint,
+        },
+      });
+      const parts = [error.message, (error as { hint?: string }).hint, (error as { details?: string }).details].filter(Boolean);
+      res.status(500).json({ error: parts.join(" | ") || "Database error", code: (error as { code?: string }).code });
+      return;
+    }
+    dbgHistory({
+      hypothesisId: "H5",
+      location: "chat.ts:GET/history",
+      message: "ok",
+      data: { count: (data || []).length },
+    });
+    res.json({ messages: data || [] });
+  } catch (e) {
+    dbgHistory({
+      hypothesisId: "H2",
+      location: "chat.ts:GET/history",
+      message: "handler_throw",
+      data: { err: String(e) },
+    });
+    res.status(500).json({ error: `Unexpected: ${String(e)}` });
   }
-  res.json({ messages: data || [] });
 });

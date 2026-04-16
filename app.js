@@ -82,8 +82,30 @@
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(opts.headers || {}) },
     });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
+      const text = await res.text();
+      let detail = "HTTP " + res.status;
+      try {
+        const j = JSON.parse(text);
+        if (j && typeof j.error === "string" && j.error.trim()) detail = j.error.trim();
+        else if (text && text.length) detail = text.slice(0, 400);
+      } catch (_) {
+        if (text && text.length) detail = text.slice(0, 400);
+      }
+      // #region agent log
+      fetch("http://127.0.0.1:7803/ingest/440abadd-e42c-4ad6-b3c7-7a5e0395097a", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a202bb" },
+        body: JSON.stringify({
+          sessionId: "a202bb",
+          hypothesisId: "H1",
+          location: "app.js:apiCall",
+          message: "fetch_failed",
+          data: { path: path, status: res.status, ct: res.headers.get("content-type") || "", preview: (text || "").slice(0, 500) },
+          timestamp: Date.now(),
+        }),
+      }).catch(function () {});
+      // #endregion
+      throw new Error(detail);
     }
     return res.json();
   }
