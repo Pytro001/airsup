@@ -37,6 +37,7 @@
   let pendingAuthCallback = null;
   let authModalTab = "login";
   let isSending = false;
+  let authRequestInFlight = false;
 
   /* ── Helpers ── */
   function escapeHtml(s) {
@@ -120,55 +121,66 @@
 
   async function handleEmailAuth(e) {
     e.preventDefault();
+    if (authRequestInFlight) return;
     if (!supabaseClient) return showAuthError("Supabase not configured. Set your anon key in config.js.");
     const email = ($("auth-email")?.value || "").trim();
     const password = $("auth-password")?.value || "";
     if (!email || !password) return showAuthError("Email and password are required.");
     const submitBtn = $("auth-submit");
+    authRequestInFlight = true;
     if (submitBtn) submitBtn.disabled = true;
     $("auth-error")?.setAttribute("hidden", "");
 
-    let result;
-    if (authModalTab === "signup") {
-      const name = ($("auth-name")?.value || "").trim();
-      result = await supabaseClient.auth.signUp({
-        email, password,
-        options: {
-          data: { full_name: name || email.split("@")[0] },
-          emailRedirectTo: window.location.origin + window.location.pathname,
-        },
-      });
-    } else {
-      result = await supabaseClient.auth.signInWithPassword({ email, password });
-    }
+    try {
+      let result;
+      if (authModalTab === "signup") {
+        const name = ($("auth-name")?.value || "").trim();
+        result = await supabaseClient.auth.signUp({
+          email, password,
+          options: {
+            data: { full_name: name || email.split("@")[0] },
+            emailRedirectTo: window.location.origin + window.location.pathname,
+          },
+        });
+      } else {
+        result = await supabaseClient.auth.signInWithPassword({ email, password });
+      }
 
-    if (submitBtn) submitBtn.disabled = false;
-    if (result.error) return showAuthError(result.error.message);
+      if (result.error) return showAuthError(result.error.message);
 
-    if (authModalTab === "signup" && result.data?.user && !result.data.session) {
-      // Email confirmation is enabled in Supabase — auto-login instead
-      const loginResult = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (loginResult.error) {
-        showAuthError("Account created! Check your email to confirm, then log in.");
+      if (authModalTab === "signup" && result.data?.user && !result.data.session) {
+        showAuthError("Check your email to confirm your account, then log in.");
         authModalTab = "login";
         syncAuthModalTab();
         return;
       }
+      closeAuthModal();
+    } finally {
+      authRequestInFlight = false;
+      if (submitBtn) submitBtn.disabled = false;
     }
-    closeAuthModal();
   }
 
   async function handleGoogleAuth() {
+    if (authRequestInFlight) return;
     if (!supabaseClient) return showAuthError("Supabase not configured. Set your anon key in config.js.");
-    const redirectTo = window.location.origin + window.location.pathname.replace(/\/$/, "");
-    const { error } = await supabaseClient.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo,
-        queryParams: { prompt: "select_account" },
-      },
-    });
-    if (error) showAuthError(error.message);
+    const googleBtn = $("auth-google");
+    authRequestInFlight = true;
+    if (googleBtn) googleBtn.disabled = true;
+    try {
+      const redirectTo = window.location.origin + window.location.pathname.replace(/\/$/, "");
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: { prompt: "select_account" },
+        },
+      });
+      if (error) showAuthError(error.message);
+    } finally {
+      authRequestInFlight = false;
+      if (googleBtn) googleBtn.disabled = false;
+    }
   }
 
   async function handleSignOut() {

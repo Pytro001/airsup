@@ -10,6 +10,10 @@
  * 3) Supabase → Authentication → URL Configuration: Site URL = your app origin (e.g. https://yoursite.com or http://localhost:5500).
  *    Add the same origin(s) under Redirect URLs.
  *
+ * Instant email signup (no “wait 20 seconds” / no inbox step):
+ * - Authentication → Providers → Email: turn OFF “Confirm email”.
+ * - Authentication → Rate Limits: lower “Signup confirmation” / OTP periods if you still see cooldowns while testing.
+ *
  * Dev-only fallback: if the key is still the placeholder, you can set
  * localStorage.setItem("airsup_supabase_anon_key", "<anon key>") in the browser console, then reload.
  */

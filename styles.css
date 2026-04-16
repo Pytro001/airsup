@@ -389,6 +389,9 @@ img { max-width: 100%; display: block; }
   transition: background 0.15s, border-color 0.15s;
 }
 .auth-social-btn:hover { background: var(--bg-subtle); border-color: var(--text-soft); }
+.auth-submit:disabled, .auth-social-btn:disabled {
+  opacity: 0.55; cursor: not-allowed; pointer-events: none;
+}
 
 @media (max-width: 640px) {
   .header-nav { gap: 0; margin-left: 12px; }
