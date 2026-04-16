@@ -324,6 +324,13 @@ img { max-width: 100%; display: block; }
 }
 
 /* ===== Settings ===== */
+.settings-hint { color: var(--text-muted); font-size: 15px; }
+.settings-banner {
+  font-size: 14px; color: var(--text-muted); margin-bottom: 20px; padding: 12px 14px;
+  background: var(--primary-light); border-radius: var(--radius-sm); line-height: 1.45;
+}
+.settings-banner code { font-size: 12px; }
+.settings-saved { font-size: 14px; color: var(--primary); margin: 12px 0 0; font-weight: 600; }
 .settings-section { margin-bottom: 32px; }
 .settings-section-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
 .settings-field { margin-bottom: 16px; }

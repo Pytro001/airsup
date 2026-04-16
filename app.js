@@ -31,6 +31,31 @@
 
   supabaseClient = initSupabase();
 
+  /** Sync auth user into public.profiles + public.user_settings (RLS allows own row). */
+  async function syncUserProfileFromAuth(user) {
+    if (!supabaseClient || !user) return;
+    const meta = user.user_metadata || {};
+    const displayName = String(
+      meta.full_name || meta.name || meta.preferred_username || user.email?.split("@")[0] || ""
+    ).trim() || "User";
+    const letter = displayName.charAt(0).toUpperCase();
+
+    const { error: pe } = await supabaseClient.from("profiles").upsert(
+      { id: user.id, display_name: displayName, avatar_letter: letter },
+      { onConflict: "id" }
+    );
+    if (pe) console.warn("[Airsup] profiles sync:", pe);
+
+    const { error: se } = await supabaseClient.from("user_settings").upsert(
+      { user_id: user.id, email: user.email || "", preferred_name: displayName },
+      { onConflict: "user_id" }
+    );
+    if (se) console.warn("[Airsup] user_settings sync:", se);
+
+    currentUser = { id: user.id, email: user.email, displayName };
+    updateAuthUI();
+  }
+
   /* ── State ── */
   let currentUser = null;
   let currentView = "landing";
@@ -44,6 +69,14 @@
     const d = document.createElement("div");
     d.textContent = s;
     return d.innerHTML;
+  }
+
+  function escapeAttr(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/"/g, "&quot;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
 
   function simpleMarkdown(text) {
@@ -149,11 +182,14 @@
       if (result.error) return showAuthError(result.error.message);
 
       if (authModalTab === "signup" && result.data?.user && !result.data.session) {
-        showAuthError("Check your email to confirm your account, then log in.");
+        showAuthError(
+          "Email confirmation is still on in Supabase. Turn off “Confirm email” under Authentication → Providers → Email, then try again."
+        );
         authModalTab = "login";
         syncAuthModalTab();
         return;
       }
+      if (result.data?.session?.user) await syncUserProfileFromAuth(result.data.session.user);
       closeAuthModal();
     } finally {
       authRequestInFlight = false;
@@ -212,14 +248,14 @@
     if (!supabaseClient) return;
     supabaseClient.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        currentUser = {
-          id: session.user.id,
-          email: session.user.email,
-          displayName: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "",
-        };
-        updateAuthUI();
-        if (currentView === "landing") setView("chat");
-        if (pendingAuthCallback) { const cb = pendingAuthCallback; pendingAuthCallback = null; cb(); }
+        syncUserProfileFromAuth(session.user).then(() => {
+          if (currentView === "landing") setView("chat");
+          if (pendingAuthCallback) {
+            const cb = pendingAuthCallback;
+            pendingAuthCallback = null;
+            cb();
+          }
+        });
       } else if (event === "SIGNED_OUT") {
         currentUser = null;
         updateAuthUI();
@@ -243,13 +279,7 @@
 
     const { data } = await supabaseClient.auth.getSession();
     if (data?.session?.user) {
-      const u = data.session.user;
-      currentUser = {
-        id: u.id,
-        email: u.email,
-        displayName: u.user_metadata?.full_name || u.email?.split("@")[0] || "",
-      };
-      updateAuthUI();
+      await syncUserProfileFromAuth(data.session.user);
       setView("chat");
     }
   }
@@ -268,6 +298,147 @@
     if (name === "chat") loadChatHistory();
     if (name === "projects") loadProjects();
     if (name === "connections") loadConnections();
+    if (name === "settings") loadSettings();
+  }
+
+  async function loadSettings() {
+    const root = $("settings-root");
+    if (!root) return;
+    if (!currentUser || !supabaseClient) {
+      root.innerHTML = '<p class="settings-hint">Log in to manage your profile.</p>';
+      return;
+    }
+
+    root.innerHTML = '<p class="settings-hint">Loading…</p>';
+
+    const { data: profile, error: pErr } = await supabaseClient
+      .from("profiles")
+      .select("display_name, company, location, headline, bio, phone")
+      .eq("id", currentUser.id)
+      .maybeSingle();
+
+    const { data: settings, error: sErr } = await supabaseClient
+      .from("user_settings")
+      .select("email, phone, company, timezone")
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+
+    if (pErr || sErr) {
+      root.innerHTML = '<p class="settings-hint">Could not load settings. Check that migrations ran in Supabase.</p>';
+      console.warn("[Airsup] settings load:", pErr || sErr);
+      return;
+    }
+
+    const email = settings?.email || currentUser.email || "";
+    const displayName = profile?.display_name || currentUser.displayName || "";
+    const company = profile?.company || settings?.company || "";
+    const phone = profile?.phone || settings?.phone || "";
+    const location = profile?.location || "";
+    const headline = profile?.headline || "";
+    const bio = profile?.bio || "";
+    const timezone = settings?.timezone || "Europe/Berlin";
+
+    root.innerHTML = `
+      <div class="settings-section">
+        <p class="settings-banner">Your profile is stored in Supabase (<code>profiles</code> & <code>user_settings</code>).</p>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-display-name">Display name</label>
+          <input type="text" id="settings-display-name" class="settings-input" value="${escapeAttr(displayName)}" maxlength="200" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-email">Email</label>
+          <input type="email" id="settings-email" class="settings-input" value="${escapeAttr(email)}" readonly />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-company">Company</label>
+          <input type="text" id="settings-company" class="settings-input" value="${escapeAttr(company)}" maxlength="200" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-phone">Phone</label>
+          <input type="tel" id="settings-phone" class="settings-input" value="${escapeAttr(phone)}" maxlength="40" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-location">Location</label>
+          <input type="text" id="settings-location" class="settings-input" value="${escapeAttr(location)}" maxlength="200" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-headline">Headline</label>
+          <input type="text" id="settings-headline" class="settings-input" value="${escapeAttr(headline)}" maxlength="300" />
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-bio">Bio</label>
+          <textarea id="settings-bio" class="settings-input" rows="3" maxlength="2000">${escapeHtml(bio)}</textarea>
+        </div>
+        <div class="settings-field">
+          <label class="settings-label" for="settings-timezone">Timezone</label>
+          <input type="text" id="settings-timezone" class="settings-input" value="${escapeAttr(timezone)}" maxlength="80" placeholder="e.g. Europe/Berlin" />
+        </div>
+        <p class="settings-saved" id="settings-saved" hidden>Saved to Supabase.</p>
+        <button type="button" class="btn-primary" id="settings-save">Save changes</button>
+      </div>`;
+
+    $("settings-save")?.addEventListener("click", saveSettings);
+  }
+
+  async function saveSettings() {
+    if (!currentUser || !supabaseClient) return;
+    const displayName = ($("settings-display-name")?.value || "").trim();
+    const company = ($("settings-company")?.value || "").trim();
+    const phone = ($("settings-phone")?.value || "").trim();
+    const location = ($("settings-location")?.value || "").trim();
+    const headline = ($("settings-headline")?.value || "").trim();
+    const bio = ($("settings-bio")?.value || "").trim();
+    const timezone = ($("settings-timezone")?.value || "").trim() || "Europe/Berlin";
+
+    const letter = (displayName || currentUser.displayName || "?").charAt(0).toUpperCase();
+
+    const { error: pe } = await supabaseClient.from("profiles").upsert(
+      {
+        id: currentUser.id,
+        display_name: displayName || currentUser.displayName,
+        avatar_letter: letter,
+        company,
+        phone,
+        location,
+        headline,
+        bio,
+      },
+      { onConflict: "id" }
+    );
+
+    const { error: se } = await supabaseClient
+      .from("user_settings")
+      .upsert(
+        {
+          user_id: currentUser.id,
+          email: currentUser.email || "",
+          company,
+          phone,
+          timezone,
+          preferred_name: displayName || currentUser.displayName,
+        },
+        { onConflict: "user_id" }
+      );
+
+    const saved = $("settings-saved");
+    if (pe || se) {
+      if (saved) {
+        saved.hidden = false;
+        saved.textContent = "Could not save. " + (pe?.message || se?.message || "Unknown error");
+        saved.style.color = "#d93025";
+      }
+      console.warn("[Airsup] save settings:", pe || se);
+      return;
+    }
+
+    currentUser.displayName = displayName || currentUser.displayName;
+    updateAuthUI();
+    if (saved) {
+      saved.hidden = false;
+      saved.textContent = "Saved to Supabase.";
+      saved.style.color = "";
+      setTimeout(() => { saved.hidden = true; }, 3000);
+    }
   }
 
   /* ── Chat ── */
