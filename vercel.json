@@ -1,7 +1,7 @@
 {
   "outputDirectory": ".",
   "buildCommand": "cd server && npm install && npx tsc",
-  "installCommand": "npm install && cd server && npm install",
+  "installCommand": "npm install",
   "functions": {
     "api/index.ts": {
       "includeFiles": "server/dist/**,server/node_modules/**",

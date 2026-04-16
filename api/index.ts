@@ -10,6 +10,21 @@ import { whatsappWebhookRouter } from "../server/dist/routes/webhooks/whatsapp.j
 import { stripeWebhookRouter } from "../server/dist/routes/webhooks/stripe.js";
 
 const app = express();
+// #region agent log
+fetch("http://127.0.0.1:7803/ingest/440abadd-e42c-4ad6-b3c7-7a5e0395097a", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a202bb" },
+  body: JSON.stringify({
+    sessionId: "a202bb",
+    hypothesisId: "H2",
+    location: "api/index.ts:module",
+    message: "api_module_loaded",
+    data: { ok: true },
+    timestamp: Date.now(),
+    runId: "post-fix",
+  }),
+}).catch(() => {});
+// #endregion
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "1mb" }));
 
