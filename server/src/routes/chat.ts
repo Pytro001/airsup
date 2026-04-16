@@ -7,21 +7,10 @@ import { runIntakeAgent, loadContext, INIT_SYSTEM_INSTRUCTION } from "../agents/
 
 export const chatRouter = Router();
 
-// #region agent log
-function debugLog(location: string, message: string, data: Record<string, unknown>, hypothesisId: string): void {
-  fetch("http://127.0.0.1:7803/ingest/440abadd-e42c-4ad6-b3c7-7a5e0395097a", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a202bb" },
-    body: JSON.stringify({ sessionId: "a202bb", location, message, data, timestamp: Date.now(), hypothesisId }),
-  }).catch(() => {});
-}
-// #endregion
-
 chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
 
   try {
-    debugLog("chat.ts:POST/init", "enter", { userIdLen: userId.length }, "H5");
     const { data: existing } = await supabaseAdmin
       .from("conversations")
       .select("id")
@@ -30,7 +19,6 @@ chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) =>
       .limit(1);
 
     if (existing && existing.length > 0) {
-      debugLog("chat.ts:POST/init", "already_initialized", { count: existing.length }, "H3");
       res.json({ already_initialized: true });
       return;
     }
@@ -50,11 +38,9 @@ chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) =>
       metadata: { options: options || null, action: action || null },
     });
 
-    debugLog("chat.ts:POST/init", "success", { replyLen: reply?.length ?? 0, hasOptions: !!options?.length }, "H5");
     res.json({ reply, options: options || null, action: action || null });
   } catch (err) {
     console.error("[Airsup] chat init error:", err);
-    debugLog("chat.ts:POST/init", "catch", { err: String(err) }, "H5");
     res.status(500).json({ error: "Failed to initialize chat." });
   }
 });
@@ -69,18 +55,13 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    let historyQuery = supabaseAdmin
-      .from("conversations")
-      .select("role, content")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true })
-      .limit(50);
+    let historyQuery = supabaseAdmin.from("conversations").select("role, content").eq("user_id", userId);
     if (project_id) {
       historyQuery = historyQuery.eq("project_id", project_id);
     } else {
       historyQuery = historyQuery.is("project_id", null);
     }
-    const { data: history } = await historyQuery;
+    const { data: history } = await historyQuery.order("created_at", { ascending: true }).limit(50);
 
     const conversationHistory: MessageParam[] = (history || []).map((row) => ({
       role: row.role as "user" | "assistant",
@@ -175,27 +156,18 @@ chatRouter.post("/ask", requireAuth, async (req: AuthRequest, res: Response) => 
 chatRouter.get("/history", requireAuth, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
   const projectId = req.query.project_id as string | undefined;
-  debugLog("chat.ts:GET/history", "enter", { hasProjectId: !!projectId }, "H1");
 
-  const query = supabaseAdmin
-    .from("conversations")
-    .select("id, role, content, metadata, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(100);
-
+  let q = supabaseAdmin.from("conversations").select("id, role, content, metadata, created_at").eq("user_id", userId);
   if (projectId) {
-    query.eq("project_id", projectId);
+    q = q.eq("project_id", projectId);
   } else {
-    query.is("project_id", null);
+    q = q.is("project_id", null);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await q.order("created_at", { ascending: true }).limit(100);
   if (error) {
-    debugLog("chat.ts:GET/history", "query_error", { err: error.message }, "H1");
     res.status(500).json({ error: error.message });
     return;
   }
-  debugLog("chat.ts:GET/history", "ok", { count: (data || []).length }, "H2");
   res.json({ messages: data || [] });
 });

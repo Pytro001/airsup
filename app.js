@@ -75,17 +75,6 @@
     return `<p>${html}</p>`;
   }
 
-  // #region agent log
-  function debugLog(location, message, data, hypothesisId) {
-    try { console.info("[AIRSUP_DEBUG]", location, message, data, hypothesisId); } catch (_) {}
-    fetch("http://127.0.0.1:7803/ingest/440abadd-e42c-4ad6-b3c7-7a5e0395097a", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a202bb" },
-      body: JSON.stringify({ sessionId: "a202bb", location, message, data: data || {}, timestamp: Date.now(), hypothesisId }),
-    }).catch(function () {});
-  }
-  // #endregion
-
   async function apiCall(path, opts = {}) {
     const token = (await supabaseClient?.auth.getSession())?.data?.session?.access_token;
     const res = await fetch(`${API_BASE}${path}`, {
@@ -368,7 +357,7 @@
     }, { onConflict: "user_id" });
 
     if (d.role === "supplier") {
-      await supabaseClient.from("factories").upsert({
+      const facPayload = {
         user_id: currentUser.id,
         name: d.companyName,
         location: d.location,
@@ -376,12 +365,22 @@
         capabilities: { description: d.capabilities, certifications: d.certifications, moq: d.moq },
         contact_info: { name: d.fullName, email: d.email, phone: d.phone },
         active: true,
-      }, { onConflict: "user_id" });
+      };
+      const { data: facRow } = await supabaseClient.from("factories").select("id").eq("user_id", currentUser.id).maybeSingle();
+      if (facRow?.id) await supabaseClient.from("factories").update(facPayload).eq("id", facRow.id);
+      else await supabaseClient.from("factories").insert(facPayload);
     } else {
-      await supabaseClient.from("companies").upsert({
-        user_id: currentUser.id, name: d.companyName, industry: d.industry, location: d.location,
+      const coPayload = {
+        user_id: currentUser.id,
+        name: d.companyName || "",
+        industry: d.industry || "",
+        location: d.location || "",
+        description: "",
         ai_knowledge: { role: d.role, product_type: d.productType, quantity: d.quantity, timeline: d.timeline, onboarded_at: new Date().toISOString() },
-      }, { onConflict: "user_id" });
+      };
+      const { data: coRow } = await supabaseClient.from("companies").select("id").eq("user_id", currentUser.id).maybeSingle();
+      if (coRow?.id) await supabaseClient.from("companies").update(coPayload).eq("id", coRow.id);
+      else await supabaseClient.from("companies").insert(coPayload);
     }
     currentUser.displayName = displayName;
     updateAuthUI();
@@ -539,19 +538,10 @@
 
   async function loadChatHistory() {
     const container = $("chat-messages");
-    // #region agent log
-    const sess = await supabaseClient?.auth.getSession();
-    debugLog("app.js:loadChatHistory", "enter", {
-      apiBaseLen: (API_BASE || "").length,
-      hasToken: !!sess?.data?.session?.access_token,
-      hasUser: !!currentUser,
-    }, "H4");
-    // #endregion
+    if (!container) return;
+    if (!(await ensureSession())) return;
     try {
       const { messages } = await apiCall("/api/chat/history");
-      // #region agent log
-      debugLog("app.js:loadChatHistory", "history_ok", { messageCount: messages?.length ?? -1 }, "H2");
-      // #endregion
       if (messages?.length) {
         container.innerHTML = "";
         messages.forEach((m) => appendMessage(m.role, m.content, m.metadata));
@@ -563,14 +553,6 @@
           const data = await apiCall("/api/chat/init", { method: "POST" });
           hideTyping();
           document.querySelectorAll(".chat-status").forEach((el) => el.remove());
-          // #region agent log
-          debugLog("app.js:loadChatHistory", "init_response", {
-            hasReply: !!(data && data.reply),
-            replyLen: data && data.reply ? String(data.reply).length : 0,
-            alreadyInit: !!(data && data.already_initialized),
-            hasOptions: !!(data && data.options && data.options.length),
-          }, "H3");
-          // #endregion
           if (data.reply) {
             appendMessage("assistant", data.reply, { options: data.options, action: data.action });
           } else if (data.already_initialized) {
@@ -583,16 +565,17 @@
           hideTyping();
           document.querySelectorAll(".chat-status").forEach((el) => el.remove());
           console.error("[Airsup] chat init error:", initErr);
-          // #region agent log
-          debugLog("app.js:loadChatHistory", "init_catch", { err: String(initErr && initErr.message) }, "H5");
-          // #endregion
           appendMessage("assistant", "Could not start the conversation. (" + (initErr.message || "Unknown error") + ")\n\nMake sure the ANTHROPIC_API_KEY environment variable is set in your Vercel project settings.");
         }
       }
     } catch (outerErr) {
-      // #region agent log
-      debugLog("app.js:loadChatHistory", "outer_catch", { err: String(outerErr && outerErr.message) }, "H1");
-      // #endregion
+      hideTyping();
+      $("chat-typing")?.remove();
+      document.querySelectorAll(".chat-status").forEach((el) => el.remove());
+      $("chat-welcome")?.remove();
+      container.innerHTML = "";
+      console.error("[Airsup] loadChatHistory:", outerErr);
+      appendMessage("assistant", "Could not load chat (" + (outerErr.message || "unknown error") + "). If this persists, run the latest Supabase migration (008_conversations_metadata.sql) and refresh.");
     }
   }
 
