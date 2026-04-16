@@ -1,0 +1,14 @@
+{
+  "buildCommand": "cd server && npm install && npx tsc",
+  "installCommand": "cd server && npm install",
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "server/dist/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/webhooks/(.*)", "destination": "/api" },
+    { "source": "/health", "destination": "/api" }
+  ]
+}

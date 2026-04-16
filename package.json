@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "cd server && npm install && npx tsc",
+    "dev": "cd server && npm run dev"
+  },
+  "devDependencies": {
+    "@vercel/node": "^5.0.0"
+  }
+}

@@ -3,448 +3,167 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Find the right factory</title>
+  <title>Airsup — AI Manufacturing Sourcing</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="header header--home header--home-expanded" id="site-header">
-    <div class="header-shell" id="header-shell">
-      <div class="header-nav-row">
-        <div class="header-left">
-          <button type="button" id="logo-home" class="site-logo" aria-label="Airsup home">
-            <img
-              src="assets/brand/logo-air-sup.png?v=2"
-              width="1024"
-              height="365"
-              alt="Airsup"
-            />
-          </button>
-        </div>
-
-        <nav class="host-nav" id="host-nav" aria-label="Supplier dashboard" hidden>
-          <button type="button" class="host-nav-link active" data-supplier-tab="today">Today</button>
-          <button type="button" class="host-nav-link" data-supplier-tab="calendar">Calendar</button>
-          <button type="button" class="host-nav-link" data-supplier-tab="listing">Listing</button>
-          <button type="button" class="host-nav-link" data-supplier-tab="messages">Messages</button>
-        </nav>
-
-        <div class="header-right">
-          <button type="button" class="nav-text" id="nav-messages">Messages</button>
-          <button type="button" class="nav-switch" id="mode-switch-link"></button>
-          <div class="header-user-wrap" id="header-user-wrap">
-            <button
-              type="button"
-              class="user-menu"
-              id="user-menu-trigger"
-              aria-label="Account menu"
-              aria-expanded="false"
-              aria-haspopup="true"
-              aria-controls="user-menu-dropdown"
-            >
-              <span class="user-menu-icon" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 5h12M2 8h12M2 11h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
-                </svg>
-              </span>
-              <span class="user-avatar" aria-hidden="true">A</span>
-            </button>
-            <div id="user-menu-dropdown" class="account-dropdown" role="menu" hidden>
-              <!-- Logged-out items -->
-              <div class="account-dropdown-section dropdown-logged-out">
-                <button type="button" class="account-dropdown-item account-dropdown-item--bold account-dropdown-item--text-only" role="menuitem" id="account-menu-login">
-                  Log in
-                </button>
-                <button type="button" class="account-dropdown-item account-dropdown-item--text-only" role="menuitem" id="account-menu-signup">
-                  Sign up
-                </button>
-              </div>
-              <div class="account-dropdown-divider dropdown-logged-out" role="presentation"></div>
-              <div class="account-dropdown-section dropdown-logged-out">
-                <button type="button" class="account-dropdown-item" role="menuitem" id="account-menu-help-out">
-                  <span class="account-dropdown-icon" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
-                  </span>
-                  Help
-                </button>
-              </div>
-
-              <!-- Logged-in items -->
-              <div class="account-dropdown-section dropdown-logged-in" hidden>
-                <button type="button" class="account-dropdown-item" role="menuitem" id="account-menu-saved">
-                  <span class="account-dropdown-icon" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-                  </span>
-                  Saved manufacturers
-                </button>
-                <button type="button" class="account-dropdown-item" role="menuitem" id="account-menu-profile">
-                  <span class="account-dropdown-icon" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                  </span>
-                  Profile
-                </button>
-              </div>
-              <div class="account-dropdown-divider dropdown-logged-in" hidden role="presentation"></div>
-              <div class="account-dropdown-section dropdown-logged-in" hidden>
-                <button type="button" class="account-dropdown-item" role="menuitem" id="account-menu-settings">
-                  <span class="account-dropdown-icon" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                  </span>
-                  Settings
-                </button>
-                <button type="button" class="account-dropdown-item" role="menuitem" id="account-menu-help">
-                  <span class="account-dropdown-icon" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
-                  </span>
-                  Help
-                </button>
-              </div>
-              <div class="account-dropdown-divider dropdown-logged-in" hidden role="presentation"></div>
-              <div class="account-dropdown-section dropdown-logged-in" hidden>
-                <button type="button" class="account-dropdown-item account-dropdown-item--signout" role="menuitem" id="account-menu-signout">
-                  <span class="account-dropdown-icon" aria-hidden="true">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-                  </span>
-                  Log out
-                </button>
-              </div>
-            </div>
+  <!-- ── Header ── -->
+  <header class="header" id="site-header">
+    <div class="header-inner">
+      <button type="button" id="logo-home" class="site-logo" aria-label="Home">
+        <img src="assets/brand/logo-air-sup.png" alt="Airsup" />
+      </button>
+      <nav class="header-nav" id="header-nav">
+        <button type="button" class="nav-link active" data-view="chat">Chat</button>
+        <button type="button" class="nav-link" data-view="projects">Projects</button>
+        <button type="button" class="nav-link" data-view="connections">Connections</button>
+      </nav>
+      <div class="header-right">
+        <button type="button" class="avatar-btn" id="user-menu-trigger" aria-label="Account menu">
+          <span class="avatar-letter" id="avatar-letter">?</span>
+        </button>
+        <div class="dropdown" id="user-menu-dropdown" hidden>
+          <div id="dropdown-logged-out">
+            <button type="button" class="dropdown-item" id="menu-login">Log in</button>
+            <button type="button" class="dropdown-item" id="menu-signup">Sign up</button>
           </div>
-        </div>
-      </div>
-
-      <div class="header-search-slot">
-        <div class="search-wrap" id="header-search">
-          <div class="search-bar" id="search-bar" role="search">
-            <div class="search-field-with-dropdown" id="what-field-combobox">
-              <div class="search-field-wrap search-field-first">
-                <span class="field-label" id="search-what-label">What</span>
-                <input
-                  class="field-input"
-                  id="search-what"
-                  type="text"
-                  placeholder="Search products or capabilities"
-                  autocomplete="off"
-                  role="combobox"
-                  aria-expanded="false"
-                  aria-controls="what-suggestions"
-                  aria-autocomplete="list"
-                />
-              </div>
-              <div
-                id="what-suggestions"
-                class="search-suggestions"
-                role="listbox"
-                aria-labelledby="suggestions-heading"
-                hidden
-              >
-                <p class="search-suggestions-heading" id="suggestions-heading">What do you want to make?</p>
-                <div id="what-suggestions-list"></div>
-              </div>
-            </div>
-            <div class="search-field-with-dropdown" id="region-field-combobox">
-              <div class="search-field-wrap search-field-last region-field-wrap">
-                <span class="field-label" id="region-field-label">Region</span>
-                <button
-                  type="button"
-                  class="region-field-trigger"
-                  id="region-field-trigger"
-                  aria-expanded="false"
-                  aria-haspopup="dialog"
-                  aria-controls="region-popover"
-                >
-                  <span class="region-field-value region-field-value--placeholder" id="region-field-summary">Add regions</span>
-                </button>
-              </div>
-              <div
-                id="region-popover"
-                class="region-popover"
-                role="dialog"
-                aria-labelledby="region-popover-title"
-                hidden
-              >
-                <h2 class="sr-only" id="region-popover-title">Where are you sourcing from?</h2>
-                <div id="region-popover-list" class="region-popover-list"></div>
-              </div>
-            </div>
-            <div class="search-btn-wrap">
-              <button type="button" class="search-btn" id="search-submit" aria-label="Search">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                  <circle cx="7.5" cy="7.5" r="5.5" stroke="white" stroke-width="2" />
-                  <path d="M11.5 11.5L16 16" stroke="white" stroke-width="2" stroke-linecap="round" />
-                </svg>
-              </button>
-            </div>
+          <div id="dropdown-logged-in" hidden>
+            <button type="button" class="dropdown-item" id="menu-settings">Settings</button>
+            <button type="button" class="dropdown-item" id="menu-signout">Log out</button>
           </div>
         </div>
       </div>
     </div>
   </header>
 
+  <!-- ── Pages ── -->
   <main>
-    <div id="page-home" class="page active">
-      <div class="section">
-        <div class="section-header">
-          <h1 class="section-title" id="grid-title">Top manufacturers</h1>
-          <button type="button" class="show-all-btn" id="show-all-btn">Show all</button>
-        </div>
-        <div class="factory-grid" id="factory-grid"></div>
-      </div>
-    </div>
-
-    <div id="page-saved" class="page">
-      <div class="section">
-        <div class="section-header">
-          <h1 class="section-title">Saved manufacturers</h1>
-        </div>
-        <div id="saved-root"></div>
-      </div>
-    </div>
-
-    <div id="page-detail" class="page">
-      <div class="detail-shell" id="detail-root"></div>
-    </div>
-
-    <div id="page-profile" class="page">
-      <div class="profile-shell" id="profile-root"></div>
-    </div>
-
-    <div id="page-settings" class="page">
-      <div class="settings-shell" id="settings-root"></div>
-    </div>
-
-    <div id="page-supplier" class="page">
-      <div class="supplier-dashboard">
-        <div id="supplier-panel-today" class="supplier-panel active" role="tabpanel">
-          <div class="dashboard-hero">
-            <h1 class="dashboard-title">Today</h1>
-            <p class="dashboard-lead">Overview of inquiries and what to do next for your factory.</p>
+    <!-- Landing (shown when not logged in) -->
+    <section class="page active" id="page-landing">
+      <div class="landing">
+        <div class="landing-content">
+          <div class="beta-badge">Beta — all features free</div>
+          <h1 class="landing-title">Tell us what you need manufactured.<br/>We handle the rest.</h1>
+          <p class="landing-sub">Our AI learns your business, finds the right factories, negotiates pricing, and connects you — only when there's a real match.</p>
+          <div class="landing-cta">
+            <button type="button" class="btn-primary btn-lg" id="landing-start">Get started</button>
           </div>
-          <div class="dashboard-stats">
-            <div class="stat-card">
-              <span class="stat-value">3</span>
-              <span class="stat-label">New buyer messages</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-value">2</span>
-              <span class="stat-label">Awaiting your reply</span>
-            </div>
-            <div class="stat-card">
-              <span class="stat-value">12</span>
-              <span class="stat-label">Profile views (7 days)</span>
-            </div>
-          </div>
-          <section class="dashboard-section">
-            <h2 class="dashboard-section-title">Needs attention</h2>
-            <ul class="attention-list">
-              <li class="attention-item">
-                <span class="attention-dot" aria-hidden="true"></span>
-                <div>
-                  <strong>Wei Chen</strong> asked about MOQ for a new IoT board — replied 2 days ago, waiting on your answer.
-                </div>
-              </li>
-              <li class="attention-item">
-                <span class="attention-dot attention-dot-warn" aria-hidden="true"></span>
-                <div>
-                  <strong>Lin Yao</strong> sent drawings for CNC parts — <button type="button" class="link-inline" id="dash-open-thread-2">Open thread</button>
-                </div>
-              </li>
-            </ul>
-          </section>
-          <section class="dashboard-section">
-            <h2 class="dashboard-section-title">Quick actions</h2>
-            <div class="quick-actions">
-              <button type="button" class="quick-action-btn" data-supplier-tab="listing">Update listing &amp; MOQ</button>
-              <button type="button" class="quick-action-btn" data-supplier-tab="calendar">Check production window</button>
-              <button type="button" class="quick-action-btn" data-supplier-tab="messages">Go to inbox</button>
-            </div>
-          </section>
-        </div>
-
-        <div id="supplier-panel-calendar" class="supplier-panel" role="tabpanel">
-          <div class="calendar-toolbar">
-            <div class="calendar-month">
-              <span class="calendar-month-label">April 2026</span>
-              <button type="button" class="calendar-chev" aria-label="Previous month">‹</button>
-              <button type="button" class="calendar-chev" aria-label="Next month">›</button>
-            </div>
-            <div class="calendar-view-toggle">
-              <span class="calendar-view-pill">Week</span>
-            </div>
-          </div>
-          <p class="calendar-hint">Plan follow-ups and production blocks. Buyers only see what you commit to in messages — this calendar is for your team.</p>
-          <div class="calendar-surface" aria-hidden="true">
-            <div class="calendar-week-head">
-              <span class="cal-time-gutter"></span>
-              <span class="calendar-day-col"><span class="cal-dow">Sun</span><span class="cal-dom">12</span></span>
-              <span class="calendar-day-col"><span class="cal-dow">Mon</span><span class="cal-dom">13</span></span>
-              <span class="calendar-day-col cal-today"><span class="cal-dow">Tue</span><span class="cal-dom">14</span></span>
-              <span class="calendar-day-col"><span class="cal-dow">Wed</span><span class="cal-dom">15</span></span>
-              <span class="calendar-day-col"><span class="cal-dow">Thu</span><span class="cal-dom">16</span></span>
-              <span class="calendar-day-col"><span class="cal-dow">Fri</span><span class="cal-dom">17</span></span>
-              <span class="calendar-day-col"><span class="cal-dow">Sat</span><span class="cal-dom">18</span></span>
-            </div>
-            <div class="calendar-body-grid">
-              <div class="cal-body-row"><span class="cal-hour">6 AM</span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span></div>
-              <div class="cal-body-row"><span class="cal-hour">9 AM</span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span></div>
-              <div class="cal-body-row"><span class="cal-hour">12 PM</span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span></div>
-              <div class="cal-body-row"><span class="cal-hour">3 PM</span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span></div>
-              <div class="cal-body-row"><span class="cal-hour">6 PM</span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell"></span></div>
-            </div>
-          </div>
-          <p class="calendar-foot">Tip: Block time for sample runs and quote reviews so responses stay predictable for buyers.</p>
-        </div>
-
-        <div id="supplier-panel-listing" class="supplier-panel" role="tabpanel">
-          <div class="listing-header">
-            <h1 class="dashboard-title">Your listing</h1>
-            <p class="dashboard-lead">What buyers see when they discover your factory in search.</p>
-          </div>
-          <div class="listing-preview-card">
-            <div class="listing-preview-img" aria-hidden="true"></div>
-            <div class="listing-preview-body">
-              <p class="listing-preview-badge">Top Manufacturer</p>
-              <h2 class="listing-preview-name">Shenzhen ProTech Electronics</h2>
-              <p class="listing-preview-meta">Shenzhen, China · MOQ 500 units · 15-day lead time</p>
-              <p class="listing-preview-price">From $0.80 / unit</p>
-            </div>
-          </div>
-          <section class="dashboard-section">
-            <h2 class="dashboard-section-title">Listing checklist</h2>
-            <ul class="checklist">
-              <li class="checklist-done">Photos and capabilities</li>
-              <li class="checklist-done">MOQ and lead times</li>
-              <li class="checklist-pending">Verification documents (optional badge)</li>
-            </ul>
-          </section>
-          <div class="listing-actions">
-            <button type="button" class="cta-btn">Edit listing</button>
-            <button type="button" class="cta-btn cta-btn-outline">Preview as buyer</button>
-          </div>
-          <p class="dashboard-footer-link">
-            <button type="button" class="link-quiet" id="supplier-back-customer">Switch to customer view</button>
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div id="page-messages" class="page">
-      <div class="messages-app" id="messages-app">
-        <aside class="msg-sidebar" id="msg-sidebar">
-          <div class="msg-sidebar-head">
-            <h2 class="msg-sidebar-title">Messages</h2>
-          </div>
-          <div class="msg-filters">
-            <button type="button" class="pill-filter active" data-filter="all">All</button>
-            <button type="button" class="pill-filter" data-filter="unread">Unread</button>
-          </div>
-          <div class="msg-thread-list" id="msg-thread-list"></div>
-        </aside>
-
-        <section class="msg-main" id="msg-main">
-          <div class="msg-main-empty" id="msg-main-empty">
-            <p>Select a conversation</p>
-          </div>
-          <div class="msg-conversation" id="msg-conversation" hidden>
-            <header class="msg-thread-header">
-              <button type="button" class="btn-back-msg" id="btn-back-msg" aria-label="Back to inbox">← Inbox</button>
-              <div class="msg-thread-ident">
-                <span class="msg-thread-avatar" id="thread-avatar"></span>
-                <div>
-                  <div class="msg-thread-name" id="thread-name"></div>
-                  <div class="msg-thread-meta" id="thread-meta"></div>
-                </div>
+          <div class="landing-features">
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
               </div>
-              <button type="button" class="btn-outline-sm" id="btn-show-inquiry">Inquiry</button>
-            </header>
-            <div class="msg-scroll" id="msg-scroll">
-              <div class="msg-feed" id="msg-feed"></div>
+              <h3>AI that learns you</h3>
+              <p>Describe your project once. Our AI remembers everything about your business — forever.</p>
             </div>
-            <div class="msg-composer-wrap">
-              <p class="msg-response-hint" id="response-hint">
-                <span id="response-hint-text">Typical response time: 3 hours</span>
-              </p>
-              <div class="msg-composer">
-                <label class="sr-only" for="msg-input">Write a message</label>
-                <textarea id="msg-input" class="msg-input" rows="2" placeholder="Write a message…"></textarea>
-                <div class="msg-composer-actions">
-                  <button type="button" class="icon-btn composer-attach" aria-label="Add photos">
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="5" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><circle cx="7.5" cy="9.5" r="1.5" fill="currentColor"/><path d="M3 14l4-4 3 3 3-3 4 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  </button>
-                  <button type="button" class="send-btn" id="msg-send" aria-label="Send">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 9l14-6-6 14-2-6-6-2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-                  </button>
-                </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               </div>
+              <h3>Autonomous sourcing</h3>
+              <p>AI finds factories, briefs them on your project, and negotiates — you just wait for results.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <h3>Protected payments</h3>
+              <p>Escrow protects every transaction. If something goes wrong, you get refunded.</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <h3>Factory visit planner <span class="premium-tag">Premium</span></h3>
+              <p>AI plans optimized multi-factory visits — nearby locations grouped by day, no wasted travel.</p>
             </div>
           </div>
-        </section>
-
-        <aside class="msg-context" id="msg-context">
-          <div class="msg-context-head">
-            <h3 class="msg-context-title">Inquiry</h3>
-            <button type="button" class="icon-btn msg-context-close" id="context-close" aria-label="Close panel">×</button>
-          </div>
-          <div class="msg-context-body" id="context-body"></div>
-        </aside>
+        </div>
       </div>
-    </div>
+    </section>
+
+    <!-- Chat (main view when logged in) -->
+    <section class="page" id="page-chat">
+      <div class="chat-container">
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-welcome" id="chat-welcome">
+            <h2>Welcome to Airsup</h2>
+            <p>Tell me about your company and what you need manufactured. I'll find the right factories for you.</p>
+          </div>
+        </div>
+        <div class="chat-composer">
+          <div class="composer-inner">
+            <textarea class="composer-input" id="chat-input" rows="1" placeholder="Describe what you need…" autocomplete="off"></textarea>
+            <button type="button" class="composer-send" id="chat-send" aria-label="Send" disabled>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Projects -->
+    <section class="page" id="page-projects">
+      <div class="page-content">
+        <h1 class="page-title">Your projects</h1>
+        <p class="page-lead" id="projects-lead">Sourcing requests created from your conversations.</p>
+        <div id="projects-list" class="projects-grid"></div>
+      </div>
+    </section>
+
+    <!-- Connections -->
+    <section class="page" id="page-connections">
+      <div class="page-content">
+        <h1 class="page-title">Connections</h1>
+        <p class="page-lead">Factories matched to your projects. Each connection includes a summary and direct WhatsApp link.</p>
+        <div id="connections-list" class="connections-list"></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section class="page" id="page-settings">
+      <div class="page-content page-content--narrow">
+        <h1 class="page-title">Settings</h1>
+        <div id="settings-root"></div>
+      </div>
+    </section>
   </main>
 
-  <!-- Auth modal (Airbnb-style) -->
+  <!-- ── Auth modal ── -->
   <div id="auth-modal" class="auth-modal-backdrop" hidden>
-    <div class="auth-modal-panel" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-      <div class="auth-modal-head">
-        <button type="button" class="auth-modal-close" id="auth-modal-close" aria-label="Close">&times;</button>
-        <h2 class="auth-modal-title" id="auth-modal-title">Log in or sign up</h2>
+    <div class="auth-modal-panel" role="dialog" aria-modal="true" aria-label="Sign in or sign up">
+      <button type="button" class="auth-modal-close" id="auth-close" aria-label="Close">&times;</button>
+      <h2 class="auth-modal-title">Welcome to Airsup</h2>
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="auth-tab active" data-auth-tab="login" role="tab" aria-selected="true">Log in</button>
+        <button type="button" class="auth-tab" data-auth-tab="signup" role="tab" aria-selected="false">Sign up</button>
       </div>
-      <div class="auth-modal-body">
-        <div class="auth-tabs" role="tablist">
-          <button type="button" class="auth-tab active" data-auth-tab="login" role="tab" aria-selected="true">Log in</button>
-          <button type="button" class="auth-tab" data-auth-tab="signup" role="tab" aria-selected="false">Sign up</button>
+      <form id="auth-form" class="auth-form" autocomplete="on">
+        <div class="auth-field" id="auth-name-field" hidden>
+          <label for="auth-name">Full name</label>
+          <input type="text" id="auth-name" class="auth-input" autocomplete="name" />
         </div>
-        <form id="auth-form" class="auth-form" autocomplete="on">
-          <div id="auth-name-field" class="auth-field" hidden>
-            <label class="auth-label" for="auth-name">Full name</label>
-            <input class="auth-input" id="auth-name" type="text" autocomplete="name" placeholder="Your name" />
-          </div>
-          <div class="auth-field">
-            <label class="auth-label" for="auth-email">Email</label>
-            <input class="auth-input" id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required />
-          </div>
-          <div class="auth-field">
-            <label class="auth-label" for="auth-password">Password</label>
-            <input class="auth-input" id="auth-password" type="password" autocomplete="current-password" placeholder="Your password" minlength="6" required />
-          </div>
-          <p class="auth-error" id="auth-error" hidden></p>
-          <button type="submit" class="auth-submit" id="auth-submit">Continue</button>
-        </form>
-        <div class="auth-divider"><span>or</span></div>
-        <button type="button" class="auth-social-btn" id="auth-google">
-          <svg class="auth-social-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09a7.12 7.12 0 010-4.17V7.07H2.18A11.98 11.98 0 001 12c0 1.94.46 3.77 1.18 5.07l3.66-2.98z" fill="#FBBC05"/><path d="M12 5.38a6.49 6.49 0 014.6 1.8l3.44-3.44A11.5 11.5 0 0012 1 11.98 11.98 0 002.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Continue with Google
-        </button>
-        <button type="button" class="auth-social-btn auth-social-btn--disabled" disabled>
-          <svg class="auth-social-icon" viewBox="0 0 24 24" width="20" height="20"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="currentColor"/></svg>
-          Continue with Apple
-          <span class="auth-coming-soon">Coming soon</span>
-        </button>
-      </div>
+        <div class="auth-field">
+          <label for="auth-email">Email</label>
+          <input type="email" id="auth-email" class="auth-input" autocomplete="email" required />
+        </div>
+        <div class="auth-field">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" class="auth-input" autocomplete="current-password" required />
+        </div>
+        <p class="auth-error" id="auth-error" hidden></p>
+        <button type="submit" class="btn-primary auth-submit" id="auth-submit">Log in</button>
+      </form>
+      <div class="auth-divider"><span>or</span></div>
+      <button type="button" class="auth-social-btn" id="auth-google">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 010-9.18l-7.98-6.19a24.03 24.03 0 000 21.56l7.98-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Continue with Google
+      </button>
     </div>
   </div>
-
-  <footer class="footer">
-    <div class="footer-inner">
-      <div class="footer-links">
-        <a href="#" class="footer-link">About</a>
-        <a href="#" class="footer-link">How it works</a>
-        <a href="#" class="footer-link">Trust &amp; safety</a>
-        <a href="#" class="footer-link">Help</a>
-      </div>
-    </div>
-  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>

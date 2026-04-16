@@ -1,2 +1,7 @@
 .DS_Store
 *.log
+node_modules/
+config.local.js
+server/.env
+server/node_modules/
+server/dist/

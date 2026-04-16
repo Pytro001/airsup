@@ -17,8 +17,8 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
-create policy "Users can read own profile"
-  on public.profiles for select using (auth.uid() = id);
+create policy "Anyone can read profiles"
+  on public.profiles for select using (true);
 create policy "Users can update own profile"
   on public.profiles for update using (auth.uid() = id);
 create policy "Users can insert own profile"
@@ -89,13 +89,13 @@ create policy "Users can update own messages"
 
 -- 5. Suppliers (listings — seed demo data here; is_demo flag for cleanup)
 create table if not exists public.suppliers (
-  id int primary key,
+  id serial primary key,
   name text not null,
   location text not null,
   category text not null,
   moq text,
   lead_time text,
-  rating numeric(3,2) default 0,
+  rating numeric(4,2) default 0,
   reviews int default 0,
   badge text default '',
   price text default '',
@@ -113,6 +113,12 @@ alter table public.suppliers enable row level security;
 
 create policy "Anyone can read suppliers"
   on public.suppliers for select using (true);
+create policy "Authenticated users can insert own supplier"
+  on public.suppliers for insert with check (auth.uid()::text = profile_id);
+create policy "Users can update own supplier"
+  on public.suppliers for update using (auth.uid()::text = profile_id);
+create policy "Users can delete own supplier"
+  on public.suppliers for delete using (auth.uid()::text = profile_id);
 
 -- Seed demo factories
 insert into public.suppliers (id,name,location,category,moq,lead_time,rating,reviews,badge,price,img,tags,verified,response_hours,contact,profile_id,is_demo) values
