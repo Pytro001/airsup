@@ -220,7 +220,7 @@
      ONBOARDING — animated step-by-step
      ══════════════════════════════════════ */
   const ONBOARD_STEPS = [
-    { id: "role", type: "choices", title: "How would you describe yourself?", sub: "This helps us tailor the experience to your needs.",
+    { id: "role", type: "choices", title: "How would you describe yourself?", sub: "We'll connect you directly with the right engineer or designer at the factory — no sales people in between.",
       choices: [
         { value: "founder", label: "I'm a Founder / Business Owner" },
         { value: "procurement", label: "I work in Procurement" },
@@ -228,13 +228,13 @@
         { value: "engineer", label: "I'm an Engineer" },
         { value: "other", label: "Other" },
       ] },
-    { id: "company", type: "form", title: "Tell us about your company.", sub: "We'll remember this so you never have to repeat it.",
+    { id: "company", type: "form", title: "Tell us about your company.", sub: "The AI remembers everything — so the factory's engineer gets full context from day one.",
       fields: [
         { key: "companyName", label: "Company name", placeholder: "Acme Inc.", required: true },
         { key: "industry", label: "Industry", placeholder: "Consumer electronics, Fashion, etc." },
         { key: "location", label: "Location", placeholder: "Berlin, Germany" },
       ] },
-    { id: "needs", type: "form", title: "What do you need manufactured?", sub: "Be as specific or vague as you want — the AI will ask follow-ups.",
+    { id: "needs", type: "form", title: "What do you need manufactured?", sub: "Be as specific or vague as you want. The goal is to get you a first drawing or sample as fast as possible.",
       fields: [
         { key: "productType", label: "Product type", placeholder: "Custom PCBs, Injection-molded parts, Apparel…", required: true },
         { row: [
@@ -242,7 +242,7 @@
           { key: "timeline", label: "Timeline", placeholder: "Q3 2026" },
         ]},
       ] },
-    { id: "contact", type: "form", title: "Last step — how can we reach you?", sub: "Your info is stored securely and never shared without your consent.",
+    { id: "contact", type: "form", title: "Last step — how can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { row: [
           { key: "fullName", label: "Full name", placeholder: "Jane Doe", required: true },
@@ -264,7 +264,7 @@
       stage.innerHTML = `
         <div class="onboard-question">
           <h1 class="onboard-title">You're all set.</h1>
-          <p class="onboard-sub">Our AI now knows your business. Start a conversation and we'll find the right factories for you.</p>
+          <p class="onboard-sub">Our AI now knows your business. We'll find the right factory and connect you directly with the engineer who'll work on your product — no sales middleman.</p>
           <div class="onboard-actions">
             <button type="button" class="btn-primary btn-lg" id="onboard-go">Start chatting</button>
           </div>
@@ -580,7 +580,7 @@
     try {
       const { matches } = await apiCall("/api/matches");
       if (!matches?.length) {
-        container.innerHTML = '<div class="connections-empty">No connections yet. Once AI finds matching factories, they\'ll appear here.</div>';
+        container.innerHTML = '<div class="connections-empty">No connections yet. Once AI matches you with a factory, you\'ll get a direct line to their designer or engineer here.</div>';
         return;
       }
       container.innerHTML = matches.map((m) => {
@@ -589,6 +589,11 @@
         const ctx = m.context_summary || {};
         const summary = ctx.short || "Connection established";
         const nextSteps = ctx.next_steps || "";
+        const contact = ctx.direct_contact || {};
+        const contactLine = contact.name ? `${contact.name}${contact.role ? ` · ${contact.role}` : ""}` : "";
+        const iter = ctx.iteration_terms || {};
+        const iterLine = iter.first_deliverable ? `First: ${iter.first_deliverable}${iter.first_deliverable_timeline ? ` (${iter.first_deliverable_timeline})` : ""}` : "";
+        const freeIter = iter.free_iterations ? `${iter.free_iterations} free iterations` : "";
         const quote = m.quote || {};
         const quoteLine = quote.unit_price ? `${quote.unit_price}/unit · ${quote.lead_time || "TBD"}` : "";
         return `
@@ -600,10 +605,12 @@
             </div>
             <span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g, " ")}</span>
           </div>
+          ${contactLine ? `<div class="connection-summary-bar" style="font-weight:500;">Your contact: ${escapeHtml(contactLine)}</div>` : ""}
           <div class="connection-summary-bar">${escapeHtml(summary)}</div>
           <div class="connection-body">
             <div class="connection-project-line">Project: ${escapeHtml(project?.title || "")}</div>
             ${quoteLine ? `<div class="connection-quote">${escapeHtml(quoteLine)}</div>` : ""}
+            ${iterLine ? `<div class="connection-next">${escapeHtml(iterLine)}${freeIter ? ` · ${escapeHtml(freeIter)}` : ""}</div>` : ""}
             ${nextSteps ? `<div class="connection-next">Next: ${escapeHtml(nextSteps)}</div>` : ""}
           </div>
           <div class="connection-actions">

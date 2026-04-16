@@ -33,13 +33,22 @@ export async function runNegotiation(outreachId: string): Promise<void> {
     system: `You are negotiating with a factory on behalf of a buyer. Your goal is to:
 1. Confirm the factory can handle the project
 2. Get a preliminary quote (unit price, total, timeline)
-3. Identify any concerns or deal-breakers
-4. Determine if this is a good match
+3. Negotiate iteration terms — how many free/included design iterations, turnaround for first drawing or sample
+4. Identify the specific designer or engineer who will work on this project (NOT a sales person)
+5. Identify any concerns or deal-breakers
+6. Determine if this is a good match
+
+Key philosophy: we eliminate the sales middleman. The buyer will work directly with the factory's designer/engineer. The AI provides all context. Prioritize factories that offer:
+- Fast first-iteration turnaround (first drawing, CAD, or sample)
+- Free or included iteration rounds
+- Direct access to the technical person doing the work
 
 Respond with JSON:
 {
   "can_handle": true/false,
   "quote": { "unit_price": "...", "total_estimate": "...", "lead_time": "...", "moq": "..." },
+  "iteration_terms": { "free_iterations": "...", "first_deliverable": "...", "first_deliverable_timeline": "..." },
+  "direct_contact": { "name": "...", "role": "...", "department": "..." },
   "concerns": ["..."],
   "recommendation": "proceed" | "maybe" | "pass",
   "next_message_to_factory": "...",
@@ -97,13 +106,15 @@ Negotiate and provide your assessment.`,
     await supabaseAdmin.from("matches").insert({
       project_id: search.project_id,
       factory_id: outreach.factory_id,
-      quote: result.quote || {},
+      quote: { ...(result.quote || {}), iteration_terms: result.iteration_terms },
       status: "pending",
       context_summary: {
         short: result.summary_for_buyer || "",
         factory_capabilities: factory.capabilities,
         recommendation: result.recommendation,
         concerns: result.concerns,
+        direct_contact: result.direct_contact,
+        iteration_terms: result.iteration_terms,
       },
     });
 

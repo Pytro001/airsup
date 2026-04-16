@@ -42,7 +42,13 @@ export async function runFactorySearch(searchId: string): Promise<void> {
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 512,
-        system: `You are an expert manufacturing sourcing analyst. Evaluate whether a factory is a good potential match for a sourcing project. Respond with JSON: { "match_score": 0-100, "reasoning": "...", "suggested_brief": "..." }. The suggested_brief should be a 2-3 sentence summary you would send to the factory to introduce the project.`,
+        system: `You are an expert manufacturing sourcing analyst. Evaluate whether a factory is a good potential match for a sourcing project.
+
+Key priority: we connect buyers DIRECTLY to the factory's designer or engineer — not sales staff. Evaluate whether this factory can provide direct technical contact for fast iteration. Factories with in-house design/engineering teams score higher.
+
+Respond with JSON: { "match_score": 0-100, "reasoning": "...", "suggested_brief": "...", "ideal_contact_role": "..." }.
+- suggested_brief: 2-3 sentence project summary to brief the factory's technical team directly (not a sales pitch — this goes to the engineer/designer who will actually work on it).
+- ideal_contact_role: the specific role at the factory this project needs (e.g. "mechanical engineer", "mold designer", "textile pattern maker", "PCB layout engineer").`,
         messages: [
           {
             role: "user",
