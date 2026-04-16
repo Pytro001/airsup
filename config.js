@@ -12,9 +12,9 @@
  *
  * Sign up without email confirmation (session immediately + rows in public.profiles):
  * - Authentication → Providers → Email → turn OFF “Confirm email” → Save.
- * - Run SQL migrations in Supabase (003_platform_pivot.sql, then 004_profile_trigger_names.sql) so
- *   handle_new_user() creates profiles + user_settings on each new auth user.
- * - Authentication → Rate Limits: lower cooldowns if you hit limits while testing.
+ * - If you see “email rate limit exceeded”: that is Supabase’s mail quota, not your SQL. Turn off
+ *   confirm email (above), wait ~an hour, or use Google OAuth. Optional: Custom SMTP or Rate Limits.
+ * - Run SQL migrations (003_platform_pivot.sql, 004_profile_trigger_names.sql) for profiles trigger.
  *
  * Dev-only fallback: if the key is still the placeholder, you can set
  * localStorage.setItem("airsup_supabase_anon_key", "<anon key>") in the browser console, then reload.

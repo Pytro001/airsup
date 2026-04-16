@@ -379,7 +379,7 @@ img { max-width: 100%; display: block; }
   border-radius: var(--radius-sm); font-size: 15px; color: var(--text); background: var(--bg);
 }
 .auth-input:focus { outline: none; border-color: var(--primary); }
-.auth-error { font-size: 13px; color: #d93025; margin: 0; }
+.auth-error { font-size: 13px; color: #d93025; margin: 0; white-space: pre-line; line-height: 1.45; }
 .auth-error[hidden] { display: none; }
 .auth-submit { width: 100%; margin-top: 4px; }
 .auth-divider {

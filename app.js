@@ -140,6 +140,29 @@
     if (submitBtn) submitBtn.textContent = authModalTab === "signup" ? "Sign up" : "Log in";
   }
 
+  function formatAuthError(err) {
+    const raw = err?.message || String(err || "");
+    const m = raw.toLowerCase();
+    const code = err?.code || "";
+    if (
+      code === "over_email_send_rate_limit" ||
+      code === "too_many_requests" ||
+      m.includes("rate limit") ||
+      m.includes("email rate") ||
+      m.includes("too many requests") ||
+      err?.status === 429
+    ) {
+      return (
+        "Supabase hit its email / auth rate limit (this is not fixed by SQL migrations). Do this:\n\n" +
+        "1) Authentication → Providers → Email → turn OFF “Confirm email” (stops confirmation emails on every sign-up).\n" +
+        "2) Wait 30–60 minutes for the limit to reset, or use “Continue with Google”.\n" +
+        "3) Optional: Authentication → Rate Limits — relax signup / email settings.\n" +
+        "4) For higher email volume long-term, add Custom SMTP in Authentication → Emails."
+      );
+    }
+    return raw;
+  }
+
   function showAuthError(msg) {
     const el = $("auth-error");
     if (!el) return;
@@ -179,7 +202,7 @@
         result = await supabaseClient.auth.signInWithPassword({ email, password });
       }
 
-      if (result.error) return showAuthError(result.error.message);
+      if (result.error) return showAuthError(formatAuthError(result.error));
 
       if (authModalTab === "signup" && result.data?.user && !result.data.session) {
         showAuthError(
@@ -212,7 +235,7 @@
           queryParams: { prompt: "select_account" },
         },
       });
-      if (error) showAuthError(error.message);
+      if (error) showAuthError(formatAuthError(error));
     } finally {
       authRequestInFlight = false;
       if (googleBtn) googleBtn.disabled = false;
