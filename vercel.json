@@ -4,7 +4,8 @@
   "installCommand": "npm install && cd server && npm install",
   "functions": {
     "api/index.ts": {
-      "includeFiles": "server/dist/**,server/node_modules/**"
+      "includeFiles": "server/dist/**,server/node_modules/**",
+      "maxDuration": 30
     }
   },
   "rewrites": [

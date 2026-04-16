@@ -351,6 +351,7 @@ img { max-width: 100%; display: block; }
 .chat-action-btn { font-size: 14px; padding: 10px 24px; }
 
 /* ===== Connection chat ===== */
+.conn-chat-wrap[hidden] { display: none !important; }
 .conn-chat-wrap { display: flex; flex-direction: column; height: calc(100dvh - var(--header-h) - 120px); min-height: 400px; }
 .conn-chat-header {
   display: flex; align-items: center; gap: 12px;

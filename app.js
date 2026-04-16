@@ -535,10 +535,12 @@
         messages.forEach((m) => appendMessage(m.role, m.content, m.metadata));
       } else {
         container.innerHTML = "";
+        appendStatus("AI is preparing your first message\u2026");
         showTyping();
         try {
           const data = await apiCall("/api/chat/init", { method: "POST" });
           hideTyping();
+          document.querySelectorAll(".chat-status").forEach((el) => el.remove());
           if (data.reply) {
             appendMessage("assistant", data.reply, { options: data.options, action: data.action });
           } else if (data.already_initialized) {
@@ -549,8 +551,9 @@
           }
         } catch (initErr) {
           hideTyping();
+          document.querySelectorAll(".chat-status").forEach((el) => el.remove());
           console.error("[Airsup] chat init error:", initErr);
-          container.innerHTML = '<div class="chat-welcome" id="chat-welcome"><h2>Welcome to Airsup</h2><p>Tell me what you need manufactured. I\'ll find the right factory and connect you directly with the engineer who\'ll build it.</p></div>';
+          appendMessage("assistant", "Could not start the conversation. (" + (initErr.message || "Unknown error") + ")\n\nMake sure the ANTHROPIC_API_KEY environment variable is set in your Vercel project settings.");
         }
       }
     } catch (_) {}
@@ -602,6 +605,7 @@
     const container = $("connections-list");
     const chatWrap = $("connection-chat-wrap");
     if (chatWrap) chatWrap.hidden = true;
+    if (container) container.hidden = false;
     activeConnectionMatchId = null;
 
     try {
