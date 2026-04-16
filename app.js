@@ -153,8 +153,11 @@
       err?.status === 429
     ) {
       return (
-        "Rate limit (Supabase Auth, not your database). Fix: Dashboard → Authentication → Providers → Email → turn off Confirm email. " +
-        "Then wait ~1 hour or sign in with Google. Optional: Rate Limits, or Custom SMTP under Emails for more mail."
+        "Supabase hit its email / auth rate limit (this is not fixed by SQL migrations). Do this:\n\n" +
+        "1) Authentication → Providers → Email → turn OFF “Confirm email” (stops confirmation emails on every sign-up).\n" +
+        "2) Wait 30–60 minutes for the limit to reset, or use “Continue with Google”.\n" +
+        "3) Optional: Authentication → Rate Limits — relax signup / email settings.\n" +
+        "4) For higher email volume long-term, add Custom SMTP in Authentication → Emails."
       );
     }
     return raw;
@@ -249,8 +252,8 @@
   /* ── Auth state ── */
   function updateAuthUI() {
     const loggedIn = !!currentUser;
-    $("dropdown-logged-out").hidden = loggedIn;
-    $("dropdown-logged-in").hidden = !loggedIn;
+    const account = $("header-account");
+    if (account) account.hidden = !loggedIn;
     const avatarEl = $("avatar-letter");
     const avatarBtn = $("user-menu-trigger");
     if (loggedIn) {
@@ -678,8 +681,6 @@
       dd.hidden = true;
     }
   });
-  $("menu-login")?.addEventListener("click", () => { $("user-menu-dropdown").hidden = true; openAuthModal("login"); });
-  $("menu-signup")?.addEventListener("click", () => { $("user-menu-dropdown").hidden = true; openAuthModal("signup"); });
   $("menu-settings")?.addEventListener("click", () => { $("user-menu-dropdown").hidden = true; setView("settings"); });
   $("menu-signout")?.addEventListener("click", () => { $("user-menu-dropdown").hidden = true; handleSignOut(); });
 

@@ -21,19 +21,13 @@
         <button type="button" class="nav-link" data-view="projects">Projects</button>
         <button type="button" class="nav-link" data-view="connections">Connections</button>
       </nav>
-      <div class="header-right">
+      <div class="header-right" id="header-account" hidden>
         <button type="button" class="avatar-btn" id="user-menu-trigger" aria-label="Account menu">
           <span class="avatar-letter" id="avatar-letter">?</span>
         </button>
         <div class="dropdown" id="user-menu-dropdown" hidden>
-          <div id="dropdown-logged-out">
-            <button type="button" class="dropdown-item" id="menu-login">Log in</button>
-            <button type="button" class="dropdown-item" id="menu-signup">Sign up</button>
-          </div>
-          <div id="dropdown-logged-in" hidden>
-            <button type="button" class="dropdown-item" id="menu-settings">Settings</button>
-            <button type="button" class="dropdown-item" id="menu-signout">Log out</button>
-          </div>
+          <button type="button" class="dropdown-item" id="menu-settings">Settings</button>
+          <button type="button" class="dropdown-item" id="menu-signout">Log out</button>
         </div>
       </div>
     </div>
