@@ -77,6 +77,7 @@
 
   // #region agent log
   function debugLog(location, message, data, hypothesisId) {
+    try { console.info("[AIRSUP_DEBUG]", location, message, data, hypothesisId); } catch (_) {}
     fetch("http://127.0.0.1:7803/ingest/440abadd-e42c-4ad6-b3c7-7a5e0395097a", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a202bb" },
