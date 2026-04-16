@@ -7,18 +7,25 @@ export interface AuthRequest extends Request {
 }
 
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
-  const header = req.headers.authorization;
-  if (!header?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "Missing authorization header" });
-    return;
+  try {
+    const header = req.headers.authorization;
+    if (!header?.startsWith("Bearer ")) {
+      res.status(401).json({ error: "Missing authorization header" });
+      return;
+    }
+    const token = header.slice(7);
+    const { data, error } = await supabaseAnon.auth.getUser(token);
+    if (error || !data.user) {
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
+    }
+    req.userId = data.user.id;
+    req.jwt = token;
+    next();
+  } catch (e) {
+    console.error("[Airsup] requireAuth:", e);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Authentication service unavailable" });
+    }
   }
-  const token = header.slice(7);
-  const { data, error } = await supabaseAnon.auth.getUser(token);
-  if (error || !data.user) {
-    res.status(401).json({ error: "Invalid or expired token" });
-    return;
-  }
-  req.userId = data.user.id;
-  req.jwt = token;
-  next();
 }

@@ -34,6 +34,46 @@ async function loadRoutes() {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  await loadRoutes();
-  app(req as any, res as any);
+  try {
+    await loadRoutes();
+  } catch (err) {
+    console.error("[Airsup] loadRoutes failed:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: `API initialization failed: ${String(err)}` });
+    }
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      res.removeListener("error", onErr);
+      resolve();
+    };
+    const onErr = (e: unknown) => {
+      if (settled) return;
+      settled = true;
+      res.removeListener("finish", settle);
+      res.removeListener("close", settle);
+      reject(e);
+    };
+    res.once("finish", settle);
+    res.once("close", settle);
+    res.once("error", onErr);
+    try {
+      app(req as any, res as any);
+    } catch (e) {
+      res.removeListener("finish", settle);
+      res.removeListener("close", settle);
+      res.removeListener("error", onErr);
+      reject(e);
+    }
+  }).catch((err) => {
+    console.error("[Airsup] Express handler error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
 }
