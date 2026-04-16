@@ -133,7 +133,10 @@
       const name = ($("auth-name")?.value || "").trim();
       result = await supabaseClient.auth.signUp({
         email, password,
-        options: { data: { full_name: name || email.split("@")[0] } },
+        options: {
+          data: { full_name: name || email.split("@")[0] },
+          emailRedirectTo: window.location.origin + window.location.pathname,
+        },
       });
     } else {
       result = await supabaseClient.auth.signInWithPassword({ email, password });
@@ -141,21 +144,27 @@
 
     if (submitBtn) submitBtn.disabled = false;
     if (result.error) return showAuthError(result.error.message);
+
     if (authModalTab === "signup" && result.data?.user && !result.data.session) {
-      showAuthError("Check your email to confirm, then log in.");
-      authModalTab = "login";
-      syncAuthModalTab();
-      return;
+      // Email confirmation is enabled in Supabase — auto-login instead
+      const loginResult = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (loginResult.error) {
+        showAuthError("Account created! Check your email to confirm, then log in.");
+        authModalTab = "login";
+        syncAuthModalTab();
+        return;
+      }
     }
     closeAuthModal();
   }
 
   async function handleGoogleAuth() {
     if (!supabaseClient) return showAuthError("Supabase not configured. Set your anon key in config.js.");
+    const redirectTo = window.location.origin + window.location.pathname.replace(/\/$/, "");
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin + window.location.pathname,
+        redirectTo,
         queryParams: { prompt: "select_account" },
       },
     });
@@ -208,6 +217,18 @@
 
   async function initAuthState() {
     if (!supabaseClient) return;
+
+    // Handle OAuth redirect — Supabase puts tokens in the URL hash
+    const hash = window.location.hash;
+    if (hash && (hash.includes("access_token") || hash.includes("error"))) {
+      // Let Supabase client process the hash (it does this automatically via detectSessionInUrl)
+      // Clean the URL after processing
+      const { data } = await supabaseClient.auth.getSession();
+      if (data?.session) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    }
+
     const { data } = await supabaseClient.auth.getSession();
     if (data?.session?.user) {
       const u = data.session.user;
