@@ -54,6 +54,7 @@
   let onboardStep = 0;
   let onboardData = {};
   let pendingFiles = [];
+  let latestProjectId = null;
   let activeConnectionMatchId = null;
 
   function resetOnboardData() {
@@ -91,23 +92,46 @@
       } catch (_) {
         if (text && text.length) detail = text.slice(0, 400);
       }
-      // #region agent log
-      fetch("http://127.0.0.1:7803/ingest/440abadd-e42c-4ad6-b3c7-7a5e0395097a", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a202bb" },
-        body: JSON.stringify({
-          sessionId: "a202bb",
-          hypothesisId: "H1",
-          location: "app.js:apiCall",
-          message: "api_error",
-          data: { path: path, status: res.status, preview: (text || "").slice(0, 500) },
-          timestamp: Date.now(),
-        }),
-      }).catch(function () {});
-      // #endregion
       throw new Error(detail);
     }
     return res.json();
+  }
+
+  async function refreshLatestProject() {
+    if (!(await ensureSession())) return;
+    try {
+      const data = await apiCall("/api/projects/latest");
+      latestProjectId = data.project?.id || null;
+    } catch (_) {
+      latestProjectId = null;
+    }
+  }
+
+  async function uploadChatFiles(fileList) {
+    if (!fileList?.length) return { filenames: [], err: null };
+    const token = (await supabaseClient?.auth.getSession())?.data?.session?.access_token;
+    const fd = new FormData();
+    fileList.forEach(function (f) {
+      fd.append("files", f);
+    });
+    if (latestProjectId) fd.append("project_id", latestProjectId);
+    const res = await fetch(`${API_BASE}/api/chat/upload-files`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    });
+    const text = await res.text();
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch (_) {}
+    if (!res.ok) {
+      return { filenames: [], err: (data && data.error) || text || "Upload failed" };
+    }
+    const names = (data.files || []).map(function (f) {
+      return f.filename;
+    });
+    return { filenames: names, err: null };
   }
 
   function showAuthBanner(msg) { const el = $("auth-banner"); if (el) { el.textContent = msg; el.hidden = false; } }
@@ -524,18 +548,29 @@
   async function sendMessage() {
     const input = $("chat-input");
     const text = input.value.trim();
-    if (!text || isSending) return;
+    if ((!text && !pendingFiles.length) || isSending) return;
     if (!(await ensureSession())) return;
 
     isSending = true;
     input.value = ""; input.style.height = "auto";
     $("chat-send").disabled = true;
 
-    let msgText = text;
+    let msgText = text || "(See attached files.)";
+    let uploadedNames = [];
     if (pendingFiles.length) {
-      msgText += "\n\n[Attached files: " + pendingFiles.map((f) => f.name).join(", ") + "]";
+      const up = await uploadChatFiles(pendingFiles);
       pendingFiles = [];
       renderPendingFiles();
+      if (up.err) {
+        isSending = false;
+        $("chat-send").disabled = !input.value.trim();
+        appendMessage("assistant", "Could not upload files: " + up.err);
+        return;
+      }
+      uploadedNames = up.filenames;
+    }
+    if (uploadedNames.length) {
+      msgText += "\n\n[Attached files: " + uploadedNames.join(", ") + "]";
     }
 
     appendMessage("user", msgText);
@@ -547,6 +582,7 @@
       hideTyping();
       document.querySelectorAll(".chat-status").forEach((el) => el.remove());
       appendMessage("assistant", data.reply, { options: data.options, action: data.action });
+      await refreshLatestProject();
     } catch (err) {
       hideTyping();
       document.querySelectorAll(".chat-status").forEach((el) => el.remove());
@@ -590,6 +626,7 @@
           appendMessage("assistant", "Could not start the conversation. (" + (initErr.message || "Unknown error") + ")\n\nMake sure the ANTHROPIC_API_KEY environment variable is set in your Vercel project settings.");
         }
       }
+      await refreshLatestProject();
     } catch (outerErr) {
       hideTyping();
       $("chat-typing")?.remove();
@@ -617,6 +654,8 @@
   /* ── Projects ── */
   async function loadProjects() {
     const container = $("projects-list");
+    const lead = $("projects-lead");
+    if (lead) lead.textContent = "Sourcing requests created from your conversations.";
     try {
       const { projects } = await apiCall("/api/projects");
       if (!projects?.length) { container.innerHTML = '<div class="projects-empty">No projects yet. Start a conversation to create one.</div>'; return; }
@@ -630,14 +669,43 @@
   }
 
   async function loadProjectDetail(id) {
-    const container = $("projects-list"), lead = $("projects-lead");
+    const container = $("projects-list");
+    const lead = $("projects-lead");
+    if (lead) lead.textContent = "Sourcing requests created from your conversations.";
     try {
       const { project } = await apiCall(`/api/projects/${id}`);
-      if (lead) lead.innerHTML = '<button type="button" class="btn-outline" id="projects-back" style="font-size:13px;padding:8px 16px;">&larr; Back</button>';
       const s = project.ai_summary || {};
-      container.innerHTML = `<div><h2 style="font-size:22px;font-weight:600;margin-bottom:4px;">${escapeHtml(project.title)}</h2><p style="color:var(--text-muted);margin-bottom:16px;">${escapeHtml(project.description||"")}</p><span class="project-card-badge badge--${project.status}">${project.status.replace(/_/g," ")}</span>${s.product?`<div style="margin:16px 0;"><strong>Product:</strong> ${escapeHtml(s.product)}</div>`:""}</div>`;
-      $("projects-back")?.addEventListener("click", () => { if (lead) lead.textContent = "Sourcing requests created from your conversations."; loadProjects(); });
+      let filesHtml = "";
+      try {
+        const { files } = await apiCall(`/api/projects/${id}/files`);
+        if (files?.length) {
+          filesHtml =
+            '<div class="project-files-block"><h3 class="project-files-heading">Files</h3><ul class="project-files-list">' +
+            files
+              .map(function (f) {
+                const link =
+                  f.signed_url &&
+                  '<a href="' +
+                    escapeAttr(f.signed_url) +
+                    '" target="_blank" rel="noopener">' +
+                    escapeHtml(f.filename) +
+                    "</a>";
+                const label = link || escapeHtml(f.filename);
+                return "<li>" + label + (f.bytes ? ' <span class="project-file-meta">' + formatBytes(f.bytes) + "</span>" : "") + "</li>";
+              })
+              .join("") +
+            "</ul></div>";
+        }
+      } catch (_) { /* no files yet */ }
+      container.innerHTML = `<div class="project-detail"><h2 style="font-size:22px;font-weight:600;margin-bottom:4px;">${escapeHtml(project.title)}</h2><p style="color:var(--text-muted);margin-bottom:16px;">${escapeHtml(project.description||"")}</p><span class="project-card-badge badge--${project.status}">${project.status.replace(/_/g," ")}</span>${s.product?`<div style="margin:16px 0;"><strong>Product:</strong> ${escapeHtml(s.product)}</div>`:""}${filesHtml}</div>`;
     } catch (_) {}
+  }
+
+  function formatBytes(n) {
+    if (n == null || n < 0) return "";
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1048576).toFixed(1) + " MB";
   }
 
   /* ══════════════════════════════════════
@@ -682,6 +750,11 @@
     chatWrap.hidden = false;
 
     const msgContainer = $("conn-chat-messages");
+    const filesEl = $("conn-chat-files");
+    if (filesEl) {
+      filesEl.hidden = true;
+      filesEl.innerHTML = "";
+    }
     msgContainer.innerHTML = '<div class="chat-status">Loading messages\u2026</div>';
 
     try {
@@ -702,12 +775,46 @@
     } catch (err) {
       msgContainer.innerHTML = '<div class="chat-status">Could not load messages.</div>';
     }
+
+    try {
+      const { files } = await apiCall(`/api/matches/${matchId}/files`);
+      if (filesEl && files?.length) {
+        filesEl.hidden = false;
+        filesEl.innerHTML =
+          '<div class="conn-chat-files-label">Project files</div><ul class="conn-chat-files-list">' +
+          files
+            .map(function (f) {
+              const url = f.signed_url || "#";
+              return (
+                "<li><a href=\"" +
+                escapeAttr(url) +
+                "\" target=\"_blank\" rel=\"noopener\">" +
+                escapeHtml(f.filename) +
+                "</a>" +
+                (f.bytes ? " <span class=\"conn-chat-file-meta\">" + formatBytes(f.bytes) + "</span>" : "") +
+                "</li>"
+              );
+            })
+            .join("") +
+          "</ul>";
+      }
+    } catch (_) {
+      if (filesEl) {
+        filesEl.hidden = true;
+        filesEl.innerHTML = "";
+      }
+    }
   }
 
   function closeConnectionChat() {
     activeConnectionMatchId = null;
     const list = $("connections-list");
     const chatWrap = $("connection-chat-wrap");
+    const filesEl = $("conn-chat-files");
+    if (filesEl) {
+      filesEl.hidden = true;
+      filesEl.innerHTML = "";
+    }
     if (list) list.hidden = false;
     if (chatWrap) chatWrap.hidden = true;
   }

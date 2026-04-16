@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam, Tool, ToolResultBlockParam } from "@anthropic-ai/sdk/resources/messages";
 import { getAnthropicClient } from "../services/anthropic.js";
 import { supabaseAdmin } from "../services/supabase.js";
+import { formatFilesForPrompt } from "../lib/project-files.js";
 
 const SYSTEM_PROMPT = `You are Airsup — an expert manufacturing sourcing agent.
 
@@ -340,6 +341,9 @@ export async function loadContext(userId: string): Promise<string> {
         ).join("\n")
     );
   }
+
+  const fileBlock = await formatFilesForPrompt(userId);
+  if (fileBlock) parts.push(fileBlock);
 
   return parts.length ? "\n\n---\n\n# What you already know about this user\n\n" + parts.join("\n\n") : "";
 }

@@ -1,11 +1,109 @@
 import { Router } from "express";
 import type { Response } from "express";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
+import multer from "multer";
+import { randomUUID } from "node:crypto";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { runIntakeAgent, loadContext, INIT_SYSTEM_INSTRUCTION } from "../agents/intake.js";
+import { safeFileSegment, signFileUrl } from "../lib/project-files.js";
 
 export const chatRouter = Router();
+
+const BUCKET = "project-files";
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024, files: 15 },
+});
+
+/** Multipart file upload from buyer chat; ties to project or orphan row. */
+chatRouter.post(
+  "/upload-files",
+  requireAuth,
+  upload.array("files", 15) as unknown as import("express").RequestHandler,
+  async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+  const files = req.files as Express.Multer.File[] | undefined;
+  if (!files?.length) {
+    res.status(400).json({ error: "No files uploaded" });
+    return;
+  }
+
+  let projectId = String((req.body as { project_id?: string })?.project_id || "").trim();
+  if (!projectId) {
+    const { data: latest } = await supabaseAdmin
+      .from("projects")
+      .select("id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    projectId = latest?.id || "";
+  } else {
+    const { data: ok } = await supabaseAdmin
+      .from("projects")
+      .select("id")
+      .eq("id", projectId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!ok) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+  }
+
+  const created: Array<{ id: string; filename: string; project_id: string | null; signed_url: string | null }> = [];
+
+  for (const file of files) {
+    const id = randomUUID();
+    const safeName = safeFileSegment(file.originalname || "file");
+    const storagePath = projectId
+      ? `${userId}/${projectId}/${id}_${safeName}`
+      : `${userId}/orphan/${id}_${safeName}`;
+
+    const { error: upErr } = await supabaseAdmin.storage.from(BUCKET).upload(storagePath, file.buffer, {
+      contentType: file.mimetype || "application/octet-stream",
+      upsert: false,
+    });
+
+    if (upErr) {
+      console.error("[Airsup] chat storage upload:", upErr.message);
+      res.status(500).json({ error: "Upload failed: " + upErr.message });
+      return;
+    }
+
+    const { data: row, error: insErr } = await supabaseAdmin
+      .from("project_files")
+      .insert({
+        user_id: userId,
+        project_id: projectId || null,
+        storage_path: storagePath,
+        filename: file.originalname || safeName,
+        mime_type: file.mimetype || "",
+        bytes: file.size,
+        source: "chat",
+      })
+      .select("id")
+      .single();
+
+    if (insErr || !row) {
+      console.error("[Airsup] project_files insert:", insErr?.message);
+      res.status(500).json({ error: "Could not save file metadata" });
+      return;
+    }
+
+    const signed_url = await signFileUrl(storagePath);
+    created.push({
+      id: row.id,
+      filename: file.originalname || safeName,
+      project_id: projectId || null,
+      signed_url,
+    });
+  }
+
+  res.json({ files: created });
+  }
+);
 
 chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
