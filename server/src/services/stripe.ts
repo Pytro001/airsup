@@ -1,8 +1,10 @@
 import Stripe from "stripe";
 
-let stripeClient: Stripe | null = null;
+type StripeClient = InstanceType<typeof Stripe>;
 
-function getStripe(): Stripe {
+let stripeClient: StripeClient | null = null;
+
+function getStripe(): StripeClient {
   if (!stripeClient) {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
@@ -61,7 +63,10 @@ export async function refundPayment(intentId: string, reason?: string): Promise<
   }
 }
 
-export function verifyWebhookSignature(payload: string | Buffer, signature: string): Stripe.Event | null {
+export function verifyWebhookSignature(
+  payload: string | Buffer,
+  signature: string
+): ReturnType<StripeClient["webhooks"]["constructEvent"]> | null {
   const stripe = getStripe();
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) return null;

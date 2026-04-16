@@ -16,12 +16,12 @@ fetch("http://127.0.0.1:7803/ingest/440abadd-e42c-4ad6-b3c7-7a5e0395097a", {
   headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "a202bb" },
   body: JSON.stringify({
     sessionId: "a202bb",
-    hypothesisId: "H2",
+    hypothesisId: "H3",
     location: "api/index.ts:module",
     message: "api_module_loaded",
     data: { ok: true },
     timestamp: Date.now(),
-    runId: "post-fix",
+    runId: "emit-cjs",
   }),
 }).catch(() => {});
 // #endregion
