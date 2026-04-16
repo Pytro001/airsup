@@ -80,8 +80,8 @@ img { max-width: 100%; display: block; }
   height: var(--header-h); padding: 0 20px;
   display: flex; align-items: center; gap: 12px;
 }
-.site-logo { flex-shrink: 0; background: transparent; height: 22px; }
-.site-logo img { height: 22px; object-fit: contain; }
+.site-logo { flex-shrink: 0; background: transparent; height: 24px; }
+.site-logo img { height: 24px; width: auto; object-fit: contain; }
 .header-right { position: relative; }
 .avatar-btn {
   width: 30px; height: 30px; border-radius: 50%;
