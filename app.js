@@ -31,31 +31,24 @@
 
   supabaseClient = initSupabase();
 
-  /** Sync auth user into public.profiles + public.user_settings (RLS allows own row). */
   async function syncUserProfileFromAuth(user) {
     if (!supabaseClient || !user) return;
     const meta = user.user_metadata || {};
     const anonymous = user.is_anonymous === true;
     const displayName = String(
-      meta.full_name ||
-        meta.name ||
-        meta.preferred_username ||
-        user.email?.split("@")[0] ||
-        (anonymous ? "Guest" : "")
+      meta.full_name || meta.name || meta.preferred_username ||
+      user.email?.split("@")[0] || (anonymous ? "Guest" : "")
     ).trim() || (anonymous ? "Guest" : "User");
     const letter = displayName.charAt(0).toUpperCase();
 
-    const { error: pe } = await supabaseClient.from("profiles").upsert(
+    await supabaseClient.from("profiles").upsert(
       { id: user.id, display_name: displayName, avatar_letter: letter },
       { onConflict: "id" }
     );
-    if (pe) console.warn("[Airsup] profiles sync:", pe);
-
-    const { error: se } = await supabaseClient.from("user_settings").upsert(
+    await supabaseClient.from("user_settings").upsert(
       { user_id: user.id, email: user.email || "", preferred_name: displayName },
       { onConflict: "user_id" }
     );
-    if (se) console.warn("[Airsup] user_settings sync:", se);
 
     currentUser = { id: user.id, email: user.email || "", displayName };
     updateAuthUI();
@@ -63,9 +56,11 @@
 
   /* ── State ── */
   let currentUser = null;
-  let currentView = "landing";
+  let currentView = "onboarding";
   let isSending = false;
   let sessionBootstrapLock = false;
+  let onboardStep = 0;
+  let onboardData = { role: "", fullName: "", email: "", phone: "", companyName: "", industry: "", location: "", productType: "", quantity: "", timeline: "" };
 
   /* ── Helpers ── */
   function escapeHtml(s) {
@@ -75,11 +70,7 @@
   }
 
   function escapeAttr(s) {
-    return String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/"/g, "&quot;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+    return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
   function simpleMarkdown(text) {
@@ -118,17 +109,14 @@
 
   function hideAuthBanner() {
     const el = $("auth-banner");
-    if (!el) return;
-    el.hidden = true;
-    el.textContent = "";
+    if (el) { el.hidden = true; el.textContent = ""; }
   }
 
-  /** Ensure a Supabase session without any login UI (anonymous JWT for API + RLS). */
   async function ensureSession() {
     hideAuthBanner();
     if (currentUser) return true;
     if (!supabaseClient) {
-      showAuthBanner("Add your Supabase anon key in config.js (or config.local.js).");
+      showAuthBanner("Add your Supabase anon key in config.js.");
       return false;
     }
     if (sessionBootstrapLock) return false;
@@ -141,10 +129,7 @@
     try {
       const { data, error } = await supabaseClient.auth.signInAnonymously();
       if (error) {
-        showAuthBanner(
-          "Could not start a session. In Supabase: Authentication → Providers → enable Anonymous sign-ins, then reload."
-        );
-        console.error("[Airsup] signInAnonymously:", error);
+        showAuthBanner("Enable Anonymous sign-ins in Supabase → Authentication → Providers, then reload.");
         return false;
       }
       if (data?.user) await syncUserProfileFromAuth(data.user);
@@ -157,8 +142,10 @@
   async function handleSignOut() {
     if (supabaseClient) await supabaseClient.auth.signOut();
     currentUser = null;
+    onboardStep = 0;
+    onboardData = { role: "", fullName: "", email: "", phone: "", companyName: "", industry: "", location: "", productType: "", quantity: "", timeline: "" };
     updateAuthUI();
-    setView("landing");
+    setView("onboarding");
   }
 
   /* ── Auth state ── */
@@ -170,22 +157,21 @@
     const avatarBtn = $("user-menu-trigger");
     if (loggedIn) {
       const letter = (currentUser.displayName || currentUser.email || "?").charAt(0).toUpperCase();
-      avatarEl.textContent = letter;
-      avatarBtn.classList.remove("avatar-btn--anon");
+      if (avatarEl) avatarEl.textContent = letter;
+      if (avatarBtn) avatarBtn.classList.remove("avatar-btn--anon");
     } else {
-      avatarEl.textContent = "?";
-      avatarBtn.classList.add("avatar-btn--anon");
+      if (avatarEl) avatarEl.textContent = "?";
+      if (avatarBtn) avatarBtn.classList.add("avatar-btn--anon");
     }
-    $("header-nav").style.display = loggedIn ? "" : "none";
+    const nav = $("header-nav");
+    if (nav) nav.style.display = loggedIn ? "" : "none";
   }
 
   function setupAuthListener() {
     if (!supabaseClient) return;
     supabaseClient.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        syncUserProfileFromAuth(session.user).then(() => {
-          if (currentView === "landing") setView("chat");
-        });
+        syncUserProfileFromAuth(session.user);
       } else if (event === "SIGNED_OUT") {
         currentUser = null;
         updateAuthUI();
@@ -195,22 +181,20 @@
 
   async function initAuthState() {
     if (!supabaseClient) return;
-
-    // Handle OAuth redirect — Supabase puts tokens in the URL hash
     const hash = window.location.hash;
     if (hash && (hash.includes("access_token") || hash.includes("error"))) {
-      // Let Supabase client process the hash (it does this automatically via detectSessionInUrl)
-      // Clean the URL after processing
       const { data } = await supabaseClient.auth.getSession();
-      if (data?.session) {
-        window.history.replaceState(null, "", window.location.pathname);
-      }
+      if (data?.session) window.history.replaceState(null, "", window.location.pathname);
     }
-
     const { data } = await supabaseClient.auth.getSession();
     if (data?.session?.user) {
       await syncUserProfileFromAuth(data.session.user);
-      setView("chat");
+      const { data: profile } = await supabaseClient.from("profiles").select("company, headline").eq("id", currentUser.id).maybeSingle();
+      if (profile?.company || profile?.headline) {
+        setView("chat");
+      } else {
+        setView("onboarding");
+      }
     }
   }
 
@@ -229,150 +213,253 @@
     if (name === "projects") loadProjects();
     if (name === "connections") loadConnections();
     if (name === "settings") void loadSettings();
+    if (name === "onboarding") renderOnboardStep();
   }
 
+  /* ══════════════════════════════════════
+     ONBOARDING — animated step-by-step
+     ══════════════════════════════════════ */
+  const ONBOARD_STEPS = [
+    { id: "role", type: "choices", title: "How would you describe yourself?", sub: "This helps us tailor the experience to your needs.",
+      choices: [
+        { value: "founder", label: "I'm a Founder / Business Owner" },
+        { value: "procurement", label: "I work in Procurement" },
+        { value: "designer", label: "I'm a Product Designer" },
+        { value: "engineer", label: "I'm an Engineer" },
+        { value: "other", label: "Other" },
+      ] },
+    { id: "company", type: "form", title: "Tell us about your company.", sub: "We'll remember this so you never have to repeat it.",
+      fields: [
+        { key: "companyName", label: "Company name", placeholder: "Acme Inc.", required: true },
+        { key: "industry", label: "Industry", placeholder: "Consumer electronics, Fashion, etc." },
+        { key: "location", label: "Location", placeholder: "Berlin, Germany" },
+      ] },
+    { id: "needs", type: "form", title: "What do you need manufactured?", sub: "Be as specific or vague as you want — the AI will ask follow-ups.",
+      fields: [
+        { key: "productType", label: "Product type", placeholder: "Custom PCBs, Injection-molded parts, Apparel…", required: true },
+        { row: [
+          { key: "quantity", label: "Estimated quantity", placeholder: "1,000 units" },
+          { key: "timeline", label: "Timeline", placeholder: "Q3 2026" },
+        ]},
+      ] },
+    { id: "contact", type: "form", title: "Last step — how can we reach you?", sub: "Your info is stored securely and never shared without your consent.",
+      fields: [
+        { row: [
+          { key: "fullName", label: "Full name", placeholder: "Jane Doe", required: true },
+          { key: "email", label: "Email", placeholder: "jane@acme.com", type: "email", required: true },
+        ]},
+        { key: "phone", label: "Phone (optional)", placeholder: "+49 170 1234567", type: "tel" },
+      ] },
+  ];
+
+  function renderOnboardStep() {
+    const stage = $("onboard-stage");
+    const bar = $("onboard-bar");
+    if (!stage || !bar) return;
+
+    const pct = ((onboardStep + 1) / (ONBOARD_STEPS.length + 1)) * 100;
+    bar.style.width = pct + "%";
+
+    if (onboardStep >= ONBOARD_STEPS.length) {
+      stage.innerHTML = `
+        <div class="onboard-question">
+          <h1 class="onboard-title">You're all set.</h1>
+          <p class="onboard-sub">Our AI now knows your business. Start a conversation and we'll find the right factories for you.</p>
+          <div class="onboard-actions">
+            <button type="button" class="btn-primary btn-lg" id="onboard-go">Start chatting</button>
+          </div>
+        </div>`;
+      $("onboard-go")?.addEventListener("click", async () => {
+        if (await ensureSession()) {
+          await saveOnboardingToSupabase();
+          setView("chat");
+        }
+      });
+      return;
+    }
+
+    const step = ONBOARD_STEPS[onboardStep];
+    let html = `<div class="onboard-question"><h1 class="onboard-title">${step.title}</h1>`;
+    if (step.sub) html += `<p class="onboard-sub">${step.sub}</p>`;
+
+    if (step.type === "choices") {
+      html += '<div class="onboard-choices">';
+      step.choices.forEach((c) => {
+        const sel = onboardData.role === c.value ? " selected" : "";
+        html += `<button type="button" class="onboard-choice${sel}" data-value="${c.value}">${c.label}</button>`;
+      });
+      html += "</div>";
+    } else if (step.type === "form") {
+      html += '<div class="onboard-form">';
+      step.fields.forEach((f) => {
+        if (f.row) {
+          html += '<div class="onboard-field-row">';
+          f.row.forEach((rf) => {
+            html += `<div class="onboard-field"><label class="onboard-label">${rf.label}</label><input class="onboard-input" data-key="${rf.key}" type="${rf.type || "text"}" placeholder="${rf.placeholder || ""}" value="${escapeAttr(onboardData[rf.key])}" ${rf.required ? "required" : ""} /></div>`;
+          });
+          html += "</div>";
+        } else {
+          html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><input class="onboard-input" data-key="${f.key}" type="${f.type || "text"}" placeholder="${f.placeholder || ""}" value="${escapeAttr(onboardData[f.key])}" ${f.required ? "required" : ""} /></div>`;
+        }
+      });
+      html += "</div>";
+      html += '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>';
+      if (onboardStep > 0) html += '<button type="button" class="onboard-skip" id="onboard-back">Back</button>';
+      html += "</div>";
+    }
+
+    html += "</div>";
+    stage.innerHTML = html;
+
+    if (step.type === "choices") {
+      stage.querySelectorAll(".onboard-choice").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          onboardData.role = btn.dataset.value;
+          onboardStep++;
+          renderOnboardStep();
+        });
+      });
+    } else {
+      $("onboard-next")?.addEventListener("click", () => {
+        stage.querySelectorAll(".onboard-input").forEach((inp) => {
+          onboardData[inp.dataset.key] = inp.value.trim();
+        });
+        const reqInputs = stage.querySelectorAll(".onboard-input[required]");
+        for (const inp of reqInputs) {
+          if (!inp.value.trim()) { inp.focus(); return; }
+        }
+        onboardStep++;
+        renderOnboardStep();
+      });
+      $("onboard-back")?.addEventListener("click", () => {
+        stage.querySelectorAll(".onboard-input").forEach((inp) => {
+          onboardData[inp.dataset.key] = inp.value.trim();
+        });
+        onboardStep--;
+        renderOnboardStep();
+      });
+      const firstInput = stage.querySelector(".onboard-input");
+      if (firstInput) setTimeout(() => firstInput.focus(), 100);
+    }
+  }
+
+  async function saveOnboardingToSupabase() {
+    if (!supabaseClient || !currentUser) return;
+    const d = onboardData;
+    const displayName = d.fullName || currentUser.displayName;
+    const letter = (displayName || "?").charAt(0).toUpperCase();
+
+    await supabaseClient.from("profiles").upsert({
+      id: currentUser.id,
+      display_name: displayName,
+      avatar_letter: letter,
+      company: d.companyName,
+      location: d.location,
+      headline: d.role,
+      phone: d.phone,
+    }, { onConflict: "id" });
+
+    await supabaseClient.from("user_settings").upsert({
+      user_id: currentUser.id,
+      email: d.email || currentUser.email || "",
+      preferred_name: displayName,
+      company: d.companyName,
+      phone: d.phone,
+    }, { onConflict: "user_id" });
+
+    await supabaseClient.from("companies").upsert({
+      user_id: currentUser.id,
+      name: d.companyName,
+      industry: d.industry,
+      location: d.location,
+      ai_knowledge: {
+        role: d.role,
+        product_type: d.productType,
+        quantity: d.quantity,
+        timeline: d.timeline,
+        onboarded_at: new Date().toISOString(),
+      },
+    }, { onConflict: "user_id" });
+
+    currentUser.displayName = displayName;
+    updateAuthUI();
+  }
+
+  /* ── Settings ── */
   async function loadSettings() {
     const root = $("settings-root");
     if (!root) return;
-    if (!supabaseClient) {
-      root.innerHTML = '<p class="settings-hint">Supabase is not configured.</p>';
-      return;
-    }
     if (!(await ensureSession())) {
-      root.innerHTML = '<p class="settings-hint">Could not load your session.</p>';
+      root.innerHTML = '<p class="settings-hint">Could not load session.</p>';
       return;
     }
-
     root.innerHTML = '<p class="settings-hint">Loading…</p>';
 
-    const { data: profile, error: pErr } = await supabaseClient
-      .from("profiles")
-      .select("display_name, company, location, headline, bio, phone")
-      .eq("id", currentUser.id)
-      .maybeSingle();
+    const { data: profile } = await supabaseClient.from("profiles").select("display_name, company, location, headline, bio, phone").eq("id", currentUser.id).maybeSingle();
+    const { data: settings } = await supabaseClient.from("user_settings").select("email, phone, company, timezone").eq("user_id", currentUser.id).maybeSingle();
 
-    const { data: settings, error: sErr } = await supabaseClient
-      .from("user_settings")
-      .select("email, phone, company, timezone")
-      .eq("user_id", currentUser.id)
-      .maybeSingle();
-
-    if (pErr || sErr) {
-      root.innerHTML = '<p class="settings-hint">Could not load settings. Check that migrations ran in Supabase.</p>';
-      console.warn("[Airsup] settings load:", pErr || sErr);
-      return;
-    }
-
-    const email = settings?.email || currentUser.email || "";
-    const displayName = profile?.display_name || currentUser.displayName || "";
-    const company = profile?.company || settings?.company || "";
-    const phone = profile?.phone || settings?.phone || "";
-    const location = profile?.location || "";
-    const headline = profile?.headline || "";
-    const bio = profile?.bio || "";
-    const timezone = settings?.timezone || "Europe/Berlin";
+    const vals = {
+      displayName: profile?.display_name || currentUser.displayName || "",
+      email: settings?.email || currentUser.email || "",
+      company: profile?.company || settings?.company || "",
+      phone: profile?.phone || settings?.phone || "",
+      location: profile?.location || "",
+      headline: profile?.headline || "",
+      bio: profile?.bio || "",
+      timezone: settings?.timezone || "Europe/Berlin",
+    };
 
     root.innerHTML = `
       <div class="settings-section">
-        <p class="settings-banner">Your profile is stored in Supabase (<code>profiles</code> & <code>user_settings</code>).</p>
+        ${Object.entries({
+          "Display name": ["displayName", "text"],
+          "Email": ["email", "email"],
+          "Company": ["company", "text"],
+          "Phone": ["phone", "tel"],
+          "Location": ["location", "text"],
+          "Headline": ["headline", "text"],
+          "Timezone": ["timezone", "text"],
+        }).map(([label, [key, type]]) => `
+          <div class="settings-field">
+            <label class="settings-label">${label}</label>
+            <input type="${type}" id="settings-${key}" class="settings-input" value="${escapeAttr(vals[key])}" ${key === "email" ? "readonly" : ""} />
+          </div>`).join("")}
         <div class="settings-field">
-          <label class="settings-label" for="settings-display-name">Display name</label>
-          <input type="text" id="settings-display-name" class="settings-input" value="${escapeAttr(displayName)}" maxlength="200" />
+          <label class="settings-label">Bio</label>
+          <textarea id="settings-bio" class="settings-input" rows="3">${escapeHtml(vals.bio)}</textarea>
         </div>
-        <div class="settings-field">
-          <label class="settings-label" for="settings-email">Email</label>
-          <input type="email" id="settings-email" class="settings-input" value="${escapeAttr(email)}" readonly />
-        </div>
-        <div class="settings-field">
-          <label class="settings-label" for="settings-company">Company</label>
-          <input type="text" id="settings-company" class="settings-input" value="${escapeAttr(company)}" maxlength="200" />
-        </div>
-        <div class="settings-field">
-          <label class="settings-label" for="settings-phone">Phone</label>
-          <input type="tel" id="settings-phone" class="settings-input" value="${escapeAttr(phone)}" maxlength="40" />
-        </div>
-        <div class="settings-field">
-          <label class="settings-label" for="settings-location">Location</label>
-          <input type="text" id="settings-location" class="settings-input" value="${escapeAttr(location)}" maxlength="200" />
-        </div>
-        <div class="settings-field">
-          <label class="settings-label" for="settings-headline">Headline</label>
-          <input type="text" id="settings-headline" class="settings-input" value="${escapeAttr(headline)}" maxlength="300" />
-        </div>
-        <div class="settings-field">
-          <label class="settings-label" for="settings-bio">Bio</label>
-          <textarea id="settings-bio" class="settings-input" rows="3" maxlength="2000">${escapeHtml(bio)}</textarea>
-        </div>
-        <div class="settings-field">
-          <label class="settings-label" for="settings-timezone">Timezone</label>
-          <input type="text" id="settings-timezone" class="settings-input" value="${escapeAttr(timezone)}" maxlength="80" placeholder="e.g. Europe/Berlin" />
-        </div>
-        <p class="settings-saved" id="settings-saved" hidden>Saved to Supabase.</p>
+        <p class="settings-saved" id="settings-saved" hidden></p>
         <button type="button" class="btn-primary" id="settings-save">Save changes</button>
       </div>`;
-
     $("settings-save")?.addEventListener("click", saveSettings);
   }
 
   async function saveSettings() {
     if (!currentUser || !supabaseClient) return;
-    const displayName = ($("settings-display-name")?.value || "").trim();
-    const company = ($("settings-company")?.value || "").trim();
-    const phone = ($("settings-phone")?.value || "").trim();
-    const location = ($("settings-location")?.value || "").trim();
-    const headline = ($("settings-headline")?.value || "").trim();
-    const bio = ($("settings-bio")?.value || "").trim();
-    const timezone = ($("settings-timezone")?.value || "").trim() || "Europe/Berlin";
+    const g = (key) => ($(`settings-${key}`)?.value || "").trim();
+    const displayName = g("displayName") || currentUser.displayName;
+    const letter = (displayName || "?").charAt(0).toUpperCase();
 
-    const letter = (displayName || currentUser.displayName || "?").charAt(0).toUpperCase();
+    const { error: pe } = await supabaseClient.from("profiles").upsert({
+      id: currentUser.id, display_name: displayName, avatar_letter: letter,
+      company: g("company"), phone: g("phone"), location: g("location"),
+      headline: g("headline"), bio: g("bio"),
+    }, { onConflict: "id" });
 
-    const { error: pe } = await supabaseClient.from("profiles").upsert(
-      {
-        id: currentUser.id,
-        display_name: displayName || currentUser.displayName,
-        avatar_letter: letter,
-        company,
-        phone,
-        location,
-        headline,
-        bio,
-      },
-      { onConflict: "id" }
-    );
-
-    const { error: se } = await supabaseClient
-      .from("user_settings")
-      .upsert(
-        {
-          user_id: currentUser.id,
-          email: currentUser.email || "",
-          company,
-          phone,
-          timezone,
-          preferred_name: displayName || currentUser.displayName,
-        },
-        { onConflict: "user_id" }
-      );
+    const { error: se } = await supabaseClient.from("user_settings").upsert({
+      user_id: currentUser.id, email: currentUser.email || "",
+      company: g("company"), phone: g("phone"),
+      timezone: g("timezone") || "Europe/Berlin", preferred_name: displayName,
+    }, { onConflict: "user_id" });
 
     const saved = $("settings-saved");
     if (pe || se) {
-      if (saved) {
-        saved.hidden = false;
-        saved.textContent = "Could not save. " + (pe?.message || se?.message || "Unknown error");
-        saved.style.color = "#d93025";
-      }
-      console.warn("[Airsup] save settings:", pe || se);
+      if (saved) { saved.hidden = false; saved.textContent = "Could not save. " + (pe?.message || se?.message || ""); saved.style.color = "#d93025"; }
       return;
     }
-
-    currentUser.displayName = displayName || currentUser.displayName;
+    currentUser.displayName = displayName;
     updateAuthUI();
-    if (saved) {
-      saved.hidden = false;
-      saved.textContent = "Saved to Supabase.";
-      saved.style.color = "";
-      setTimeout(() => { saved.hidden = true; }, 3000);
-    }
+    if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
   }
 
   /* ── Chat ── */
@@ -382,11 +469,7 @@
     const container = $("chat-messages");
     const bubble = document.createElement("div");
     bubble.className = `chat-bubble chat-bubble--${role}`;
-    if (role === "assistant") {
-      bubble.innerHTML = simpleMarkdown(text);
-    } else {
-      bubble.textContent = text;
-    }
+    if (role === "assistant") { bubble.innerHTML = simpleMarkdown(text); } else { bubble.textContent = text; }
     container.appendChild(bubble);
     container.scrollTop = container.scrollHeight;
   }
@@ -394,16 +477,13 @@
   function showTyping() {
     const container = $("chat-messages");
     const el = document.createElement("div");
-    el.className = "chat-typing";
-    el.id = "chat-typing";
+    el.className = "chat-typing"; el.id = "chat-typing";
     el.innerHTML = '<span class="chat-typing-dot"></span><span class="chat-typing-dot"></span><span class="chat-typing-dot"></span>';
     container.appendChild(el);
     container.scrollTop = container.scrollHeight;
   }
 
-  function hideTyping() {
-    $("chat-typing")?.remove();
-  }
+  function hideTyping() { $("chat-typing")?.remove(); }
 
   async function sendMessage() {
     const input = $("chat-input");
@@ -419,10 +499,7 @@
     showTyping();
 
     try {
-      const { reply } = await apiCall("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({ message: text }),
-      });
+      const { reply } = await apiCall("/api/chat", { method: "POST", body: JSON.stringify({ message: text }) });
       hideTyping();
       appendMessage("assistant", reply);
     } catch (err) {
@@ -443,9 +520,7 @@
         container.innerHTML = "";
         messages.forEach((m) => appendMessage(m.role, m.content));
       }
-    } catch (_) {
-      // First visit or no history — keep welcome message
-    }
+    } catch (_) {}
   }
 
   /* ── Projects ── */
@@ -454,15 +529,12 @@
     try {
       const { projects } = await apiCall("/api/projects");
       if (!projects?.length) {
-        container.innerHTML = '<div class="projects-empty">No projects yet. Start a conversation to describe what you need manufactured.</div>';
+        container.innerHTML = '<div class="projects-empty">No projects yet. Start a conversation to create one.</div>';
         return;
       }
       container.innerHTML = projects.map((p) => {
         const summary = p.ai_summary || {};
-        const reqs = [];
-        if (summary.quantity) reqs.push(summary.quantity);
-        if (summary.budget) reqs.push(summary.budget);
-        if (summary.timeline) reqs.push(summary.timeline);
+        const reqs = [summary.quantity, summary.budget, summary.timeline].filter(Boolean);
         const reqLine = reqs.length ? `<div class="project-card-reqs">${reqs.map((r) => escapeHtml(r)).join(" · ")}</div>` : "";
         return `
         <div class="project-card" data-id="${p.id}">
@@ -471,20 +543,14 @@
           ${reqLine}
           <div class="project-card-meta">
             <span class="project-card-badge badge--${p.status}">${p.status.replace(/_/g, " ")}</span>
-            ${p.matches?.length ? `<span style="font-size:13px;color:var(--text-muted)">${p.matches.length} match${p.matches.length > 1 ? "es" : ""}</span>` : ""}
           </div>
         </div>`;
       }).join("");
-
       container.querySelectorAll(".project-card").forEach((card) => {
-        card.addEventListener("click", () => {
-          const id = card.getAttribute("data-id");
-          if (id) loadProjectDetail(id);
-        });
+        card.addEventListener("click", () => { const id = card.dataset.id; if (id) loadProjectDetail(id); });
       });
     } catch (err) {
       container.innerHTML = '<div class="projects-empty">Could not load projects.</div>';
-      console.error("[Airsup] loadProjects:", err);
     }
   }
 
@@ -493,34 +559,19 @@
     const lead = $("projects-lead");
     try {
       const { project } = await apiCall(`/api/projects/${id}`);
-      if (lead) lead.innerHTML = `<button type="button" class="btn-outline" id="projects-back" style="font-size:13px;padding:6px 14px;margin-right:8px;">&larr; All projects</button>`;
+      if (lead) lead.innerHTML = '<button type="button" class="btn-outline" id="projects-back" style="font-size:13px;padding:8px 16px;">&larr; Back</button>';
       const summary = project.ai_summary || {};
       const matches = project.matches || [];
       container.innerHTML = `
-        <div class="project-detail">
-          <h2 style="font-size:22px;font-weight:700;margin-bottom:4px;">${escapeHtml(project.title)}</h2>
+        <div>
+          <h2 style="font-size:22px;font-weight:600;margin-bottom:4px;">${escapeHtml(project.title)}</h2>
           <p style="color:var(--text-muted);margin-bottom:16px;">${escapeHtml(project.description || "")}</p>
-          <span class="project-card-badge badge--${project.status}" style="margin-bottom:16px;display:inline-block;">${project.status.replace(/_/g, " ")}</span>
+          <span class="project-card-badge badge--${project.status}">${project.status.replace(/_/g, " ")}</span>
           ${summary.product ? `<div style="margin:16px 0;"><strong>Product:</strong> ${escapeHtml(summary.product)}</div>` : ""}
-          ${summary.key_requirements?.length ? `<div style="margin-bottom:12px;"><strong>Requirements:</strong><ul style="padding-left:20px;margin-top:4px;">${summary.key_requirements.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
-          ${matches.length ? `
-            <h3 style="font-size:16px;font-weight:600;margin:20px 0 12px;">Matches (${matches.length})</h3>
-            ${matches.map((m) => `
-              <div class="connection-card" style="margin-bottom:8px;">
-                <div class="connection-info">
-                  <div class="connection-factory">${escapeHtml(m.factories?.name || "Factory")}</div>
-                  <div class="connection-project">${escapeHtml(m.factories?.location || "")} · ${escapeHtml(m.factories?.category || "")}</div>
-                </div>
-                <span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g, " ")}</span>
-              </div>`).join("")}` : ""}
+          ${matches.length ? `<h3 style="font-size:16px;font-weight:600;margin:24px 0 12px;">Matches (${matches.length})</h3>${matches.map((m) => `<div class="connection-card" style="margin-bottom:8px;"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(m.factories?.name || "Factory")}</span><span class="connection-location">${escapeHtml(m.factories?.location || "")}</span></div><span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g, " ")}</span></div></div>`).join("")}` : ""}
         </div>`;
-      $("projects-back")?.addEventListener("click", () => {
-        if (lead) lead.textContent = "Sourcing requests created from your conversations.";
-        loadProjects();
-      });
-    } catch (err) {
-      console.error("[Airsup] loadProjectDetail:", err);
-    }
+      $("projects-back")?.addEventListener("click", () => { if (lead) lead.textContent = "Sourcing requests created from your conversations."; loadProjects(); });
+    } catch (err) { console.error("[Airsup] loadProjectDetail:", err); }
   }
 
   /* ── Connections ── */
@@ -529,7 +580,7 @@
     try {
       const { matches } = await apiCall("/api/matches");
       if (!matches?.length) {
-        container.innerHTML = '<div class="connections-empty">No connections yet. Once AI finds matching factories, they\'ll appear here with summaries and WhatsApp links.</div>';
+        container.innerHTML = '<div class="connections-empty">No connections yet. Once AI finds matching factories, they\'ll appear here.</div>';
         return;
       }
       container.innerHTML = matches.map((m) => {
@@ -538,10 +589,8 @@
         const ctx = m.context_summary || {};
         const summary = ctx.short || "Connection established";
         const nextSteps = ctx.next_steps || "";
-        const waLink = m.wa_group_id ? `https://wa.me/${m.wa_group_id}` : "";
         const quote = m.quote || {};
         const quoteLine = quote.unit_price ? `${quote.unit_price}/unit · ${quote.lead_time || "TBD"}` : "";
-
         return `
         <div class="connection-card">
           <div class="connection-header">
@@ -558,72 +607,50 @@
             ${nextSteps ? `<div class="connection-next">Next: ${escapeHtml(nextSteps)}</div>` : ""}
           </div>
           <div class="connection-actions">
-            ${waLink ? `<a href="${waLink}" target="_blank" class="btn-primary" style="font-size:13px;padding:8px 16px;">Open WhatsApp</a>` : ""}
             <button type="button" class="btn-outline" style="font-size:13px;padding:8px 16px;" onclick="document.querySelectorAll('.nav-link')[0].click()">Discuss with AI</button>
           </div>
         </div>`;
       }).join("");
     } catch (err) {
       container.innerHTML = '<div class="connections-empty">Could not load connections.</div>';
-      console.error("[Airsup] loadConnections:", err);
     }
   }
 
   /* ── Event wiring ── */
-  // Header nav
   document.querySelectorAll(".nav-link").forEach((btn) => {
     btn.addEventListener("click", () => {
       const view = btn.getAttribute("data-view");
-      if (view) {
-        ensureSession().then((ok) => { if (ok) setView(view); });
-      }
+      if (view) ensureSession().then((ok) => { if (ok) setView(view); });
     });
   });
 
   $("logo-home")?.addEventListener("click", () => {
-    setView(currentUser ? "chat" : "landing");
+    setView(currentUser ? "chat" : "onboarding");
   });
 
-  // Account menu
   $("user-menu-trigger")?.addEventListener("click", () => {
     const dd = $("user-menu-dropdown");
-    dd.hidden = !dd.hidden;
+    if (dd) dd.hidden = !dd.hidden;
   });
   document.addEventListener("click", (e) => {
     const dd = $("user-menu-dropdown");
-    if (!dd?.hidden && !e.target.closest("#user-menu-trigger") && !e.target.closest("#user-menu-dropdown")) {
-      dd.hidden = true;
-    }
+    if (dd && !dd.hidden && !e.target.closest("#user-menu-trigger") && !e.target.closest("#user-menu-dropdown")) dd.hidden = true;
   });
   $("menu-settings")?.addEventListener("click", () => { $("user-menu-dropdown").hidden = true; setView("settings"); });
   $("menu-signout")?.addEventListener("click", () => { $("user-menu-dropdown").hidden = true; handleSignOut(); });
 
-  // Landing CTA
-  $("landing-start")?.addEventListener("click", () => {
-    ensureSession().then((ok) => { if (ok) setView("chat"); });
-  });
-
-  // Chat composer
   const chatInput = $("chat-input");
   const chatSend = $("chat-send");
-
   chatInput?.addEventListener("input", () => {
     chatInput.style.height = "auto";
     chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + "px";
     chatSend.disabled = !chatInput.value.trim();
   });
-
-  chatInput?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
+  chatInput?.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
   chatSend?.addEventListener("click", sendMessage);
 
   /* ── Init ── */
   updateAuthUI();
   setupAuthListener();
-  initAuthState();
+  ensureSession().then(() => initAuthState());
 })();
