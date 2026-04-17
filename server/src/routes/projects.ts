@@ -1,18 +1,10 @@
 import { Router } from "express";
 import type { Response } from "express";
-import multer from "multer";
-import { randomUUID } from "node:crypto";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { supabaseAdmin } from "../services/supabase.js";
-import { listFilesForProjectWithUrls, safeFileSegment, signFileUrl } from "../lib/project-files.js";
+import { listFilesForProjectWithUrls, registerProjectFileRecord } from "../lib/project-files.js";
 
 export const projectsRouter = Router();
-
-const BUCKET = "project-files";
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024, files: 15 },
-});
 
 projectsRouter.get("/", requireAuth, async (req: AuthRequest, res: Response) => {
   const { data, error } = await supabaseAdmin
@@ -66,13 +58,21 @@ projectsRouter.get("/:id/files", requireAuth, async (req: AuthRequest, res: Resp
   res.json({ files });
 });
 
-projectsRouter.post(
-  "/:id/files",
-  requireAuth,
-  upload.array("files", 15) as unknown as import("express").RequestHandler,
-  async (req: AuthRequest, res: Response) => {
+/** Register file after direct Storage upload (same as chat/register-file, project id from URL). */
+projectsRouter.post("/:id/register-file", requireAuth, async (req: AuthRequest, res: Response) => {
   const projectId = req.params.id;
   const userId = req.userId!;
+  const body = req.body as {
+    storage_path?: string;
+    filename?: string;
+    bytes?: number;
+    mime_type?: string;
+  };
+
+  if (!body.storage_path?.trim() || !body.filename?.trim()) {
+    res.status(400).json({ error: "storage_path and filename are required" });
+    return;
+  }
 
   const { data: project, error: pe } = await supabaseAdmin
     .from("projects")
@@ -86,62 +86,27 @@ projectsRouter.post(
     return;
   }
 
-  const files = req.files as Express.Multer.File[] | undefined;
-  if (!files?.length) {
-    res.status(400).json({ error: "No files uploaded" });
+  const result = await registerProjectFileRecord({
+    userId,
+    storage_path: body.storage_path.trim(),
+    filename: body.filename.trim(),
+    bytes: typeof body.bytes === "number" ? body.bytes : 0,
+    mime_type: typeof body.mime_type === "string" ? body.mime_type : "",
+    source: "manual",
+    project_id: projectId,
+  });
+
+  if (!result.ok) {
+    res.status(result.status).json({ error: result.error });
     return;
   }
 
-  const created: Array<{ id: string; filename: string; project_id: string; signed_url: string | null }> = [];
-
-  for (const file of files) {
-    const id = randomUUID();
-    const safeName = safeFileSegment(file.originalname || "file");
-    const storagePath = `${userId}/${projectId}/${id}_${safeName}`;
-
-    const { error: upErr } = await supabaseAdmin.storage.from(BUCKET).upload(storagePath, file.buffer, {
-      contentType: file.mimetype || "application/octet-stream",
-      upsert: false,
-    });
-
-    if (upErr) {
-      console.error("[Airsup] storage upload:", upErr.message);
-      res.status(500).json({ error: "Upload failed: " + upErr.message });
-      return;
-    }
-
-    const { data: row, error: insErr } = await supabaseAdmin
-      .from("project_files")
-      .insert({
-        user_id: userId,
-        project_id: projectId,
-        storage_path: storagePath,
-        filename: file.originalname || safeName,
-        mime_type: file.mimetype || "",
-        bytes: file.size,
-        source: "manual",
-      })
-      .select("id")
-      .single();
-
-    if (insErr || !row) {
-      console.error("[Airsup] project_files insert:", insErr?.message);
-      res.status(500).json({ error: "Could not save file metadata" });
-      return;
-    }
-
-    const signed_url = await signFileUrl(storagePath);
-    created.push({
-      id: row.id,
-      filename: file.originalname || safeName,
-      project_id: projectId,
-      signed_url,
-    });
-  }
-
-  res.json({ files: created });
-  }
-);
+  res.json({
+    id: result.id,
+    filename: body.filename.trim(),
+    signed_url: result.signed_url,
+  });
+});
 
 projectsRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
   const { data, error } = await supabaseAdmin

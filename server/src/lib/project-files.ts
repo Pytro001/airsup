@@ -33,6 +33,72 @@ export async function signFileUrl(storagePath: string): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
+/** Validate client upload path and insert project_files (bytes go to Storage directly, not Vercel). */
+export async function registerProjectFileRecord(input: {
+  userId: string;
+  storage_path: string;
+  filename: string;
+  bytes: number;
+  mime_type: string;
+  source: "chat" | "manual";
+  /** Omit or null with orphan path; UUID must match path segment when set */
+  project_id?: string | null;
+}): Promise<{ ok: true; id: string; signed_url: string | null } | { ok: false; status: number; error: string }> {
+  const { userId, storage_path, filename, bytes, mime_type, source, project_id: bodyProjectId } = input;
+  const parts = storage_path.split("/").filter(Boolean);
+  if (parts.length < 3 || parts[0] !== userId) {
+    return { ok: false, status: 403, error: "Invalid storage path" };
+  }
+
+  const seg = parts[1];
+  let resolvedProjectId: string | null = null;
+
+  if (seg === "orphan") {
+    if (bodyProjectId != null && bodyProjectId !== "") {
+      return { ok: false, status: 400, error: "orphan path cannot include project_id" };
+    }
+    resolvedProjectId = null;
+  } else {
+    const pathProjectId = seg;
+    if (bodyProjectId != null && bodyProjectId !== "" && bodyProjectId !== pathProjectId) {
+      return { ok: false, status: 400, error: "project_id does not match path" };
+    }
+    resolvedProjectId = pathProjectId;
+    const { data: proj, error: pe } = await supabaseAdmin
+      .from("projects")
+      .select("id")
+      .eq("id", resolvedProjectId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (pe || !proj) {
+      return { ok: false, status: 404, error: "Project not found" };
+    }
+  }
+
+  const { data: row, error: insErr } = await supabaseAdmin
+    .from("project_files")
+    .insert({
+      user_id: userId,
+      project_id: resolvedProjectId,
+      storage_path,
+      filename,
+      mime_type: mime_type || "",
+      bytes: bytes ?? 0,
+      source,
+    })
+    .select("id")
+    .single();
+
+  if (insErr || !row) {
+    const msg = insErr?.message || "Could not save file metadata";
+    const dup = insErr?.code === "23505" || /duplicate|unique/i.test(msg);
+    return { ok: false, status: dup ? 409 : 500, error: msg };
+  }
+
+  const signed_url = await signFileUrl(storage_path);
+  return { ok: true, id: row.id, signed_url };
+}
+
 export async function listFilesForProjectWithUrls(projectId: string): Promise<
   Array<ProjectFileRow & { signed_url: string | null }>
 > {

@@ -109,28 +109,65 @@
 
   async function uploadChatFiles(fileList) {
     if (!fileList?.length) return { filenames: [], err: null };
-    const token = (await supabaseClient?.auth.getSession())?.data?.session?.access_token;
-    const fd = new FormData();
-    fileList.forEach(function (f) {
-      fd.append("files", f);
-    });
-    if (latestProjectId) fd.append("project_id", latestProjectId);
-    const res = await fetch(`${API_BASE}/api/chat/upload-files`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: fd,
-    });
-    const text = await res.text();
-    let data = {};
-    try {
-      data = JSON.parse(text);
-    } catch (_) {}
-    if (!res.ok) {
-      return { filenames: [], err: (data && data.error) || text || "Upload failed" };
+    if (!supabaseClient) return { filenames: [], err: "Supabase not configured" };
+    const session = (await supabaseClient.auth.getSession()).data.session;
+    if (!session?.user) return { filenames: [], err: "Not signed in" };
+    const uid = session.user.id;
+
+    var projectId = latestProjectId;
+    if (!projectId) {
+      try {
+        var latest = await apiCall("/api/projects/latest");
+        projectId = latest.project && latest.project.id ? latest.project.id : null;
+      } catch (_) {
+        projectId = null;
+      }
     }
-    const names = (data.files || []).map(function (f) {
-      return f.filename;
-    });
+
+    const names = [];
+    for (var i = 0; i < fileList.length; i++) {
+      var f = fileList[i];
+      var rid =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : String(Date.now()) + "-" + i;
+      var safe = String(f.name || "file")
+        .replace(/[^a-zA-Z0-9._-]/g, "_")
+        .slice(0, 180);
+      var path = projectId
+        ? uid + "/" + projectId + "/" + rid + "_" + safe
+        : uid + "/orphan/" + rid + "_" + safe;
+
+      var up = await supabaseClient.storage.from("project-files").upload(path, f, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: f.type || "application/octet-stream",
+      });
+      if (up.error) {
+        var msg = up.error.message || "Storage upload failed";
+        if (/bucket not found|No such bucket/i.test(msg)) {
+          msg +=
+            " Create the \u201cproject-files\u201d bucket (run Supabase migration 009) and Storage policies (010).";
+        }
+        return { filenames: [], err: msg };
+      }
+
+      try {
+        await apiCall("/api/chat/register-file", {
+          method: "POST",
+          body: JSON.stringify({
+            storage_path: path,
+            filename: f.name || safe,
+            bytes: f.size,
+            mime_type: f.type || "",
+            project_id: projectId,
+          }),
+        });
+      } catch (regErr) {
+        return { filenames: [], err: regErr.message || "Could not save file metadata" };
+      }
+      names.push(f.name || safe);
+    }
     return { filenames: names, err: null };
   }
 
