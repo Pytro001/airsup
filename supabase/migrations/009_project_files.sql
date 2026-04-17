@@ -1,5 +1,9 @@
 -- Project file attachments (Storage + metadata). Run in Supabase SQL Editor if not using CLI.
 
+-- 0. Ensure factories.user_id exists (same as migration 006). Required for supplier RLS below.
+alter table public.factories add column if not exists user_id uuid references public.profiles(id) on delete set null;
+create unique index if not exists factories_user_id_unique on public.factories (user_id) where user_id is not null;
+
 -- 1. Private bucket for buyer project files (access via signed URLs from API only)
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('project-files', 'project-files', false, 52428800, null)
