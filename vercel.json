@@ -2,6 +2,12 @@
   "outputDirectory": ".",
   "buildCommand": "cd server && npm install && npx tsc",
   "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/internal/jobs",
+      "schedule": "*/2 * * * *"
+    }
+  ],
   "functions": {
     "api/index.ts": {
       "includeFiles": "server/dist/**,server/node_modules/**",

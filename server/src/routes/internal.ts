@@ -1,0 +1,48 @@
+import { Router } from "express";
+import type { Response } from "express";
+import { runJobPollOnce } from "../jobs/poll.js";
+
+export const internalRouter = Router();
+
+/**
+ * Background jobs for Vercel: vercel.json crons should hit GET /api/internal/jobs.
+ *
+ * Ops checklist (matching + uploads):
+ * - CRON_SECRET — Vercel project env; cron requests include Authorization: Bearer <CRON_SECRET>
+ * - SUPABASE_SERVICE_ROLE_KEY — service_role key (not anon); required for admin DB + Storage signing
+ * - ANTHROPIC_API_KEY — intake, search scoring, negotiation, match intros
+ * - Apply Supabase migrations through 012 (supplier outreach RLS, storage 011, etc.)
+ * - Local / non-Vercel: server/src/index.ts runs startWorker(); or set RUN_JOB_POLL_AFTER_SEARCH=1 so intake can trigger runJobPollOnce after search_factories
+ */
+function authorizeCron(req: { headers: { authorization?: string } }): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  const auth = req.headers.authorization;
+  return auth === `Bearer ${secret}`;
+}
+
+async function runJobs(_req: unknown, res: Response): Promise<void> {
+  try {
+    await runJobPollOnce();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[internal/jobs]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Job run failed" });
+  }
+}
+
+internalRouter.get("/jobs", (req, res) => {
+  if (!authorizeCron(req)) {
+    res.status(401).json({ error: "Unauthorized — set CRON_SECRET and use Vercel cron or Bearer token" });
+    return;
+  }
+  void runJobs(req, res);
+});
+
+internalRouter.post("/jobs", (req, res) => {
+  if (!authorizeCron(req)) {
+    res.status(401).json({ error: "Unauthorized — set CRON_SECRET and use Vercel cron or Bearer token" });
+    return;
+  }
+  void runJobs(req, res);
+});

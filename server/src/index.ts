@@ -9,6 +9,8 @@ import { visitsRouter } from "./routes/visits.js";
 import { connectionChatRouter } from "./routes/connection-chat.js";
 import { whatsappWebhookRouter } from "./routes/webhooks/whatsapp.js";
 import { stripeWebhookRouter } from "./routes/webhooks/stripe.js";
+import { internalRouter } from "./routes/internal.js";
+import { outreachRouter } from "./routes/outreach.js";
 import { startWorker } from "./jobs/worker.js";
 
 const app = express();
@@ -25,6 +27,8 @@ app.use("/api/matches", matchesRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/visits", visitsRouter);
 app.use("/api/connections", connectionChatRouter);
+app.use("/api/internal", internalRouter);
+app.use("/api/outreach", outreachRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 

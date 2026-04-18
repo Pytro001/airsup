@@ -399,7 +399,10 @@ img { max-width: 100%; display: block; }
 .badge--intro_sent { background: #dbeafe; color: #1e40af; }
 .badge--quoted { background: #dbeafe; color: #1e40af; }
 .badge--briefed { background: #fef3c7; color: #92400e; }
+.badge--await_supplier { background: #fef3c7; color: #92400e; }
 .badge--accepted { background: #d1fae5; color: #065f46; }
+.badge--rejected { background: #fee2e2; color: #991b1b; }
+.supplier-brief-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .project-card-reqs { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
 .project-files-block { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-light); }
 .project-files-heading { font-size: 14px; font-weight: 600; margin-bottom: 8px; }

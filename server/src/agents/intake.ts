@@ -3,6 +3,8 @@ import type { MessageParam, Tool, ToolResultBlockParam } from "@anthropic-ai/sdk
 import { getAnthropicClient } from "../services/anthropic.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { formatFilesForPrompt } from "../lib/project-files.js";
+import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
+import { runJobPollOnce } from "../jobs/poll.js";
 
 const SYSTEM_PROMPT = `You are Airsup — an expert manufacturing sourcing agent.
 
@@ -18,8 +20,8 @@ Airsup eliminates the sales middleman. When we match a buyer with a factory, we 
 4. UPDATE — Keep the user informed about progress. When you find matches, present them clearly with quotes, timelines, iteration process, and what the first deliverable will be (e.g. initial drawing, CAD model, sample).
 
 ## Guided conversation flow
-- Use suggest_options to offer 2-4 clickable choices when you ask a question. Make options specific to the user's context (industry, product type). This makes the conversation faster.
-- After gathering enough details (product, quantity, timeline), create the project with save_project, start the search with search_factories, and explain what happens next.
+- Use suggest_options to offer 2-4 clickable choices when you ask a question. Make options specific to the user's context (company description, product type). This makes the conversation faster.
+- After gathering enough details (product, quantity, timeline), call update_project_summary with ideal_factory_profile and readiness when possible, then create or reference the project and start the search with search_factories.
 - When you kick off a factory search, use suggest_action with action "navigate" and target "connections" to give the user a button to check their connections.
 - Explain the process clearly: "I'll handle all communication with factories, negotiate terms, and when there's a match, they'll appear in your Connections where you can chat directly with the engineer."
 
@@ -110,14 +112,14 @@ const TOOLS: Tool[] = [
   {
     name: "search_factories",
     description:
-      "Start searching for matching factories for a project. Only call this when you have enough info about the project (at minimum: what to manufacture and rough quantity).",
+      "Start searching for matching factories. Prefer calling update_project_summary first with ideal_factory_profile and readiness. Requires project_id; optional criteria refine the factory pool (category, location_preference, certifications). The server merges project and company context automatically.",
     input_schema: {
       type: "object" as const,
       properties: {
         project_id: { type: "string", description: "The project UUID to search for" },
         criteria: {
           type: "object",
-          description: "Search criteria",
+          description: "Optional refinements (merged with saved project summary and company description)",
           properties: {
             category: { type: "string" },
             location_preference: { type: "string" },
@@ -143,7 +145,7 @@ const TOOLS: Tool[] = [
   {
     name: "update_project_summary",
     description:
-      "Update the AI-generated summary for a project after learning significant new details.",
+      "Update the AI-generated summary for a project after learning significant new details. Call before search_factories when possible, including ideal_factory_profile (type of factory/process) and readiness.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -281,13 +283,41 @@ async function handleToolCall(
 
     case "search_factories": {
       const { project_id, criteria } = toolInput as { project_id: string; criteria?: Record<string, unknown> };
-      const { data: search } = await supabaseAdmin
+      const { data: project, error: pe } = await supabaseAdmin
+        .from("projects")
+        .select("id, user_id, title, description, requirements, ai_summary")
+        .eq("id", project_id)
+        .maybeSingle();
+      if (pe || !project || project.user_id !== userId) {
+        return "Project not found or you do not have access to it.";
+      }
+
+      const { data: company } = await supabaseAdmin
+        .from("companies")
+        .select("name, description, industry, location, ai_knowledge")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      const merged = mergeSearchCriteriaFromSources(criteria, project, company);
+
+      const { data: search, error: se } = await supabaseAdmin
         .from("factory_searches")
-        .insert({ project_id, search_criteria: criteria || {}, status: "pending" })
+        .insert({ project_id, search_criteria: merged, status: "pending" })
         .select("id")
         .single();
+      if (se || !search) {
+        return `Could not start factory search: ${se?.message || "unknown error"}`;
+      }
       await supabaseAdmin.from("projects").update({ status: "searching" }).eq("id", project_id);
-      return `Factory search started (search id: ${search?.id}). The background worker will find and negotiate with matching factories.`;
+
+      const kick =
+        process.env.RUN_JOB_POLL_AFTER_SEARCH === "1" ||
+        (process.env.NODE_ENV !== "production" && !process.env.VERCEL);
+      if (kick) {
+        void runJobPollOnce().catch((err) => console.error("[Airsup] post-search job poll:", err));
+      }
+
+      return `Factory search started (search id: ${search.id}). The background worker will find and negotiate with matching factories.${kick ? " Job queue was run once on this server (local or RUN_JOB_POLL_AFTER_SEARCH=1)." : " On production (Vercel), ensure CRON_SECRET and the /api/internal/jobs cron are configured."}`;
     }
 
     case "get_project_status": {
@@ -320,7 +350,9 @@ export async function loadContext(userId: string): Promise<string> {
 
   const { data: company } = await supabaseAdmin.from("companies").select("*").eq("user_id", userId).maybeSingle();
   if (company) {
-    parts.push(`## Known company info\nName: ${company.name}\nIndustry: ${company.industry || "unknown"}\nDescription: ${company.description || "unknown"}\nLocation: ${company.location || "unknown"}`);
+    parts.push(
+      `## Known company info\nName: ${company.name}\nShort description: ${company.description || "unknown"}\nIndustry (if any): ${company.industry || "unknown"}\nLocation: ${company.location || "unknown"}`
+    );
     if (company.ai_knowledge && Object.keys(company.ai_knowledge).length > 0) {
       parts.push("## Additional knowledge\n" + Object.entries(company.ai_knowledge).map(([k, v]) => `- ${k}: ${v}`).join("\n"));
     }

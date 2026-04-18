@@ -57,22 +57,32 @@ matchesRouter.get("/", requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 matchesRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
+  const uid = req.userId!;
   const { data, error } = await supabaseAdmin
     .from("matches")
     .select(`
       id, status, quote, context_summary, wa_group_id, created_at,
       projects!inner(id, title, description, user_id),
-      factories(id, name, location, category, capabilities),
+      factories(id, name, location, category, capabilities, user_id),
       timelines(id, milestone, due_date, status),
       payments(id, amount_cents, currency, status)
     `)
     .eq("id", req.params.id)
-    .eq("projects.user_id", req.userId!)
     .single();
 
-  if (error) {
+  if (error || !data) {
     res.status(404).json({ error: "Match not found" });
     return;
   }
+
+  const proj = (Array.isArray(data.projects) ? data.projects[0] : data.projects) as { user_id: string };
+  const fac = (Array.isArray(data.factories) ? data.factories[0] : data.factories) as { user_id: string | null };
+  const isBuyer = proj.user_id === uid;
+  const isSupplier = fac.user_id != null && fac.user_id === uid;
+  if (!isBuyer && !isSupplier) {
+    res.status(403).json({ error: "Not allowed" });
+    return;
+  }
+
   res.json({ match: data });
 });

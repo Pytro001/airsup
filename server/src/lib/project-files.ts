@@ -90,7 +90,11 @@ export async function registerProjectFileRecord(input: {
     .single();
 
   if (insErr || !row) {
-    const msg = insErr?.message || "Could not save file metadata";
+    let msg = insErr?.message || "Could not save file metadata";
+    if (/row-level security|violates row-level security policy/i.test(msg)) {
+      msg +=
+        " If this is not a duplicate path, verify Vercel env SUPABASE_SERVICE_ROLE_KEY is the Supabase service_role secret (not the anon key).";
+    }
     const dup = insErr?.code === "23505" || /duplicate|unique/i.test(msg);
     return { ok: false, status: dup ? 409 : 500, error: msg };
   }

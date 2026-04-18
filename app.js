@@ -58,13 +58,38 @@
   let activeConnectionMatchId = null;
 
   function resetOnboardData() {
-    onboardData = { role: "", fullName: "", email: "", phone: "", companyName: "", industry: "", location: "", productType: "", quantity: "", timeline: "", capabilities: "", certifications: "", moq: "", specialization: "" };
+    onboardData = { role: "", fullName: "", email: "", phone: "", companyName: "", companyDescription: "", location: "", productType: "", quantity: "", timeline: "", capabilities: "", certifications: "", moq: "", specialization: "" };
   }
   resetOnboardData();
 
   /* ── Helpers ── */
   function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
   function escapeAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function formatOutreachStage(stage) {
+    if (stage === "await_supplier") return "Awaiting your response";
+    return String(stage || "").replace(/_/g, " ") || "";
+  }
+
+  function summarizeProjectRequirements(req) {
+    if (!req || typeof req !== "object") return "";
+    try {
+      var parts = [];
+      if (req.quantity) parts.push("Qty: " + String(req.quantity));
+      if (req.timeline) parts.push("Timeline: " + String(req.timeline));
+      if (req.budget) parts.push("Budget: " + String(req.budget));
+      if (req.materials) parts.push("Materials: " + String(req.materials).slice(0, 140));
+      if (req.quality_requirements) parts.push("Quality: " + String(req.quality_requirements).slice(0, 120));
+      return parts.join(" \u00b7 ");
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function formatMatchStatusLabel(status) {
+    if (status === "intro_sent") return "Intro sent \u2014 say hello";
+    if (status === "in_production") return "In production";
+    return String(status || "").replace(/_/g, " ") || "";
+  }
 
   function simpleMarkdown(text) {
     let html = escapeHtml(text);
@@ -147,7 +172,10 @@
         var msg = up.error.message || "Storage upload failed";
         if (/bucket not found|No such bucket/i.test(msg)) {
           msg +=
-            " Create the \u201cproject-files\u201d bucket (run Supabase migration 009) and Storage policies (010).";
+            " Create the \u201cproject-files\u201d bucket (run Supabase migration 009) and Storage policies (010/011).";
+        } else if (/row-level security|RLS|permission denied|not authorized/i.test(msg)) {
+          msg +=
+            " [Storage upload \u2014 Network tab: storage/v1/object/...] First path segment must be your user id; apply migrations 010 and 011.";
         }
         return { filenames: [], err: msg };
       }
@@ -164,7 +192,12 @@
           }),
         });
       } catch (regErr) {
-        return { filenames: [], err: regErr.message || "Could not save file metadata" };
+        var regMsg = regErr.message || "Could not save file metadata";
+        if (/row-level security|RLS|violates row-level security/i.test(regMsg)) {
+          regMsg +=
+            " [register-file API uses the service role on the server. On Vercel, set SUPABASE_SERVICE_ROLE_KEY to the Supabase service_role secret.]";
+        }
+        return { filenames: [], err: regMsg };
       }
       names.push(f.name || safe);
     }
@@ -281,7 +314,7 @@
     { id: "company", type: "form", title: "Tell us about your company.", sub: "Our AI remembers everything \u2014 so the factory\u2019s engineer gets full context from day one.",
       fields: [
         { key: "companyName", label: "Company name", placeholder: "Acme Inc.", required: true },
-        { key: "industry", label: "Industry", placeholder: "Consumer electronics, Fashion, etc." },
+        { key: "companyDescription", label: "Short company description", placeholder: "What you build, who it\u2019s for, stage (e.g. pre-seed hardware startup).", type: "textarea" },
         { key: "location", label: "Location", placeholder: "Berlin, Germany" },
       ] },
     { id: "needs", type: "form", title: "What do you need manufactured?", sub: "Be as specific or vague as you want. The goal is to get you a first drawing or sample as fast as possible.",
@@ -456,9 +489,9 @@
       const coPayload = {
         user_id: currentUser.id,
         name: d.companyName || "",
-        industry: d.industry || "",
+        industry: "",
         location: d.location || "",
-        description: "",
+        description: d.companyDescription || "",
         ai_knowledge: { role: d.role, product_type: d.productType, quantity: d.quantity, timeline: d.timeline, onboarded_at: new Date().toISOString() },
       };
       const { data: coRow } = await supabaseClient.from("companies").select("id").eq("user_id", currentUser.id).maybeSingle();
@@ -763,7 +796,7 @@
         const contact = ctx.direct_contact || {};
         const contactLine = contact.name ? `${contact.name}${contact.role ? ` \u00b7 ${contact.role}` : ""}` : "";
         const q = m.quote || {};
-        return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(f?.name||"Factory")}</span><span class="connection-location">${escapeHtml(f?.location||"")}</span></div><span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g," ")}</span></div>${contactLine?`<div class="connection-summary-bar" style="font-weight:500;">Your contact: ${escapeHtml(contactLine)}</div>`:""}<div class="connection-summary-bar">${escapeHtml(ctx.short||"Connection established")}</div><div class="connection-body"><div class="connection-project-line">Project: ${escapeHtml(p?.title||"")}</div>${q.unit_price?`<div class="connection-quote">${escapeHtml(q.unit_price)}/unit \u00b7 ${escapeHtml(q.lead_time||"TBD")}</div>`:""}</div></div>`;
+        return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(f?.name||"Factory")}</span><span class="connection-location">${escapeHtml(f?.location||"")}</span></div><span class="project-card-badge badge--${m.status}">${escapeHtml(formatMatchStatusLabel(m.status))}</span></div>${contactLine?`<div class="connection-summary-bar" style="font-weight:500;">Your contact: ${escapeHtml(contactLine)}</div>`:""}<div class="connection-summary-bar">${escapeHtml(ctx.short||"Connection established")}</div><div class="connection-body"><div class="connection-project-line">Project: ${escapeHtml(p?.title||"")}</div>${q.unit_price?`<div class="connection-quote">${escapeHtml(q.unit_price)}/unit \u00b7 ${escapeHtml(q.lead_time||"TBD")}</div>`:""}</div></div>`;
       }).join("");
       container.querySelectorAll(".connection-card--clickable").forEach((card) => {
         card.addEventListener("click", () => {
@@ -904,10 +937,17 @@
       return;
     }
 
-    const { data: outreach } = await supabaseClient.from("outreach_logs").select("id, stage, outcome, factory_searches(projects(title, description, status))").eq("factory_id", factory.id).order("created_at", { ascending: false }).limit(20);
+    const { data: outreach } = await supabaseClient
+      .from("outreach_logs")
+      .select("id, stage, outcome, factory_searches(projects(title, description, status, requirements))")
+      .eq("factory_id", factory.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
     const { data: matches } = await supabaseClient.from("matches").select("id, status, quote, context_summary, projects(title, description)").eq("factory_id", factory.id).order("created_at", { ascending: false }).limit(20);
 
-    const briefCount = (outreach || []).filter((o) => o.stage === "briefed" || o.stage === "quoted").length;
+    const briefCount = (outreach || []).filter((o) =>
+      ["briefed", "negotiating", "await_supplier", "quoted"].includes(o.stage)
+    ).length;
     const activeCount = (matches || []).filter((m) => m.status !== "cancelled").length;
 
     if (stats) stats.innerHTML = `<div class="stat-card"><div class="stat-value">${briefCount}</div><div class="stat-label">Incoming briefs</div></div><div class="stat-card"><div class="stat-value">${activeCount}</div><div class="stat-label">Active projects</div></div><div class="stat-card"><div class="stat-value">0</div><div class="stat-label">Completed</div></div>`;
@@ -917,8 +957,45 @@
       else {
         briefs.innerHTML = outreach.map((o) => {
           const proj = o.factory_searches?.projects;
-          return `<div class="project-card"><div class="project-card-title">${escapeHtml(proj?.title || "Untitled project")}</div><div class="project-card-desc">${escapeHtml(o.outcome || proj?.description || "")}</div><div class="project-card-meta"><span class="project-card-badge badge--${o.stage}">${o.stage}</span></div></div>`;
+          const stageClass = String(o.stage || "").replace(/[^a-zA-Z0-9_-]/g, "_");
+          const actions =
+            o.stage === "await_supplier"
+              ? `<div class="supplier-brief-actions"><button type="button" class="btn-primary supplier-accept-btn" data-outreach-id="${escapeAttr(o.id)}">Accept brief</button><button type="button" class="btn-secondary supplier-decline-btn" data-outreach-id="${escapeAttr(o.id)}">Decline</button></div>`
+              : o.stage === "briefed" || o.stage === "negotiating"
+                ? `<div class="supplier-brief-actions"><button type="button" class="btn-secondary supplier-decline-btn" data-outreach-id="${escapeAttr(o.id)}">Decline brief</button></div>`
+                : "";
+          var reqLine = summarizeProjectRequirements(proj?.requirements);
+          var descPart = proj?.description ? String(proj.description).slice(0, 260) : "";
+          var outcomePart = o.outcome || "";
+          var bodyText = [descPart, outcomePart].filter(Boolean).join("\n\n");
+          if (!bodyText && !reqLine) bodyText = "No project details yet.";
+          var reqsHtml = reqLine ? `<div class="project-card-reqs">${escapeHtml(reqLine)}</div>` : "";
+          return `<div class="project-card"><div class="project-card-title">${escapeHtml(proj?.title || "Untitled project")}</div><div class="project-card-desc">${escapeHtml(bodyText)}</div>${reqsHtml}<div class="project-card-meta"><span class="project-card-badge badge--${stageClass}">${escapeHtml(formatOutreachStage(o.stage))}</span></div>${actions}</div>`;
         }).join("");
+        briefs.querySelectorAll(".supplier-accept-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-outreach-id");
+            if (!id) return;
+            try {
+              await apiCall(`/api/outreach/${id}/accept`, { method: "POST", body: "{}" });
+              await loadSupplierDashboard();
+            } catch (e) {
+              alert(e.message || "Could not accept brief");
+            }
+          });
+        });
+        briefs.querySelectorAll(".supplier-decline-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = btn.getAttribute("data-outreach-id");
+            if (!id) return;
+            try {
+              await apiCall(`/api/outreach/${id}/decline`, { method: "POST", body: "{}" });
+              await loadSupplierDashboard();
+            } catch (e) {
+              alert(e.message || "Could not decline brief");
+            }
+          });
+        });
       }
     }
 
@@ -928,7 +1005,7 @@
         active.innerHTML = matches.map((m) => {
           const p = m.projects;
           const q = m.quote || {};
-          return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(p?.title || "Project")}</span></div><span class="project-card-badge badge--${m.status}">${m.status.replace(/_/g," ")}</span></div><div class="connection-summary-bar">${escapeHtml(m.context_summary?.short || p?.description || "")}</div>${q.unit_price ? `<div class="connection-body"><div class="connection-quote">${escapeHtml(q.unit_price)}/unit</div></div>` : ""}</div>`;
+          return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(p?.title || "Project")}</span></div><span class="project-card-badge badge--${m.status}">${escapeHtml(formatMatchStatusLabel(m.status))}</span></div><div class="connection-summary-bar">${escapeHtml(m.context_summary?.short || p?.description || "")}</div>${q.unit_price ? `<div class="connection-body"><div class="connection-quote">${escapeHtml(q.unit_price)}/unit</div></div>` : ""}</div>`;
         }).join("");
         active.querySelectorAll(".connection-card--clickable").forEach((card) => {
           card.addEventListener("click", () => {
