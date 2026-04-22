@@ -313,50 +313,50 @@
   const STARTUP_STEPS = [
     { id: "company", type: "form", title: "Tell us about your company.", sub: "Our AI remembers everything \u2014 so the factory\u2019s engineer gets full context from day one.",
       fields: [
-        { key: "companyName", label: "Company name", placeholder: "Acme Inc.", required: true },
-        { key: "companyDescription", label: "Short company description", placeholder: "What you build, who it\u2019s for, stage (e.g. pre-seed hardware startup).", type: "textarea" },
-        { key: "location", label: "Location", placeholder: "Berlin, Germany" },
+        { key: "companyName", label: "Company name", required: true },
+        { key: "companyDescription", label: "Short company description", type: "textarea" },
+        { key: "location", label: "Location" },
       ] },
     { id: "needs", type: "form", title: "What do you need manufactured?", sub: "Be as specific or vague as you want. The goal is to get you a first drawing or sample as fast as possible.",
       fields: [
-        { key: "productType", label: "Product type", placeholder: "Custom PCBs, Injection-molded parts, Apparel\u2026", required: true },
+        { key: "productType", label: "Product type", required: true },
         { row: [
-          { key: "quantity", label: "Estimated quantity", placeholder: "1,000 units" },
-          { key: "timeline", label: "Timeline", placeholder: "Q3 2026" },
+          { key: "quantity", label: "Estimated quantity" },
+          { key: "timeline", label: "Timeline" },
         ]},
       ] },
     { id: "contact", type: "form", title: "How can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { row: [
-          { key: "fullName", label: "Full name", placeholder: "Jane Doe", required: true },
-          { key: "email", label: "Email", placeholder: "jane@acme.com", type: "email", required: true },
+          { key: "fullName", label: "Full name", required: true },
+          { key: "email", label: "Email", type: "email", required: true },
         ]},
-        { key: "phone", label: "Phone (optional)", placeholder: "+49 170 1234567", type: "tel" },
+        { key: "phone", label: "Phone (optional)", type: "tel" },
       ] },
   ];
 
   const SUPPLIER_STEPS = [
     { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers never talk to sales \u2014 AI briefs your designers and engineers directly. Less overhead, faster iterations.",
       fields: [
-        { key: "companyName", label: "Factory / company name", placeholder: "Shenzhen Precision Mfg.", required: true },
-        { key: "location", label: "Location", placeholder: "Shenzhen, China", required: true },
-        { key: "specialization", label: "Specialization", placeholder: "CNC machining, Injection molding, PCB assembly\u2026", required: true },
+        { key: "companyName", label: "Factory / company name", required: true },
+        { key: "location", label: "Location", required: true },
+        { key: "specialization", label: "Specialization", required: true },
       ] },
     { id: "capabilities", type: "form", title: "What can you produce?", sub: "This helps our AI match you with the right projects. Be specific about what your team excels at.",
       fields: [
-        { key: "capabilities", label: "Core capabilities", placeholder: "Aluminum CNC, 3-axis & 5-axis, surface finishing\u2026", type: "textarea" },
+        { key: "capabilities", label: "Core capabilities", type: "textarea" },
         { row: [
-          { key: "certifications", label: "Certifications", placeholder: "ISO 9001, CE, UL\u2026" },
-          { key: "moq", label: "Typical MOQ", placeholder: "100 units" },
+          { key: "certifications", label: "Certifications" },
+          { key: "moq", label: "Typical MOQ" },
         ]},
       ] },
     { id: "contact", type: "form", title: "Who should buyers work with?", sub: "We\u2019ll connect projects directly to your designer or engineer \u2014 not a sales team. This is your competitive advantage.",
       fields: [
         { row: [
-          { key: "fullName", label: "Contact name", placeholder: "Wei Zhang", required: true },
-          { key: "email", label: "Email", placeholder: "wei@factory.com", type: "email", required: true },
+          { key: "fullName", label: "Contact name", required: true },
+          { key: "email", label: "Email", type: "email", required: true },
         ]},
-        { key: "phone", label: "Phone / WeChat", placeholder: "+86 138 0000 0000", type: "tel" },
+        { key: "phone", label: "Phone / WeChat", type: "tel" },
       ] },
   ];
 
@@ -424,13 +424,13 @@
       if (f.row) {
         html += '<div class="onboard-field-row">';
         f.row.forEach((rf) => {
-          html += `<div class="onboard-field"><label class="onboard-label">${rf.label}</label><input class="onboard-input" data-key="${rf.key}" type="${rf.type || "text"}" placeholder="${rf.placeholder || ""}" value="${escapeAttr(onboardData[rf.key] || "")}" ${rf.required ? "required" : ""} /></div>`;
+          html += `<div class="onboard-field"><label class="onboard-label">${rf.label}</label><input class="onboard-input" data-key="${rf.key}" type="${rf.type || "text"}" value="${escapeAttr(onboardData[rf.key] || "")}" ${rf.required ? "required" : ""} /></div>`;
         });
         html += "</div>";
       } else if (f.type === "textarea") {
-        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><textarea class="onboard-textarea onboard-input" data-key="${f.key}" placeholder="${f.placeholder || ""}" ${f.required ? "required" : ""}>${escapeHtml(onboardData[f.key] || "")}</textarea></div>`;
+        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><textarea class="onboard-textarea onboard-input" data-key="${f.key}" ${f.required ? "required" : ""}>${escapeHtml(onboardData[f.key] || "")}</textarea></div>`;
       } else {
-        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><input class="onboard-input" data-key="${f.key}" type="${f.type || "text"}" placeholder="${f.placeholder || ""}" value="${escapeAttr(onboardData[f.key] || "")}" ${f.required ? "required" : ""} /></div>`;
+        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><input class="onboard-input" data-key="${f.key}" type="${f.type || "text"}" value="${escapeAttr(onboardData[f.key] || "")}" ${f.required ? "required" : ""} /></div>`;
       }
     });
     html += '</div><div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>';
