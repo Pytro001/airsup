@@ -7,6 +7,11 @@ export const internalRouter = Router();
 /**
  * Background jobs for Vercel: vercel.json crons should hit GET /api/internal/jobs.
  *
+ * Vercel Hobby only allows cron schedules that run once per day; more frequent
+ * schedules fail deployment (see Vercel cron docs). For every-few-minutes jobs
+ * on Hobby, use an external HTTP cron (e.g. cron-job.org) calling this route,
+ * or upgrade to Pro and use a tighter schedule in vercel.json.
+ *
  * Ops checklist (matching + uploads):
  * - CRON_SECRET — Vercel project env; cron requests include Authorization: Bearer <CRON_SECRET>
  * - SUPABASE_SERVICE_ROLE_KEY — service_role key (not anon); required for admin DB + Storage signing
