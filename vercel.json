@@ -17,6 +17,8 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/webhooks/(.*)", "destination": "/api" },
-    { "source": "/health", "destination": "/api" }
+    { "source": "/health", "destination": "/api" },
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/landingpage", "destination": "/landingpage.html" }
   ]
 }

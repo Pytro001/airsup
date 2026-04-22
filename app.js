@@ -305,6 +305,7 @@
     if (name === "onboarding") renderOnboardStep();
     if (name === "supplier-dashboard") loadSupplierDashboard();
     if (name === "supplier-profile") loadSupplierProfile();
+    if (name === "admin") loadAdminOverview();
   }
 
   /* ══════════════════════════════════════
@@ -1020,6 +1021,83 @@
     }
   }
 
+  async function loadAdminOverview() {
+    const stats = $("admin-stats");
+    const custEl = $("admin-customers");
+    const facEl = $("admin-factories");
+    const connEl = $("admin-connections");
+    if (stats) stats.innerHTML = '<div class="projects-empty">Loading\u2026</div>';
+    if (custEl) custEl.innerHTML = "";
+    if (facEl) facEl.innerHTML = "";
+    if (connEl) connEl.innerHTML = "";
+
+    let data;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/overview`, { headers: { "Content-Type": "application/json" } });
+      data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Could not load admin data");
+    } catch (err) {
+      if (stats) stats.innerHTML = `<div class="projects-empty">${escapeHtml(err.message || "Failed to load")}</div>`;
+      return;
+    }
+
+    const customers = data.customers || [];
+    const factories = data.factories || [];
+    const connections = data.connections || [];
+
+    if (stats) {
+      const connectedBuyers = customers.filter((c) => c.connected).length;
+      const connectedFactories = factories.filter((f) => f.connected).length;
+      stats.innerHTML =
+        `<div class="stat-card"><div class="stat-value">${customers.length}</div><div class="stat-label">Customers</div></div>` +
+        `<div class="stat-card"><div class="stat-value">${factories.length}</div><div class="stat-label">Factories</div></div>` +
+        `<div class="stat-card"><div class="stat-value">${connections.length}</div><div class="stat-label">AI connections</div></div>` +
+        `<div class="stat-card"><div class="stat-value">${connectedBuyers}/${customers.length}</div><div class="stat-label">Customers matched</div></div>` +
+        `<div class="stat-card"><div class="stat-value">${connectedFactories}/${factories.length}</div><div class="stat-label">Factories matched</div></div>`;
+    }
+
+    if (custEl) {
+      if (!customers.length) custEl.innerHTML = '<div class="projects-empty">No customers yet.</div>';
+      else custEl.innerHTML = customers.map((c) => {
+        const title = escapeHtml(c.company || c.display_name || "Unnamed customer");
+        const sub = [c.location, c.display_name && c.display_name !== c.company ? c.display_name : ""].filter(Boolean).join(" · ");
+        const desc = c.company_description ? String(c.company_description).slice(0, 220) : (c.project_titles || []).slice(0, 2).join(" · ");
+        const badge = c.connected
+          ? `<span class="project-card-badge badge--accepted">Connected</span>`
+          : `<span class="project-card-badge badge--pending">Not connected</span>`;
+        const meta = `<span class="project-card-meta-item">${c.project_count} project${c.project_count === 1 ? "" : "s"}</span>` +
+          `<span class="project-card-meta-item">${c.match_count} match${c.match_count === 1 ? "" : "es"}</span>`;
+        return `<div class="project-card"><div class="project-card-title">${title}</div>${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}<div class="project-card-desc">${escapeHtml(desc || "No description")}</div><div class="project-card-meta">${badge}${meta}</div></div>`;
+      }).join("");
+    }
+
+    if (facEl) {
+      if (!factories.length) facEl.innerHTML = '<div class="projects-empty">No factories yet.</div>';
+      else facEl.innerHTML = factories.map((f) => {
+        const title = escapeHtml(f.name || "Unnamed factory");
+        const sub = [f.category, f.location].filter(Boolean).join(" · ");
+        const desc = f.capabilities_description ? String(f.capabilities_description).slice(0, 220) : "";
+        const badge = f.connected
+          ? `<span class="project-card-badge badge--accepted">Connected</span>`
+          : `<span class="project-card-badge badge--pending">Not connected</span>`;
+        const meta = `<span class="project-card-meta-item">${f.brief_count} brief${f.brief_count === 1 ? "" : "s"}</span>` +
+          `<span class="project-card-meta-item">${f.match_count} match${f.match_count === 1 ? "" : "es"}</span>`;
+        return `<div class="project-card"><div class="project-card-title">${title}</div>${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}<div class="project-card-desc">${escapeHtml(desc || "No description")}</div><div class="project-card-meta">${badge}${meta}</div></div>`;
+      }).join("");
+    }
+
+    if (connEl) {
+      if (!connections.length) connEl.innerHTML = '<div class="projects-empty">No AI-made connections yet.</div>';
+      else connEl.innerHTML = connections.map((m) => {
+        const buyer = m.buyer?.company || m.buyer?.display_name || "Unknown buyer";
+        const factory = m.factory?.name || "Unknown factory";
+        const proj = m.project?.title || "Untitled project";
+        const statusClass = String(m.status || "").replace(/[^a-zA-Z0-9_-]/g, "_");
+        return `<div class="project-card"><div class="project-card-title">${escapeHtml(buyer)} <span class="admin-arrow">&rarr;</span> ${escapeHtml(factory)}</div><div class="project-card-sub">${escapeHtml(proj)}</div><div class="project-card-meta"><span class="project-card-badge badge--${statusClass}">${escapeHtml(m.status || "pending")}</span></div></div>`;
+      }).join("");
+    }
+  }
+
   async function loadSupplierProfile() {
     const root = $("supplier-profile-root");
     if (!root || !supabaseClient || !currentUser) return;
@@ -1094,5 +1172,13 @@
   /* ── Init ── */
   updateAuthUI();
   setupAuthListener();
-  ensureSession().then(() => initAuthState());
+  if (window.location.pathname.replace(/\/+$/, "") === "/admin") {
+    const account = $("header-account");
+    if (account) account.hidden = true;
+    const nav = $("header-nav");
+    if (nav) nav.style.display = "none";
+    setView("admin");
+  } else {
+    ensureSession().then(() => initAuthState());
+  }
 })();

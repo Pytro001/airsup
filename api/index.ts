@@ -10,6 +10,7 @@ import { whatsappWebhookRouter } from "../server/dist/routes/webhooks/whatsapp.j
 import { stripeWebhookRouter } from "../server/dist/routes/webhooks/stripe.js";
 import { internalRouter } from "../server/dist/routes/internal.js";
 import { outreachRouter } from "../server/dist/routes/outreach.js";
+import { adminRouter } from "../server/dist/routes/admin.js";
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
@@ -25,6 +26,7 @@ app.use("/api/visits", visitsRouter);
 app.use("/api/connections", connectionChatRouter);
 app.use("/api/internal", internalRouter);
 app.use("/api/outreach", outreachRouter);
+app.use("/api/admin", adminRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 
