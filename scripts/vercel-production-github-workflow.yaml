@@ -1,0 +1,46 @@
+# -----------------------------------------------------------------------------
+# Copy this file to: .github/workflows/vercel-production.yml
+# (PATs without "workflow" scope cannot push files under .github/workflows/.)
+#
+# Or: GitHub → Add file → Create new file → paste this → path above.
+#
+# Deploy to Vercel on every push to `main` (production). Use when the Vercel
+# dashboard does not show new deployments after a git push.
+#
+# Repository: github.com/Pytro001/airsup . Reconnect the project under
+# Vercel → Project → Settings → Git if a different repo is selected.
+#
+# One-time: GitHub → Settings → Secrets and variables → Actions:
+#   VERCEL_TOKEN       — https://vercel.com/account/settings/tokens
+#   VERCEL_ORG_ID      — Vercel team ID (Team settings) or from `vercel link` → .vercel/project.json
+#   VERCEL_PROJECT_ID  — Vercel → Project → Settings → General
+#
+# Then push to main (or re-run the workflow in the Actions tab).
+# -----------------------------------------------------------------------------
+
+name: Deploy to Vercel (production)
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: vercel-production-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: "--prod"
