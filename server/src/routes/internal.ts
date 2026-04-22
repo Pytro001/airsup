@@ -21,7 +21,10 @@ export const internalRouter = Router();
  */
 function authorizeCron(req: { headers: { authorization?: string } }): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
+  // In local dev (no VERCEL env, no CRON_SECRET) allow unauthenticated calls.
+  if (!secret) {
+    return !process.env.VERCEL;
+  }
   const auth = req.headers.authorization;
   return auth === `Bearer ${secret}`;
 }
