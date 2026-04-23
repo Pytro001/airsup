@@ -181,11 +181,14 @@
     </div>
 
     <div class="lp-login" id="lp-login-section" style="display:none;">
-      <p class="lp-login-label">Enter your email. We'll send a login link.</p>
       <div class="lp-login-row">
-        <input type="email" class="lp-email-input" id="lp-email" autocomplete="email" />
-        <button type="button" class="lp-email-btn" id="lp-send-btn">Send link</button>
+        <input type="tel" class="lp-email-input" id="lp-phone" placeholder="+1 555 000 0000" autocomplete="tel" />
       </div>
+      <div class="lp-login-row" style="margin-top:8px;">
+        <input type="password" class="lp-email-input" id="lp-pin" placeholder="PIN" maxlength="30" autocomplete="current-password" style="max-width:130px;" />
+        <button type="button" class="lp-email-btn" id="lp-send-btn">Login</button>
+      </div>
+      <p style="font-size:12px;color:#aaa;margin-top:8px;text-align:left;">First time? Just pick any PIN and you're in.</p>
       <p class="lp-login-msg" id="lp-login-msg"></p>
     </div>
   </main>
@@ -217,10 +220,13 @@
       if (!visible) document.getElementById("lp-email").focus();
     });
 
-    // Magic link login
-    const emailInput = document.getElementById("lp-email");
-    const sendBtn = document.getElementById("lp-send-btn");
-    const msgEl = document.getElementById("lp-login-msg");
+    // Phone + PIN login
+    // Phone is normalized and used as a fake email internally.
+    // No SMS, no email, costs nothing, works forever.
+    const phoneInput = document.getElementById("lp-phone");
+    const pinInput   = document.getElementById("lp-pin");
+    const sendBtn    = document.getElementById("lp-send-btn");
+    const msgEl      = document.getElementById("lp-login-msg");
 
     function showMsg(text, isError) {
       msgEl.textContent = text;
@@ -228,22 +234,49 @@
       msgEl.className = "lp-login-msg" + (isError ? " lp-login-msg--error" : "");
     }
 
-    async function sendLoginLink() {
-      const email = emailInput.value.trim();
-      if (!email || !email.includes("@")) { showMsg("Enter a valid email address.", true); return; }
-      if (!sb) { showMsg("Supabase not configured.", true); return; }
-      sendBtn.disabled = true;
-      sendBtn.textContent = "Sending…";
-      const redirectTo = (cfg.apiUrl || window.location.origin) + "/dashboard";
-      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
-      sendBtn.disabled = false;
-      sendBtn.textContent = "Send link";
-      if (error) { showMsg(error.message || "Could not send link.", true); }
-      else { showMsg("Check your email. Your link is on the way.", false); emailInput.value = ""; }
+    function phoneToFakeEmail(phone) {
+      // Strip everything except digits and leading +
+      const digits = phone.replace(/[^0-9]/g, "");
+      return digits + "@login.airsup";
     }
 
-    sendBtn.addEventListener("click", sendLoginLink);
-    emailInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendLoginLink(); });
+    async function doLogin() {
+      const phone = phoneInput.value.trim();
+      const pin   = pinInput.value;
+      if (!phone || phone.replace(/[^0-9]/g, "").length < 7) { showMsg("Enter a valid phone number with country code.", true); return; }
+      if (!pin || pin.length < 4) { showMsg("PIN must be at least 4 characters.", true); return; }
+      if (!sb) { showMsg("Not configured.", true); return; }
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Signing in…";
+      const fakeEmail = phoneToFakeEmail(phone);
+
+      // Try sign in first
+      const { data: siData, error: siErr } = await sb.auth.signInWithPassword({ email: fakeEmail, password: pin });
+      if (!siErr && siData?.session) { window.location.href = "/dashboard"; return; }
+
+      // If wrong credentials (user exists but wrong PIN)
+      const notFound = siErr?.message?.toLowerCase().includes("invalid") || siErr?.message?.toLowerCase().includes("credentials");
+      if (!notFound) {
+        sendBtn.disabled = false; sendBtn.textContent = "Login";
+        showMsg(siErr?.message || "Login failed.", true); return;
+      }
+
+      // Try sign up (new user)
+      const { data: suData, error: suErr } = await sb.auth.signUp({ email: fakeEmail, password: pin, options: { data: { phone } } });
+      if (suErr) {
+        sendBtn.disabled = false; sendBtn.textContent = "Login";
+        showMsg(suErr.message || "Could not create account.", true); return;
+      }
+      if (suData?.session) { window.location.href = "/dashboard"; return; }
+
+      // signUp succeeded but email confirmation is ON — instruct to disable it
+      sendBtn.disabled = false; sendBtn.textContent = "Login";
+      showMsg("Almost there! Disable 'Email confirmations' in Supabase Auth settings, then try again.", true);
+    }
+
+    sendBtn.addEventListener("click", doLogin);
+    phoneInput.addEventListener("keydown", (e) => { if (e.key === "Enter") pinInput.focus(); });
+    pinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
 
     // Cursor-tracking eyes with smooth lerp (lazy follow)
     // Target offset is computed instantly from mouse position, but the

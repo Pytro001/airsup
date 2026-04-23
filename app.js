@@ -40,7 +40,7 @@
     ).trim() || (anonymous ? "Guest" : "User");
     const letter = displayName.charAt(0).toUpperCase();
     await supabaseClient.from("profiles").upsert({ id: user.id, display_name: displayName, avatar_letter: letter }, { onConflict: "id" });
-    await supabaseClient.from("user_settings").upsert({ user_id: user.id, email: user.email || "", preferred_name: displayName }, { onConflict: "user_id" });
+    await supabaseClient.from("user_settings").upsert({ user_id: user.id, preferred_name: displayName }, { onConflict: "user_id" });
     currentUser = { id: user.id, email: user.email || "", displayName };
     updateAuthUI();
   }
@@ -58,7 +58,7 @@
   let activeConnectionMatchId = null;
 
   function resetOnboardData() {
-    onboardData = { role: "", fullName: "", email: "", phone: "", companyName: "", companyDescription: "", location: "", productType: "", quantity: "", timeline: "", capabilities: "", certifications: "", moq: "", specialization: "" };
+    onboardData = { role: "", fullName: "", phone: "", companyName: "", companyDescription: "", location: "", productType: "", quantity: "", timeline: "", capabilities: "", certifications: "", moq: "", specialization: "" };
   }
   resetOnboardData();
 
@@ -328,11 +328,8 @@
       ] },
     { id: "contact", type: "form", title: "How can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
-        { row: [
-          { key: "fullName", label: "Full name", required: true },
-          { key: "email", label: "Email", type: "email", required: true },
-        ]},
-        { key: "phone", label: "Phone (optional)", type: "tel" },
+        { key: "fullName", label: "Full name", required: true },
+        { key: "phone", label: "Phone / WhatsApp", type: "tel", required: true },
       ] },
   ];
 
@@ -353,11 +350,8 @@
       ] },
     { id: "contact", type: "form", title: "Who should buyers work with?", sub: "We\u2019ll connect projects directly to your designer or engineer, not a sales team. This is your competitive advantage.",
       fields: [
-        { row: [
-          { key: "fullName", label: "Contact name", required: true },
-          { key: "email", label: "Email", type: "email", required: true },
-        ]},
-        { key: "phone", label: "Phone / WeChat", type: "tel" },
+        { key: "fullName", label: "Contact name", required: true },
+        { key: "phone", label: "Phone / WeChat / WhatsApp", type: "tel", required: true },
       ] },
   ];
 
@@ -469,7 +463,7 @@
     }, { onConflict: "id" });
 
     await supabaseClient.from("user_settings").upsert({
-      user_id: currentUser.id, email: d.email || currentUser.email || "",
+      user_id: currentUser.id,
       preferred_name: displayName, company: d.companyName, phone: d.phone,
     }, { onConflict: "user_id" });
 
@@ -479,7 +473,7 @@
         location: d.location,
         category: d.specialization,
         capabilities: { description: d.capabilities, certifications: d.certifications, moq: d.moq },
-        contact_info: { name: d.fullName, email: d.email, phone: d.phone },
+        contact_info: { name: d.fullName, phone: d.phone },
         active: true,
       };
       await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify(facPayload) });
@@ -507,16 +501,16 @@
     if (!(await ensureSession())) { root.innerHTML = '<p class="settings-hint">Could not load session.</p>'; return; }
     root.innerHTML = '<p class="settings-hint">Loading\u2026</p>';
     const { data: profile } = await supabaseClient.from("profiles").select("display_name, company, location, headline, bio, phone").eq("id", currentUser.id).maybeSingle();
-    const { data: settings } = await supabaseClient.from("user_settings").select("email, phone, company, timezone").eq("user_id", currentUser.id).maybeSingle();
+    const { data: settings } = await supabaseClient.from("user_settings").select("phone, company, timezone").eq("user_id", currentUser.id).maybeSingle();
     const v = {
-      displayName: profile?.display_name || currentUser.displayName || "", email: settings?.email || currentUser.email || "",
+      displayName: profile?.display_name || currentUser.displayName || "",
       company: profile?.company || settings?.company || "", phone: profile?.phone || settings?.phone || "",
       location: profile?.location || "", headline: profile?.headline || "", bio: profile?.bio || "",
       timezone: settings?.timezone || "Europe/Berlin",
     };
     root.innerHTML = `<div class="settings-section">
-      ${[["Display name","displayName","text"],["Email","email","email"],["Company","company","text"],["Phone","phone","tel"],["Location","location","text"],["Timezone","timezone","text"]].map(([l,k,t]) =>
-        `<div class="settings-field"><label class="settings-label">${l}</label><input type="${t}" id="settings-${k}" class="settings-input" value="${escapeAttr(v[k])}" ${k==="email"?"readonly":""} /></div>`).join("")}
+      ${[["Display name","displayName","text"],["Company","company","text"],["Phone / WhatsApp","phone","tel"],["Location","location","text"],["Timezone","timezone","text"]].map(([l,k,t]) =>
+        `<div class="settings-field"><label class="settings-label">${l}</label><input type="${t}" id="settings-${k}" class="settings-input" value="${escapeAttr(v[k])}" /></div>`).join("")}
       <div class="settings-field"><label class="settings-label">Bio</label><textarea id="settings-bio" class="settings-input" rows="3">${escapeHtml(v.bio)}</textarea></div>
       <p class="settings-saved" id="settings-saved" hidden></p>
       <button type="button" class="btn-primary" id="settings-save">Save changes</button></div>`;
@@ -528,7 +522,7 @@
     const g = (k) => ($(`settings-${k}`)?.value || "").trim();
     const dn = g("displayName") || currentUser.displayName;
     const { error: pe } = await supabaseClient.from("profiles").upsert({ id: currentUser.id, display_name: dn, avatar_letter: (dn||"?").charAt(0).toUpperCase(), company: g("company"), phone: g("phone"), location: g("location"), bio: g("bio") }, { onConflict: "id" });
-    const { error: se } = await supabaseClient.from("user_settings").upsert({ user_id: currentUser.id, email: currentUser.email||"", company: g("company"), phone: g("phone"), timezone: g("timezone")||"Europe/Berlin", preferred_name: dn }, { onConflict: "user_id" });
+    const { error: se } = await supabaseClient.from("user_settings").upsert({ user_id: currentUser.id, company: g("company"), phone: g("phone"), timezone: g("timezone")||"Europe/Berlin", preferred_name: dn }, { onConflict: "user_id" });
     const saved = $("settings-saved");
     if (pe || se) { if (saved) { saved.hidden = false; saved.textContent = "Error: " + (pe?.message||se?.message||""); saved.style.color = "#d93025"; } return; }
     currentUser.displayName = dn; updateAuthUI();
