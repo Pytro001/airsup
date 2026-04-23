@@ -1181,6 +1181,13 @@
 
   /* ── Event wiring ── */
   $("logo-home")?.addEventListener("click", () => {
+    const onAdmin = window.location.pathname.replace(/\/+$/, "") === "/admin";
+    if (onAdmin) {
+      if (sessionStorage.getItem("admin_unlocked") === "1") {
+        setView("admin");
+      }
+      return;
+    }
     // Not logged in or still in onboarding → go to landing page
     if (!currentUser || currentView === "onboarding") {
       window.location.href = "/";
