@@ -96,7 +96,7 @@ img { max-width: 100%; display: block; }
   height: 24px;
   width: 24px;
   object-fit: contain;
-  border-radius: 5px;
+  border-radius: 7px;
 }
 .header-right { position: relative; }
 .avatar-btn {
