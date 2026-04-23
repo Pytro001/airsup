@@ -68,32 +68,12 @@
     .sp-wa-btn:hover { background: #1ebe5d; transform: translateY(-1px); }
     .sp-wa-icon { width: 20px; height: 20px; flex-shrink: 0; }
 
-    .sp-email-link {
-      color: #111; border-bottom: 1px solid #e0e0e0;
-      transition: border-color 0.15s;
-    }
-    .sp-email-link:hover { border-color: #111; }
-
-    .sp-hours {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-      margin-top: 20px;
-    }
-    .sp-hours-item {
-      background: #f8f8f8; border-radius: 10px; padding: 16px;
-    }
-    .sp-hours-label { font-size: 12px; color: #aaa; font-weight: 500; margin-bottom: 4px; }
-    .sp-hours-value { font-size: 14px; font-weight: 600; }
-
     .sp-footer {
       padding: 20px 24px; text-align: center;
       font-size: 12px; color: #bbb; border-top: 1px solid #f0f0f0;
     }
     .sp-footer a { color: #bbb; margin: 0 8px; transition: color 0.15s; }
     .sp-footer a:hover { color: #666; }
-
-    @media (max-width: 480px) {
-      .sp-hours { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -123,36 +103,6 @@
         </svg>
         WhatsApp
       </a>
-    </div>
-
-    <div class="sp-card">
-      <p class="sp-card-title">Email</p>
-      <p class="sp-card-body">
-        For non-urgent questions, billing, or partnership inquiries, drop us an email. We'll get back to you within 1–2 business days.
-      </p>
-      <a href="mailto:hello@airsup.ai" class="sp-email-link">hello@airsup.ai</a>
-    </div>
-
-    <div class="sp-card">
-      <p class="sp-card-title">Response times</p>
-      <div class="sp-hours">
-        <div class="sp-hours-item">
-          <p class="sp-hours-label">WhatsApp</p>
-          <p class="sp-hours-value">Within a few hours</p>
-        </div>
-        <div class="sp-hours-item">
-          <p class="sp-hours-label">Email</p>
-          <p class="sp-hours-value">1–2 business days</p>
-        </div>
-        <div class="sp-hours-item">
-          <p class="sp-hours-label">Business hours</p>
-          <p class="sp-hours-value">Mon–Fri, 9am–6pm CET</p>
-        </div>
-        <div class="sp-hours-item">
-          <p class="sp-hours-label">Emergency</p>
-          <p class="sp-hours-value">WhatsApp is fastest</p>
-        </div>
-      </div>
     </div>
   </main>
 
