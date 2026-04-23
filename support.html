@@ -107,11 +107,20 @@
     .sp-wa-icon { width: 20px; height: 20px; flex-shrink: 0; }
 
     .sp-footer {
-      padding: 20px 24px; text-align: center;
+      display: flex; flex-wrap: nowrap; justify-content: center; align-items: center;
+      gap: 0; padding: 16px 12px; text-align: center;
       font-size: 12px; color: var(--text-faint); border-top: 1px solid var(--border);
+      white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
     }
-    .sp-footer a { color: var(--text-faint); margin: 0 8px; transition: color 0.15s; }
+    .sp-footer > span,
+    .sp-footer > a { flex-shrink: 0; }
+    .sp-footer a { color: var(--text-faint); margin: 0 6px; transition: color 0.15s; }
     .sp-footer a:hover { color: var(--text-soft); }
+    @media (max-width: 480px) {
+      .sp-footer { font-size: 10px; padding: 14px 8px; }
+      .sp-footer a { margin: 0 4px; }
+    }
   </style>
 </head>
 <body>
