@@ -15,8 +15,10 @@
     }
   },
   "redirects": [
-    { "source": "/app", "destination": "/dashboard", "permanent": true },
-    { "source": "/app/", "destination": "/dashboard", "permanent": true }
+    { "source": "/app", "destination": "/workspace", "permanent": true },
+    { "source": "/app/", "destination": "/workspace", "permanent": true },
+    { "source": "/dashboard", "destination": "/workspace", "permanent": true },
+    { "source": "/dashboard/", "destination": "/workspace", "permanent": true }
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
@@ -24,8 +26,8 @@
     { "source": "/health", "destination": "/api" },
     { "source": "/admin", "destination": "/_app.html" },
     { "source": "/admin/", "destination": "/_app.html" },
-    { "source": "/dashboard", "destination": "/_app.html" },
-    { "source": "/dashboard/", "destination": "/_app.html" },
+    { "source": "/workspace", "destination": "/_app.html" },
+    { "source": "/workspace/", "destination": "/_app.html" },
     { "source": "/landingpage", "destination": "/landingpage.html" },
     { "source": "/landingpage/", "destination": "/landingpage.html" },
     { "source": "/supi", "destination": "/supi.html" },

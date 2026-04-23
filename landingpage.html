@@ -200,7 +200,7 @@
   <header class="lp-header">
     <div class="lp-brand" aria-hidden="true"></div>
     <div class="lp-header-right">
-      <a href="/dashboard?role=supplier" class="lp-login-link">Supplier</a>
+      <a href="/workspace?role=supplier" class="lp-login-link">Supplier</a>
       <button type="button" class="lp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
       <button type="button" class="lp-login-link" id="lp-login-toggle">Login</button>
     </div>
@@ -243,7 +243,7 @@
     <h1 class="lp-headline">From idea to product,<br>in one conversation.</h1>
 
     <div style="margin-bottom:40px;">
-      <a href="/dashboard?role=startup" class="lp-choice" style="display:inline-flex;align-items:center;justify-content:center;padding:14px 32px;border-radius:999px;max-width:320px;width:100%;">
+      <a href="/workspace?role=startup" class="lp-choice" style="display:inline-flex;align-items:center;justify-content:center;padding:14px 32px;border-radius:999px;max-width:320px;width:100%;">
         <span style="font-size:15px;font-weight:600;">I need something manufactured</span>
       </a>
     </div>
@@ -285,30 +285,53 @@
         })
       : null;
 
-    // Auto-redirect signed-in visitors straight to the dashboard.
-    // We hide the page until we know, to avoid flashing the login UI.
+    // Auto-redirect signed-in visitors straight to /workspace, but only
+    // if they have fully completed onboarding (a real profile exists).
+    // Users who have a session but no profile should stay on the landing
+    // page and be prompted to sign up again.
     document.body.style.visibility = "hidden";
-    // Safety fallback: show the page after 1.5s no matter what, so visitors
-    // are never stuck on a blank screen if the session check stalls.
-    var revealTimer = setTimeout(function () { document.body.style.visibility = ""; }, 1500);
-    (async () => {
+    var revealTimer = setTimeout(function () { document.body.style.visibility = ""; }, 1800);
+
+    async function checkAndRedirect() {
+      if (!sb) return false;
       try {
+        const { data: sessionData } = await sb.auth.getSession();
+        const session = sessionData?.session;
+        if (!session) return false;
+
+        // Check if onboarding is done: profile must have a company OR a headline
+        // (suppliers store "supplier" in headline; customers store their company name)
+        const { data: profile } = await sb
+          .from("profiles")
+          .select("company, headline")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        const isComplete = profile && (profile.company || profile.headline);
+        if (isComplete) {
+          window.location.replace("/workspace");
+          return true;
+        }
+        return false;
+      } catch (e) { return false; }
+    }
+
+    (async () => {
+      const redirecting = await checkAndRedirect();
+      if (!redirecting) {
+        clearTimeout(revealTimer);
+        document.body.style.visibility = "";
+
         if (sb) {
-          const { data } = await sb.auth.getSession();
-          if (data?.session) {
-            window.location.replace("/dashboard");
-            return;
-          }
-          // Also redirect if the session refreshes or signs in while this page is open.
-          sb.auth.onAuthStateChange((event, session) => {
-            if (session && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
-              window.location.replace("/dashboard");
+          // If the user signs in while on this page (successful login), check again
+          sb.auth.onAuthStateChange(async (event) => {
+            if (event === "SIGNED_IN") {
+              await checkAndRedirect();
+              document.body.style.visibility = "";
             }
           });
         }
-      } catch (e) { /* fall through to showing the landing */ }
-      clearTimeout(revealTimer);
-      document.body.style.visibility = "";
+      }
     })();
 
     // Toggle login section
@@ -353,7 +376,7 @@
 
       // Try sign in first
       const { data: siData, error: siErr } = await sb.auth.signInWithPassword({ email: fakeEmail, password: pin });
-      if (!siErr && siData?.session) { window.location.href = "/dashboard"; return; }
+      if (!siErr && siData?.session) { window.location.href = "/workspace"; return; }
 
       // If wrong credentials (user exists but wrong PIN)
       const notFound = siErr?.message?.toLowerCase().includes("invalid") || siErr?.message?.toLowerCase().includes("credentials");
@@ -368,7 +391,7 @@
         sendBtn.disabled = false; sendBtn.textContent = "Login";
         showMsg(suErr.message || "Could not create account.", true); return;
       }
-      if (suData?.session) { window.location.href = "/dashboard"; return; }
+      if (suData?.session) { window.location.href = "/workspace"; return; }
 
       // signUp succeeded but email confirmation is ON — instruct to disable it
       sendBtn.disabled = false; sendBtn.textContent = "Login";

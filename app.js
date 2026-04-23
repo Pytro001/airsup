@@ -226,7 +226,7 @@
   async function handleSignOut() {
     if (supabaseClient) await supabaseClient.auth.signOut();
     currentUser = null; userRole = null; onboardStep = 0; resetOnboardData();
-    updateAuthUI(); setView("onboarding");
+    window.location.href = "/";
   }
 
   /* ── Auth UI ── */
@@ -283,7 +283,14 @@
       } else if (profile?.company || profile?.headline) {
         userRole = "startup"; buildNav(); setView("chat");
       } else {
+        // Logged in but onboarding not complete — stay in onboarding flow
         setView("onboarding");
+      }
+    } else {
+      // No session — redirect to landing page (admin path keeps its own gate)
+      const isAdmin = window.location.pathname.replace(/\/+$/, "") === "/admin";
+      if (!isAdmin) {
+        window.location.href = "/";
       }
     }
   }
@@ -1396,7 +1403,7 @@
   /* ── Init ── */
   updateAuthUI();
   setupAuthListener();
-  // Pre-select role when arriving from the landing page (/dashboard?role=startup|supplier)
+  // Pre-select role when arriving from the landing page (/workspace?role=startup|supplier)
   const roleParam = new URLSearchParams(window.location.search).get("role");
   if (roleParam === "startup" || roleParam === "supplier") {
     onboardData.role = roleParam;
