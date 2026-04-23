@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import { supabaseAdmin } from "../services/supabase.js";
 
 export const adminRouter = Router();
@@ -7,7 +7,7 @@ export const adminRouter = Router();
 /**
  * Public (no auth) admin overview: customers on the left, factories on the right,
  * and the matches that connect them. Served by the static /admin page.
- * Do NOT deploy publicly without adding a gate if data becomes sensitive.
+ * Excludes soft-deleted rows.
  */
 adminRouter.get("/overview", async (_req, res: Response) => {
   try {
@@ -15,6 +15,7 @@ adminRouter.get("/overview", async (_req, res: Response) => {
       supabaseAdmin
         .from("profiles")
         .select("id, display_name, company, headline, location, created_at")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(500),
       supabaseAdmin
@@ -29,6 +30,7 @@ adminRouter.get("/overview", async (_req, res: Response) => {
       supabaseAdmin
         .from("factories")
         .select("id, user_id, name, location, category, capabilities, active, created_at")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(500),
       supabaseAdmin
@@ -151,4 +153,89 @@ adminRouter.get("/overview", async (_req, res: Response) => {
     console.error("[admin/overview]", err);
     res.status(500).json({ error: err instanceof Error ? err.message : "Admin overview failed" });
   }
+});
+
+/** Soft-delete a customer profile (moves to bin). */
+adminRouter.delete("/customers/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ ok: true });
+});
+
+/** Soft-delete a factory (moves to bin). */
+adminRouter.delete("/factories/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { error } = await supabaseAdmin
+    .from("factories")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", String(id));
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ ok: true });
+});
+
+/** List everything currently in the bin (soft-deleted). */
+adminRouter.get("/bin", async (_req, res: Response) => {
+  const [custRes, facRes] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("id, display_name, company, headline, location, deleted_at")
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false }),
+    supabaseAdmin
+      .from("factories")
+      .select("id, user_id, name, location, category, deleted_at")
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false }),
+  ]);
+  res.json({
+    customers: custRes.data || [],
+    factories: facRes.data || [],
+  });
+});
+
+/** Restore a customer from the bin. */
+adminRouter.post("/bin/customers/:id/restore", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update({ deleted_at: null })
+    .eq("id", id);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ ok: true });
+});
+
+/** Restore a factory from the bin. */
+adminRouter.post("/bin/factories/:id/restore", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { error } = await supabaseAdmin
+    .from("factories")
+    .update({ deleted_at: null })
+    .eq("id", String(id));
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ ok: true });
+});
+
+/** Permanently delete a customer (hard-delete profile row + auth user). */
+adminRouter.delete("/bin/customers/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  // Delete profile row first, then remove auth user
+  await supabaseAdmin.from("profiles").delete().eq("id", id);
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ ok: true });
+});
+
+/** Permanently delete a factory row (hard-delete). */
+adminRouter.delete("/bin/factories/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { error } = await supabaseAdmin
+    .from("factories")
+    .delete()
+    .eq("id", String(id));
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ ok: true });
 });

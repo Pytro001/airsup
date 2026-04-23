@@ -80,3 +80,20 @@ factoriesRouter.put("/me", async (req: Request, res: Response) => {
   if (result.error) { res.status(500).json({ error: result.error.message }); return; }
   res.json({ factory: result.data });
 });
+
+/**
+ * DELETE /api/factories/me
+ * Soft-deletes the supplier's factory profile (moves it to the bin).
+ */
+factoriesRouter.delete("/me", async (req: Request, res: Response) => {
+  const userId = await resolveUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const { error } = await supabaseAdmin
+    .from("factories")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("user_id", userId);
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ ok: true });
+});

@@ -513,8 +513,23 @@
         `<div class="settings-field"><label class="settings-label">${l}</label><input type="${t}" id="settings-${k}" class="settings-input" value="${escapeAttr(v[k])}" /></div>`).join("")}
       <div class="settings-field"><label class="settings-label">Bio</label><textarea id="settings-bio" class="settings-input" rows="3">${escapeHtml(v.bio)}</textarea></div>
       <p class="settings-saved" id="settings-saved" hidden></p>
-      <button type="button" class="btn-primary" id="settings-save">Save changes</button></div>`;
+      <button type="button" class="btn-primary" id="settings-save">Save changes</button>
+      <div style="margin-top:40px;padding-top:24px;border-top:1px solid #f0f0f0;">
+        <p style="font-size:13px;color:#aaa;margin-bottom:10px;">Danger zone</p>
+        <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
+      </div></div>`;
     $("settings-save")?.addEventListener("click", saveSettings);
+    $("settings-delete-profile")?.addEventListener("click", async () => {
+      if (!confirm("Delete your profile? It will be moved to the admin bin. You can ask support to restore it.")) return;
+      try {
+        const token = (await supabaseClient.auth.getSession()).data.session?.access_token;
+        await fetch(`${API_BASE}/api/profile/me`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+        await supabaseClient.auth.signOut();
+        window.location.href = "/";
+      } catch (err) {
+        alert("Could not delete profile: " + (err.message || String(err)));
+      }
+    });
   }
 
   async function saveSettings() {
@@ -1098,34 +1113,50 @@
         `<div class="stat-card"><div class="stat-value">${connectedFactories}/${factories.length}</div><div class="stat-label">Factories matched</div></div>`;
     }
 
+    const renderCustomerCard = (c) => {
+      const title = escapeHtml(c.company || c.display_name || "Unnamed customer");
+      const sub = [c.location, c.display_name && c.display_name !== c.company ? c.display_name : ""].filter(Boolean).join(" · ");
+      const desc = c.company_description ? String(c.company_description).slice(0, 220) : (c.project_titles || []).slice(0, 2).join(" · ");
+      const badge = c.connected
+        ? `<span class="project-card-badge badge--accepted">Connected</span>`
+        : `<span class="project-card-badge badge--pending">Not connected</span>`;
+      const meta = `<span class="project-card-meta-item">${c.project_count} project${c.project_count === 1 ? "" : "s"}</span>` +
+        `<span class="project-card-meta-item">${c.match_count} match${c.match_count === 1 ? "" : "es"}</span>`;
+      return `<div class="project-card" style="position:relative;">
+        <button class="admin-delete-btn" data-type="customer" data-id="${escapeAttr(c.id)}" title="Move to bin">&#128465;</button>
+        <div class="project-card-title">${title}</div>
+        ${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}
+        <div class="project-card-desc">${escapeHtml(desc || "No description")}</div>
+        <div class="project-card-meta">${badge}${meta}</div>
+      </div>`;
+    };
+
+    const renderFactoryCard = (f) => {
+      const title = escapeHtml(f.name || "Unnamed factory");
+      const sub = [f.category, f.location].filter(Boolean).join(" · ");
+      const desc = f.capabilities_description ? String(f.capabilities_description).slice(0, 220) : "";
+      const badge = f.connected
+        ? `<span class="project-card-badge badge--accepted">Connected</span>`
+        : `<span class="project-card-badge badge--pending">Not connected</span>`;
+      const meta = `<span class="project-card-meta-item">${f.brief_count} brief${f.brief_count === 1 ? "" : "s"}</span>` +
+        `<span class="project-card-meta-item">${f.match_count} match${f.match_count === 1 ? "" : "es"}</span>`;
+      return `<div class="project-card" style="position:relative;">
+        <button class="admin-delete-btn" data-type="factory" data-id="${escapeAttr(String(f.id))}" title="Move to bin">&#128465;</button>
+        <div class="project-card-title">${title}</div>
+        ${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}
+        <div class="project-card-desc">${escapeHtml(desc || "No description")}</div>
+        <div class="project-card-meta">${badge}${meta}</div>
+      </div>`;
+    };
+
     if (custEl) {
       if (!customers.length) custEl.innerHTML = '<div class="projects-empty">No customers yet.</div>';
-      else custEl.innerHTML = customers.map((c) => {
-        const title = escapeHtml(c.company || c.display_name || "Unnamed customer");
-        const sub = [c.location, c.display_name && c.display_name !== c.company ? c.display_name : ""].filter(Boolean).join(" · ");
-        const desc = c.company_description ? String(c.company_description).slice(0, 220) : (c.project_titles || []).slice(0, 2).join(" · ");
-        const badge = c.connected
-          ? `<span class="project-card-badge badge--accepted">Connected</span>`
-          : `<span class="project-card-badge badge--pending">Not connected</span>`;
-        const meta = `<span class="project-card-meta-item">${c.project_count} project${c.project_count === 1 ? "" : "s"}</span>` +
-          `<span class="project-card-meta-item">${c.match_count} match${c.match_count === 1 ? "" : "es"}</span>`;
-        return `<div class="project-card"><div class="project-card-title">${title}</div>${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}<div class="project-card-desc">${escapeHtml(desc || "No description")}</div><div class="project-card-meta">${badge}${meta}</div></div>`;
-      }).join("");
+      else custEl.innerHTML = customers.map(renderCustomerCard).join("");
     }
 
     if (facEl) {
       if (!factories.length) facEl.innerHTML = '<div class="projects-empty">No factories yet.</div>';
-      else facEl.innerHTML = factories.map((f) => {
-        const title = escapeHtml(f.name || "Unnamed factory");
-        const sub = [f.category, f.location].filter(Boolean).join(" · ");
-        const desc = f.capabilities_description ? String(f.capabilities_description).slice(0, 220) : "";
-        const badge = f.connected
-          ? `<span class="project-card-badge badge--accepted">Connected</span>`
-          : `<span class="project-card-badge badge--pending">Not connected</span>`;
-        const meta = `<span class="project-card-meta-item">${f.brief_count} brief${f.brief_count === 1 ? "" : "s"}</span>` +
-          `<span class="project-card-meta-item">${f.match_count} match${f.match_count === 1 ? "" : "es"}</span>`;
-        return `<div class="project-card"><div class="project-card-title">${title}</div>${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}<div class="project-card-desc">${escapeHtml(desc || "No description")}</div><div class="project-card-meta">${badge}${meta}</div></div>`;
-      }).join("");
+      else facEl.innerHTML = factories.map(renderFactoryCard).join("");
     }
 
     if (connEl) {
@@ -1137,6 +1168,87 @@
         const statusClass = String(m.status || "").replace(/[^a-zA-Z0-9_-]/g, "_");
         return `<div class="project-card"><div class="project-card-title">${escapeHtml(buyer)} <span class="admin-arrow">&rarr;</span> ${escapeHtml(factory)}</div><div class="project-card-sub">${escapeHtml(proj)}</div><div class="project-card-meta"><span class="project-card-badge badge--${statusClass}">${escapeHtml(m.status || "pending")}</span></div></div>`;
       }).join("");
+    }
+
+    // Wire up delete buttons (soft-delete -> move to bin)
+    document.querySelectorAll(".admin-delete-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const type = btn.getAttribute("data-type");
+        const id = btn.getAttribute("data-id");
+        const label = type === "customer" ? "customer" : "factory";
+        if (!confirm(`Move this ${label} to the bin? You can restore or permanently delete it from the bin.`)) return;
+        try {
+          await fetch(`${API_BASE}/api/admin/${label === "customer" ? "customers" : "factories"}/${id}`, { method: "DELETE" });
+          btn.closest(".project-card")?.remove();
+        } catch (err) {
+          alert("Could not delete: " + (err.message || String(err)));
+        }
+      });
+    });
+
+    // Load bin section
+    await loadAdminBin();
+  }
+
+  async function loadAdminBin() {
+    const binEl = $("admin-bin");
+    if (!binEl) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/bin`);
+      const data = await res.json();
+      const customers = data.customers || [];
+      const factories = data.factories || [];
+      if (!customers.length && !factories.length) {
+        binEl.innerHTML = '<div class="projects-empty">Bin is empty.</div>';
+        return;
+      }
+      const renderBinItem = (item, type) => {
+        const label = type === "customer"
+          ? escapeHtml(item.company || item.display_name || "Unnamed customer")
+          : escapeHtml(item.name || "Unnamed factory");
+        const sub = escapeHtml(item.location || "");
+        const deletedAt = item.deleted_at ? new Date(item.deleted_at).toLocaleDateString() : "";
+        return `<div class="project-card bin-card" style="position:relative;border-color:#fdd;background:#fffafa;">
+          <div class="project-card-title">${label} <span style="font-size:11px;color:#bbb;font-weight:400;">${type}</span></div>
+          ${sub ? `<div class="project-card-sub">${sub}</div>` : ""}
+          ${deletedAt ? `<div class="project-card-sub" style="color:#ccc;font-size:11px;">Deleted ${deletedAt}</div>` : ""}
+          <div class="project-card-meta" style="gap:8px;margin-top:10px;">
+            <button class="bin-restore-btn" data-type="${type}" data-id="${escapeAttr(String(item.id))}"
+              style="font-size:12px;padding:4px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Restore</button>
+            <button class="bin-hard-delete-btn" data-type="${type}" data-id="${escapeAttr(String(item.id))}"
+              style="font-size:12px;padding:4px 12px;border-radius:6px;border:1px solid #fbb;background:#fff;color:#c0392b;cursor:pointer;">Delete forever</button>
+          </div>
+        </div>`;
+      };
+      binEl.innerHTML = [
+        ...customers.map((c) => renderBinItem(c, "customer")),
+        ...factories.map((f) => renderBinItem(f, "factory")),
+      ].join("");
+
+      binEl.querySelectorAll(".bin-restore-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const type = btn.getAttribute("data-type");
+          const id = btn.getAttribute("data-id");
+          const path = type === "customer" ? "customers" : "factories";
+          await fetch(`${API_BASE}/api/admin/bin/${path}/${id}/restore`, { method: "POST" });
+          await loadAdminBin();
+          await loadAdminOverview();
+        });
+      });
+
+      binEl.querySelectorAll(".bin-hard-delete-btn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const type = btn.getAttribute("data-type");
+          const id = btn.getAttribute("data-id");
+          if (!confirm("Permanently delete? This cannot be undone.")) return;
+          const path = type === "customer" ? "customers" : "factories";
+          await fetch(`${API_BASE}/api/admin/bin/${path}/${id}`, { method: "DELETE" });
+          await loadAdminBin();
+        });
+      });
+    } catch (err) {
+      binEl.innerHTML = `<div class="projects-empty">Could not load bin: ${escapeHtml(err.message || String(err))}</div>`;
     }
   }
 
@@ -1165,7 +1277,11 @@
       <div class="settings-field"><label class="settings-label">Contact name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(ci.name || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Contact phone</label><input type="tel" id="fp-contact-phone" class="settings-input" value="${escapeAttr(ci.phone || "")}" /></div>
       <p class="settings-saved" id="fp-saved" hidden></p>
-      <button type="button" class="btn-primary" id="fp-save">Save profile</button></div>`;
+      <button type="button" class="btn-primary" id="fp-save">Save profile</button>
+      <div style="margin-top:40px;padding-top:24px;border-top:1px solid #f0f0f0;">
+        <p style="font-size:13px;color:#aaa;margin-bottom:10px;">Danger zone</p>
+        <button type="button" class="btn-danger" id="fp-delete-profile">Delete my profile</button>
+      </div></div>`;
     $("fp-save")?.addEventListener("click", async () => {
       const g = (k) => ($(`fp-${k}`)?.value || "").trim();
       const saved = $("fp-saved");
@@ -1178,6 +1294,16 @@
         if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
       } catch (err) {
         if (saved) { saved.hidden = false; saved.textContent = "Error: " + (err.message || String(err)); saved.style.color = "#d93025"; }
+      }
+    });
+    $("fp-delete-profile")?.addEventListener("click", async () => {
+      if (!confirm("Delete your factory profile? It will be moved to the admin bin. You can ask support to restore it.")) return;
+      try {
+        await apiCall("/api/factories/me", { method: "DELETE" });
+        await supabaseClient.auth.signOut();
+        window.location.href = "/";
+      } catch (err) {
+        alert("Could not delete profile: " + (err.message || String(err)));
       }
     });
   }
