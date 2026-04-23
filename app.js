@@ -1163,7 +1163,6 @@
       <div class="settings-field"><label class="settings-label">Certifications</label><input type="text" id="fp-certifications" class="settings-input" value="${escapeAttr(c.certifications || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Typical MOQ</label><input type="text" id="fp-moq" class="settings-input" value="${escapeAttr(c.moq || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Contact name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(ci.name || "")}" /></div>
-      <div class="settings-field"><label class="settings-label">Contact email</label><input type="email" id="fp-contact-email" class="settings-input" value="${escapeAttr(ci.email || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Contact phone</label><input type="tel" id="fp-contact-phone" class="settings-input" value="${escapeAttr(ci.phone || "")}" /></div>
       <p class="settings-saved" id="fp-saved" hidden></p>
       <button type="button" class="btn-primary" id="fp-save">Save profile</button></div>`;
@@ -1174,7 +1173,7 @@
         await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify({
           name: g("name"), location: g("location"), category: g("category"),
           capabilities: { description: g("capabilities"), certifications: g("certifications"), moq: g("moq") },
-          contact_info: { name: g("contact-name"), email: g("contact-email"), phone: g("contact-phone") },
+          contact_info: { name: g("contact-name"), phone: g("contact-phone") },
         })});
         if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
       } catch (err) {

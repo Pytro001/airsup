@@ -170,8 +170,9 @@
           <rect x="129" y="61" width="26" height="28" rx="6" fill="#000"/>
         </g>
         <!-- eyelids: oversized so they fully cover white eye incl. rounded corners -->
-        <rect id="lid-l" x="19" y="30" width="80" height="0" fill="#000"/>
-        <rect id="lid-r" x="102" y="30" width="80" height="0" fill="#000"/>
+        <!-- eyelids start from top of SVG so rounded eye corners are never exposed -->
+        <rect id="lid-l" x="19" y="0" width="80" height="0" fill="#000"/>
+        <rect id="lid-r" x="102" y="0" width="80" height="0" fill="#000"/>
       </svg>
     </div>
 
@@ -191,7 +192,6 @@
         <input type="password" class="lp-email-input" id="lp-pin" placeholder="PIN" maxlength="30" autocomplete="current-password" style="max-width:130px;" />
         <button type="button" class="lp-email-btn" id="lp-send-btn">Login</button>
       </div>
-      <p style="font-size:12px;color:#aaa;margin-top:8px;text-align:left;">First time? Just pick any PIN and you're in.</p>
       <p class="lp-login-msg" id="lp-login-msg"></p>
     </div>
   </main>
@@ -330,7 +330,7 @@
     // Blink: black eyelids grow down to cover each eye, then retract
     const lidL = document.getElementById("lid-l");
     const lidR = document.getElementById("lid-r");
-    const EYE_H = 90; // oversized to fully cover white eye incl. rounded corners
+    const EYE_H = 125; // lids grow from y=0, so 125 reaches y=125 > bottom of eye (y=113)
 
     function animateBlink() {
       const CLOSE_MS = 120;
