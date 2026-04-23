@@ -138,7 +138,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:16px;">
       <a href="/dashboard?role=supplier" class="lp-login-link">Supplier</a>
-      <button type="button" class="lp-login-link" id="lp-login-toggle">Log in</button>
+      <button type="button" class="lp-login-link" id="lp-login-toggle">Login</button>
     </div>
   </header>
 
@@ -183,7 +183,7 @@
     loginToggle.addEventListener("click", () => {
       const visible = loginSection.style.display !== "none";
       loginSection.style.display = visible ? "none" : "block";
-      loginToggle.textContent = visible ? "Already have an account?" : "Hide login";
+      loginToggle.textContent = visible ? "Login" : "Close";
       if (!visible) document.getElementById("lp-email").focus();
     });
 
