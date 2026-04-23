@@ -245,18 +245,23 @@
     sendBtn.addEventListener("click", sendLoginLink);
     emailInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendLoginLink(); });
 
-    // Cursor-tracking eyes
-    // Pupils are centered inside their eye sockets at rest.
-    // Direction angle is computed in SCREEN coordinates so all 4 directions work.
-    // MAX_OFFSET 20 SVG units → pupils reach ≈ 85 % of eye wall in every direction.
-    const SVG_SIZE = 200;
+    // Cursor-tracking eyes with smooth lerp (lazy follow)
+    // Target offset is computed instantly from mouse position, but the
+    // rendered offset eases toward the target each animation frame.
+    // LERP = 0.06 → pupils lag ~16 frames behind → feels fluid, not instant.
+    const SVG_SIZE  = 200;
     const MAX_OFFSET = 20;
+    const LERP = 0.06; // lower = lazier / more delayed
+
     const eyeDefs = [
-      { group: document.getElementById("pupil-l-g"), ecx: 59,  ecy: 75 },
-      { group: document.getElementById("pupil-r-g"), ecx: 142, ecy: 75 },
+      { group: document.getElementById("pupil-l-g"), ecx: 59,  ecy: 75, cx: 0, cy: 0, tx: 0, ty: 0 },
+      { group: document.getElementById("pupil-r-g"), ecx: 142, ecy: 75, cx: 0, cy: 0, tx: 0, ty: 0 },
     ];
 
-    document.addEventListener("mousemove", (e) => {
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    document.addEventListener("mousemove", (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+    function tick() {
       const svg = document.getElementById("face-svg");
       const r = svg.getBoundingClientRect();
 
@@ -265,17 +270,25 @@
         const ex = r.left + (eye.ecx / SVG_SIZE) * r.width;
         const ey = r.top  + (eye.ecy / SVG_SIZE) * r.height;
 
-        const dx = e.clientX - ex;
-        const dy = e.clientY - ey;
+        const dx = mouse.x - ex;
+        const dy = mouse.y - ey;
         const angle = Math.atan2(dy, dx);
-        // dist reaches 1 at 120 screen px — snappier response
-        const dist = Math.min(Math.hypot(dx, dy) / 120, 1);
+        const dist  = Math.min(Math.hypot(dx, dy) / 120, 1);
 
-        const ox = Math.cos(angle) * MAX_OFFSET * dist;
-        const oy = Math.sin(angle) * MAX_OFFSET * dist;
-        eye.group.setAttribute("transform", "translate(" + ox.toFixed(2) + "," + oy.toFixed(2) + ")");
+        // Target offset in SVG units
+        eye.tx = Math.cos(angle) * MAX_OFFSET * dist;
+        eye.ty = Math.sin(angle) * MAX_OFFSET * dist;
+
+        // Lerp current toward target — smooth lazy follow
+        eye.cx += (eye.tx - eye.cx) * LERP;
+        eye.cy += (eye.ty - eye.cy) * LERP;
+
+        eye.group.setAttribute("transform", "translate(" + eye.cx.toFixed(2) + "," + eye.cy.toFixed(2) + ")");
       }
-    });
+
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
   </script>
 </body>
 </html>
