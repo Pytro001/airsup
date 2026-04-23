@@ -54,6 +54,7 @@
       flex: 1; max-width: 680px; width: 100%;
       margin: 0 auto; padding: 64px 24px 80px;
     }
+    .supi-content--title-only { padding-bottom: 24px; }
     .supi-eyebrow {
       font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
       text-transform: uppercase; color: #aaa; margin-bottom: 12px;
@@ -91,13 +92,8 @@
     }
     .supi-step-desc { font-size: 14px; color: #666; line-height: 1.6; margin: 0; }
 
-    /* Closing */
-    .supi-closing-plain {
-      margin-top: 48px; padding-top: 40px;
-      border-top: 1px solid #f0f0f0;
-    }
-    .supi-closing-plain-title {
-      font-size: 20px; font-weight: 600; color: #111; margin-bottom: 10px;
+    .supi-works-title {
+      font-size: 18px; font-weight: 600; color: #111; margin-bottom: 16px; letter-spacing: -0.01em;
     }
     .supi-closing-plain-body { font-size: 16px; color: #555; line-height: 1.75; margin: 0; }
 
@@ -123,19 +119,22 @@
     <a href="/" class="sp-back">← Home</a>
   </header>
 
+  <main class="supi-content supi-content--title-only">
+
+    <p class="supi-eyebrow">The story behind Airsup</p>
+    <h1 class="supi-title">Meet Supi.<br><span>He just wants to build something amazing and magical.</span></h1>
+
+  </main>
+
   <div class="supi-hero">
     <img src="assets/supi.png" alt="Supi" />
     <p class="supi-hero-caption">Supi, somewhere between a great idea and a broken supply chain in 2025</p>
   </div>
 
-  <main class="supi-content">
-
-    <p class="supi-eyebrow">The story behind Airsup</p>
-    <h1 class="supi-title">Meet Supi.<br><span>He just wants to build something amazing and magical.</span></h1>
+  <main class="supi-content" style="padding-top:40px;">
 
     <!-- Origin story -->
     <div class="supi-section">
-      <p class="supi-section-title">How it started</p>
       <p>
         Supi had an idea. A real one. The kind that keeps you up at night because you genuinely believe it could help people.
         He wanted to make something physical, a product that would matter. So he did what everyone does: he started searching for a factory.
@@ -158,7 +157,6 @@
 
     <!-- What Supi built -->
     <div class="supi-section">
-      <p class="supi-section-title">What he built instead</p>
       <p>
         So Supi built Airsup. Short for <strong>Air Supply</strong>: the idea that getting what you need to manufacture something
         should feel as effortless as breathing, not like navigating a maze of gatekeepers.
@@ -172,7 +170,7 @@
 
     <!-- How the platform works -->
     <div class="supi-section">
-      <p class="supi-section-title">How Airsup works</p>
+      <h2 class="supi-works-title">How Airsup works</h2>
       <div class="supi-steps">
         <div class="supi-step">
           <div class="supi-step-num">1</div>
@@ -213,13 +211,9 @@
     </div>
 
     <!-- Closing -->
-    <div class="supi-closing-plain">
-      <p class="supi-closing-plain-title">All thanks to Supi.</p>
-      <p class="supi-closing-plain-body">
-        He never got to build his product. But he made sure no one else would have to go through what he did.<br>
-        He is just Supiiii.
-      </p>
-    </div>
+    <p class="supi-closing-plain-body" style="margin-top:40px;">
+      All thanks to Supi. He never got to build his product. But he made sure no one else would have to go through what he did. He is just Supiiii.
+    </p>
 
   </main>
 
