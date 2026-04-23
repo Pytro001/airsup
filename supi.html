@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supi · Airsup</title>
+  <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fff; color: #111; line-height: 1.7;
+      min-height: 100dvh; -webkit-font-smoothing: antialiased;
+      display: flex; flex-direction: column;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    .sp-header {
+      padding: 20px 28px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid #f0f0f0;
+    }
+    .sp-brand {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-weight: 600; font-size: 16px; color: #111;
+    }
+    .sp-brand img { height: 22px; width: 22px; border-radius: 2px; }
+    .sp-back {
+      font-size: 14px; font-weight: 500; color: #888; transition: color 0.15s;
+    }
+    .sp-back:hover { color: #111; }
+
+    /* Hero */
+    .supi-hero {
+      width: 100%; max-height: 480px; overflow: hidden;
+      position: relative;
+    }
+    .supi-hero img {
+      width: 100%; height: 480px; object-fit: cover; object-position: center 30%;
+      filter: grayscale(20%);
+    }
+    .supi-hero-caption {
+      position: absolute; bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.65); color: #fff;
+      padding: 8px 20px; border-radius: 999px;
+      font-size: 13px; font-weight: 500; white-space: nowrap;
+      backdrop-filter: blur(6px);
+    }
+
+    /* Content */
+    .supi-content {
+      flex: 1; max-width: 680px; width: 100%;
+      margin: 0 auto; padding: 64px 24px 80px;
+    }
+    .supi-eyebrow {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #aaa; margin-bottom: 12px;
+    }
+    .supi-title {
+      font-size: clamp(32px, 5vw, 52px); font-weight: 600;
+      letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 40px;
+    }
+    .supi-title span { color: #888; }
+
+    .supi-section { margin-bottom: 52px; }
+    .supi-section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: #ccc; margin-bottom: 14px;
+    }
+    p { font-size: 16px; color: #333; margin-bottom: 16px; line-height: 1.75; }
+    strong { color: #111; font-weight: 600; }
+
+    /* How it works steps */
+    .supi-steps { display: flex; flex-direction: column; gap: 0; margin-top: 4px; }
+    .supi-step {
+      display: flex; gap: 20px; padding: 20px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .supi-step:last-child { border-bottom: none; }
+    .supi-step-num {
+      flex-shrink: 0; width: 32px; height: 32px;
+      background: #111; color: #fff; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; margin-top: 2px;
+    }
+    .supi-step-body {}
+    .supi-step-label {
+      font-size: 15px; font-weight: 600; margin-bottom: 4px; color: #111;
+    }
+    .supi-step-desc { font-size: 14px; color: #666; line-height: 1.6; margin: 0; }
+
+    /* Promise cards */
+    .supi-cards {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px;
+    }
+    .supi-card {
+      border: 1.5px solid #f0f0f0; border-radius: 14px; padding: 20px;
+    }
+    .supi-card-icon { font-size: 22px; margin-bottom: 10px; }
+    .supi-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .supi-card-body { font-size: 13px; color: #888; line-height: 1.5; margin: 0; }
+
+    /* Closing */
+    .supi-closing {
+      margin-top: 56px; padding: 36px; background: #111; border-radius: 20px;
+      color: #fff; text-align: center;
+    }
+    .supi-closing-title {
+      font-size: 22px; font-weight: 600; margin-bottom: 10px;
+    }
+    .supi-closing-body { font-size: 15px; color: #aaa; line-height: 1.6; margin: 0; }
+
+    .sp-footer {
+      padding: 20px 24px; text-align: center;
+      font-size: 12px; color: #bbb; border-top: 1px solid #f0f0f0;
+    }
+    .sp-footer a { color: #bbb; margin: 0 8px; transition: color 0.15s; }
+    .sp-footer a:hover { color: #666; }
+
+    @media (max-width: 520px) {
+      .supi-cards { grid-template-columns: 1fr; }
+      .supi-hero img { height: 300px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="sp-header">
+    <a href="/" class="sp-brand">
+      <img src="assets/brand/logo-air-sup.png" alt="Airsup" />
+      Airsup
+    </a>
+    <a href="/" class="sp-back">← Home</a>
+  </header>
+
+  <div class="supi-hero">
+    <img src="assets/supi.png" alt="Supi standing in a factory" />
+    <span class="supi-hero-caption">Supi, somewhere between a great idea and a broken supply chain</span>
+  </div>
+
+  <main class="supi-content">
+
+    <p class="supi-eyebrow">The story behind Airsup</p>
+    <h1 class="supi-title">Meet Supi.<br><span>He just wanted to build something.</span></h1>
+
+    <!-- Origin story -->
+    <div class="supi-section">
+      <p class="supi-section-title">How it started</p>
+      <p>
+        Supi had an idea. A real one. The kind that keeps you up at night because you genuinely believe it could help people.
+        He wanted to make something physical, a product that would matter. So he did what everyone does: he started searching for a factory.
+      </p>
+      <p>
+        What followed was months of cold emails, sales calls that went nowhere, middlemen who promised everything and delivered nothing,
+        and quotes that arrived three weeks late in broken English. Every person he talked to was trying to make money off him.
+        Nobody actually wanted to help him build.
+      </p>
+      <p>
+        The factories were real. The engineers inside them were talented. But between Supi and those engineers stood
+        an entire layer of salespeople, brokers, and systems designed to slow things down and take a cut.
+        Supi never got his sample. He never got his product off the ground.
+      </p>
+      <p>
+        <strong>He was not alone.</strong> Thousands of founders, builders, and companies face the exact same wall every day.
+        Great ideas that never become real products, not because the manufacturing doesn't exist, but because the connection between the two sides is broken.
+      </p>
+    </div>
+
+    <!-- What Supi built -->
+    <div class="supi-section">
+      <p class="supi-section-title">What he built instead</p>
+      <p>
+        So Supi built Airsup. Short for <strong>Air Supply</strong>: the idea that getting what you need to manufacture something
+        should feel as effortless as breathing, not like navigating a maze of gatekeepers.
+      </p>
+      <p>
+        The vision was simple: <strong>let AI do the sourcing</strong>. Let it learn everything about your project,
+        find the right factories, talk to them, brief the actual engineer (not a sales rep), and only bring you in
+        when there's a real match. No brokers. No cold emails. No wasted months.
+      </p>
+    </div>
+
+    <!-- How the platform works -->
+    <div class="supi-section">
+      <p class="supi-section-title">How Airsup works</p>
+      <div class="supi-steps">
+        <div class="supi-step">
+          <div class="supi-step-num">1</div>
+          <div class="supi-step-body">
+            <p class="supi-step-label">You tell the AI everything</p>
+            <p class="supi-step-desc">You come onto the platform and talk to the AI. It learns about you, your company, your product, your requirements, and your timeline. It remembers all of it forever. You never repeat yourself.</p>
+          </div>
+        </div>
+        <div class="supi-step">
+          <div class="supi-step-num">2</div>
+          <div class="supi-step-body">
+            <p class="supi-step-label">AI goes out and finds the right factories</p>
+            <p class="supi-step-desc">The AI searches, scores, and reaches out to manufacturers that match your project. It negotiates terms, briefs the technical team with full context, and figures out if it's a real match. No human involvement needed on either side yet.</p>
+          </div>
+        </div>
+        <div class="supi-step">
+          <div class="supi-step-num">3</div>
+          <div class="supi-step-body">
+            <p class="supi-step-label">You get a match with full context</p>
+            <p class="supi-step-desc">When a factory confirms they can do your project, you get an introduction with everything you need to know: who the engineer is, the quote, the lead time, what the first deliverable will be and when to expect it.</p>
+          </div>
+        </div>
+        <div class="supi-step">
+          <div class="supi-step-num">4</div>
+          <div class="supi-step-body">
+            <p class="supi-step-label">You connect directly with the engineer</p>
+            <p class="supi-step-desc">Both sides already know what the other needs. You connect via WhatsApp with full background on each other. First iteration starts immediately. No sales person in the middle, ever.</p>
+          </div>
+        </div>
+        <div class="supi-step">
+          <div class="supi-step-num">5</div>
+          <div class="supi-step-body">
+            <p class="supi-step-label">You pay and manufacturing starts</p>
+            <p class="supi-step-desc">Transfer payment through the platform. Production begins. Samples get shipped directly to you, no additional approval steps required. Your money is protected the entire time.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Promises -->
+    <div class="supi-section">
+      <p class="supi-section-title">What Airsup protects</p>
+      <div class="supi-cards">
+        <div class="supi-card">
+          <div class="supi-card-icon">🛡</div>
+          <p class="supi-card-title">Your money is safe</p>
+          <p class="supi-card-body">Every payment is held in escrow. If something goes wrong or someone tries to scam you, the platform refunds you. No questions asked.</p>
+        </div>
+        <div class="supi-card">
+          <div class="supi-card-icon">⏱</div>
+          <p class="supi-card-title">Timelines are enforced</p>
+          <p class="supi-card-body">Every manufacturer commits to a timeline. If they miss it, they get a warning. Repeated failures get them removed from the platform. No more ghosting.</p>
+        </div>
+        <div class="supi-card">
+          <div class="supi-card-icon">🧠</div>
+          <p class="supi-card-title">AI remembers everything</p>
+          <p class="supi-card-body">Your project context, past conversations, and preferences are stored permanently. Every new interaction picks up exactly where you left off.</p>
+        </div>
+        <div class="supi-card">
+          <div class="supi-card-icon">📋</div>
+          <p class="supi-card-title">Connections stay organized</p>
+          <p class="supi-card-body">Every chat shows a live summary of who the other party is, where the project stands, and what the next step is. You always know what's happening.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Closing -->
+    <div class="supi-closing">
+      <p class="supi-closing-title">All thanks to Supi.</p>
+      <p class="supi-closing-body">
+        He never got to build his product. But he made sure no one else would have to go through what he did.<br>
+        He is just Supiiii.
+      </p>
+    </div>
+
+  </main>
+
+  <footer class="sp-footer">
+    <span>&copy; <span id="yr"></span> Airsup</span>
+    <a href="/supi">Supi</a>
+    <a href="/support">Support</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+  </footer>
+  <script>document.getElementById("yr").textContent = new Date().getFullYear();</script>
+</body>
+</html>
