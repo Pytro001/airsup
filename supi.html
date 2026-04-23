@@ -36,20 +36,17 @@
 
     /* Hero */
     .supi-hero {
-      width: 100%; max-height: 480px; overflow: hidden;
-      position: relative;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 40px 24px 0;
     }
     .supi-hero img {
-      width: 100%; height: 480px; object-fit: cover; object-position: center 30%;
-      filter: grayscale(20%);
+      width: 100%; max-width: 520px; height: 340px;
+      object-fit: cover; object-position: center 30%;
+      border-radius: 14px; filter: grayscale(20%);
     }
     .supi-hero-caption {
-      position: absolute; bottom: 24px; left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.65); color: #fff;
-      padding: 8px 20px; border-radius: 999px;
-      font-size: 13px; font-weight: 500; white-space: nowrap;
-      backdrop-filter: blur(6px);
+      font-size: 13px; font-style: italic; color: #999;
+      margin-top: 12px; text-align: center;
     }
 
     /* Content */
@@ -94,26 +91,15 @@
     }
     .supi-step-desc { font-size: 14px; color: #666; line-height: 1.6; margin: 0; }
 
-    /* Promise cards */
-    .supi-cards {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px;
-    }
-    .supi-card {
-      border: 1.5px solid #f0f0f0; border-radius: 14px; padding: 20px;
-    }
-    .supi-card-icon { font-size: 22px; margin-bottom: 10px; }
-    .supi-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-    .supi-card-body { font-size: 13px; color: #888; line-height: 1.5; margin: 0; }
-
     /* Closing */
-    .supi-closing {
-      margin-top: 56px; padding: 36px; background: #111; border-radius: 20px;
-      color: #fff; text-align: center;
+    .supi-closing-plain {
+      margin-top: 48px; padding-top: 40px;
+      border-top: 1px solid #f0f0f0;
     }
-    .supi-closing-title {
-      font-size: 22px; font-weight: 600; margin-bottom: 10px;
+    .supi-closing-plain-title {
+      font-size: 20px; font-weight: 600; color: #111; margin-bottom: 10px;
     }
-    .supi-closing-body { font-size: 15px; color: #aaa; line-height: 1.6; margin: 0; }
+    .supi-closing-plain-body { font-size: 16px; color: #555; line-height: 1.75; margin: 0; }
 
     .sp-footer {
       padding: 20px 24px; text-align: center;
@@ -123,8 +109,7 @@
     .sp-footer a:hover { color: #666; }
 
     @media (max-width: 520px) {
-      .supi-cards { grid-template-columns: 1fr; }
-      .supi-hero img { height: 300px; }
+      .supi-hero img { height: 220px; }
     }
   </style>
 </head>
@@ -139,14 +124,14 @@
   </header>
 
   <div class="supi-hero">
-    <img src="assets/supi.png" alt="Supi standing in a factory" />
-    <span class="supi-hero-caption">Supi, somewhere between a great idea and a broken supply chain</span>
+    <img src="assets/supi.png" alt="Supi" />
+    <p class="supi-hero-caption">Supi, somewhere between a great idea and a broken supply chain in 2025</p>
   </div>
 
   <main class="supi-content">
 
     <p class="supi-eyebrow">The story behind Airsup</p>
-    <h1 class="supi-title">Meet Supi.<br><span>He just wanted to build something.</span></h1>
+    <h1 class="supi-title">Meet Supi.<br><span>He just wants to build something amazing and magical.</span></h1>
 
     <!-- Origin story -->
     <div class="supi-section">
@@ -227,37 +212,10 @@
       </div>
     </div>
 
-    <!-- Promises -->
-    <div class="supi-section">
-      <p class="supi-section-title">What Airsup protects</p>
-      <div class="supi-cards">
-        <div class="supi-card">
-          <div class="supi-card-icon">🛡</div>
-          <p class="supi-card-title">Your money is safe</p>
-          <p class="supi-card-body">Every payment is held in escrow. If something goes wrong or someone tries to scam you, the platform refunds you. No questions asked.</p>
-        </div>
-        <div class="supi-card">
-          <div class="supi-card-icon">⏱</div>
-          <p class="supi-card-title">Timelines are enforced</p>
-          <p class="supi-card-body">Every manufacturer commits to a timeline. If they miss it, they get a warning. Repeated failures get them removed from the platform. No more ghosting.</p>
-        </div>
-        <div class="supi-card">
-          <div class="supi-card-icon">🧠</div>
-          <p class="supi-card-title">AI remembers everything</p>
-          <p class="supi-card-body">Your project context, past conversations, and preferences are stored permanently. Every new interaction picks up exactly where you left off.</p>
-        </div>
-        <div class="supi-card">
-          <div class="supi-card-icon">📋</div>
-          <p class="supi-card-title">Connections stay organized</p>
-          <p class="supi-card-body">Every chat shows a live summary of who the other party is, where the project stands, and what the next step is. You always know what's happening.</p>
-        </div>
-      </div>
-    </div>
-
     <!-- Closing -->
-    <div class="supi-closing">
-      <p class="supi-closing-title">All thanks to Supi.</p>
-      <p class="supi-closing-body">
+    <div class="supi-closing-plain">
+      <p class="supi-closing-plain-title">All thanks to Supi.</p>
+      <p class="supi-closing-plain-body">
         He never got to build his product. But he made sure no one else would have to go through what he did.<br>
         He is just Supiiii.
       </p>
