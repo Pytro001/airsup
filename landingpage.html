@@ -169,9 +169,9 @@
         <g id="pupil-r-g">
           <rect x="129" y="61" width="26" height="28" rx="6" fill="#000"/>
         </g>
-        <!-- eyelids: grow downward from top of each eye, covering the white -->
-        <rect id="lid-l" x="23" y="37" width="72" height="0" fill="#000"/>
-        <rect id="lid-r" x="106" y="37" width="72" height="0" fill="#000"/>
+        <!-- eyelids: oversized so they fully cover white eye incl. rounded corners -->
+        <rect id="lid-l" x="19" y="30" width="80" height="0" fill="#000"/>
+        <rect id="lid-r" x="102" y="30" width="80" height="0" fill="#000"/>
       </svg>
     </div>
 
@@ -329,7 +329,7 @@
     // Blink: black eyelids grow down to cover each eye, then retract
     const lidL = document.getElementById("lid-l");
     const lidR = document.getElementById("lid-r");
-    const EYE_H = 76; // full eye height in SVG units
+    const EYE_H = 90; // oversized to fully cover white eye incl. rounded corners
 
     function animateBlink() {
       const CLOSE_MS = 120;
