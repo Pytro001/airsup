@@ -40,12 +40,24 @@
       display: flex; flex-direction: column; align-items: stretch;
       padding: 0 24px 0;
     }
-    .supi-hero img {
+    /* Fixed aspect box reserves height before the image loads (no layout jump). */
+    .supi-hero-frame {
+      position: relative;
       width: 100%;
-      height: auto;
-      aspect-ratio: 520 / 340;
-      object-fit: cover; object-position: center 30%;
-      border-radius: 14px; filter: grayscale(20%);
+      /* Matches assets/supi.png (1024×578) so reserved space = final crop */
+      aspect-ratio: 1024 / 578;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #ececec;
+    }
+    .supi-hero-frame img {
+      position: absolute;
+      left: 0; top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 30%;
+      filter: grayscale(20%);
     }
     .supi-hero-caption {
       font-size: 13px; font-style: italic; color: #999;
@@ -108,9 +120,6 @@
     .sp-footer a { color: #bbb; margin: 0 8px; transition: color 0.15s; }
     .sp-footer a:hover { color: #666; }
 
-    @media (max-width: 520px) {
-      .supi-hero img { aspect-ratio: 4 / 3; }
-    }
   </style>
 </head>
 <body>
@@ -130,7 +139,9 @@
   </main>
 
   <div class="supi-hero">
-    <img src="assets/supi.png" alt="Supi" />
+    <div class="supi-hero-frame">
+      <img src="assets/supi.png" alt="Supi" width="1024" height="578" decoding="async" fetchpriority="high" />
+    </div>
     <p class="supi-hero-caption">Supi, somewhere between a great idea and a broken supply chain in 2025</p>
   </div>
 
