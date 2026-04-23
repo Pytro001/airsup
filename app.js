@@ -1025,38 +1025,42 @@
       setView("admin");
       return;
     }
-    const page = $("page-admin");
-    if (page) {
-      page.classList.add("active");
-      page.innerHTML = `
-        <div class="page-content page-content--narrow" style="padding-top:96px;text-align:center;">
-          <h1 class="page-title" style="margin-bottom:8px;">Admin access</h1>
-          <p class="page-lead" style="margin-bottom:24px;">Enter the admin password to continue.</p>
-          <div style="display:flex;flex-direction:column;gap:12px;max-width:320px;margin:0 auto;">
-            <input type="password" id="admin-pw-input" class="settings-input" placeholder="Password" autocomplete="current-password" />
-            <p id="admin-pw-error" style="color:#d93025;font-size:13px;display:none;">Wrong password.</p>
-            <button type="button" class="btn-primary" id="admin-pw-btn">Unlock</button>
+    // Show an overlay on top of the page — never wipe admin HTML
+    let overlay = document.getElementById("admin-gate-overlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "admin-gate-overlay";
+      overlay.style.cssText = "position:fixed;inset:0;background:#fff;z-index:9999;display:flex;align-items:center;justify-content:center;";
+      overlay.innerHTML = `
+        <div style="text-align:center;max-width:320px;width:90%;padding:0 24px;">
+          <h1 style="font-size:22px;font-weight:600;margin-bottom:8px;">Admin access</h1>
+          <p style="font-size:14px;color:#888;margin-bottom:24px;">Enter the admin password to continue.</p>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <input type="password" id="admin-pw-input" style="padding:11px 14px;border-radius:999px;border:1.5px solid #e8e8e8;font-size:14px;outline:none;width:100%;font-family:inherit;" placeholder="Password" autocomplete="current-password" />
+            <p id="admin-pw-error" style="color:#d93025;font-size:13px;display:none;margin:0;">Wrong password.</p>
+            <button type="button" id="admin-pw-btn" style="padding:11px;border-radius:999px;background:#111;color:#fff;font-size:14px;font-weight:500;border:none;cursor:pointer;">Unlock</button>
           </div>
         </div>`;
-      const input = $("admin-pw-input");
-      const btn = $("admin-pw-btn");
-      const err = $("admin-pw-error");
-      async function tryUnlock() {
-        const hash = await hashPassword((input?.value || "").trim());
-        if (hash === ADMIN_HASH) {
-          sessionStorage.setItem("admin_unlocked", "1");
-          page.innerHTML = "";
-          page.classList.remove("active");
-          setView("admin");
-        } else {
-          if (err) err.style.display = "block";
-          if (input) { input.value = ""; input.focus(); }
-        }
-      }
-      btn?.addEventListener("click", tryUnlock);
-      input?.addEventListener("keydown", (e) => { if (e.key === "Enter") tryUnlock(); });
-      setTimeout(() => input?.focus(), 100);
+      document.body.appendChild(overlay);
     }
+    overlay.style.display = "flex";
+    const input = document.getElementById("admin-pw-input");
+    const btn   = document.getElementById("admin-pw-btn");
+    const err   = document.getElementById("admin-pw-error");
+    async function tryUnlock() {
+      const hash = await hashPassword((input?.value || "").trim());
+      if (hash === ADMIN_HASH) {
+        sessionStorage.setItem("admin_unlocked", "1");
+        overlay.style.display = "none";
+        setView("admin");
+      } else {
+        if (err) err.style.display = "block";
+        if (input) { input.value = ""; input.focus(); }
+      }
+    }
+    btn?.addEventListener("click", tryUnlock);
+    input?.addEventListener("keydown", (e) => { if (e.key === "Enter") tryUnlock(); });
+    setTimeout(() => input?.focus(), 100);
   }
 
   async function loadAdminOverview() {
