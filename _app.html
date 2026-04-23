@@ -10,6 +10,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("airsupTheme");
+        document.documentElement.dataset.theme = (t === "dark") ? "dark" : "light";
+      } catch (e) { document.documentElement.dataset.theme = "light"; }
+    })();
+  </script>
+  <script src="assets/theme.js" defer></script>
 </head>
 <body>
   <header class="header" id="site-header">
@@ -28,6 +37,7 @@
         </div>
       </div>
       <nav class="header-nav" id="header-nav"></nav>
+      <button type="button" class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
     </div>
   </header>
 

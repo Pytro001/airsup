@@ -8,32 +8,74 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("airsupTheme");
+        document.documentElement.dataset.theme = (t === "dark") ? "dark" : "light";
+      } catch (e) { document.documentElement.dataset.theme = "light"; }
+    })();
+  </script>
+  <script src="assets/theme.js" defer></script>
   <style>
+    :root {
+      --page-bg: #fff;
+      --text: #111;
+      --text-muted: #555;
+      --text-soft: #888;
+      --text-faint: #bbb;
+      --border: #f0f0f0;
+      --card-border: #e8e8e8;
+      --card-bg: #fff;
+      --accent-bg: #f5f5f5;
+      color-scheme: light;
+    }
+    html[data-theme="dark"] {
+      --page-bg: #0b0b0d;
+      --text: #f2f2f3;
+      --text-muted: #c0c0c6;
+      --text-soft: #8a8a92;
+      --text-faint: #44444a;
+      --border: #1d1d22;
+      --card-border: #26262b;
+      --card-bg: #111114;
+      --accent-bg: #1d1d22;
+      color-scheme: dark;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { -webkit-text-size-adjust: 100%; }
     body {
       font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #fff; color: #111; line-height: 1.6;
+      background: var(--page-bg); color: var(--text); line-height: 1.6;
       min-height: 100dvh; -webkit-font-smoothing: antialiased;
       display: flex; flex-direction: column;
+      transition: background-color 0.2s, color 0.2s;
     }
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
 
     .sp-header {
       padding: 20px 28px; display: flex; align-items: center;
-      justify-content: space-between; border-bottom: 1px solid #f0f0f0;
+      justify-content: space-between; border-bottom: 1px solid var(--border);
     }
     .sp-brand {
       display: inline-flex; align-items: center; gap: 9px;
-      font-weight: 600; font-size: 16px; color: #111;
+      font-weight: 600; font-size: 16px; color: var(--text);
     }
     .sp-brand img { height: 22px; width: 22px; border-radius: 6px; }
+    html[data-theme="dark"] .sp-brand img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
     .sp-back {
-      font-size: 14px; font-weight: 500; color: #888;
+      font-size: 14px; font-weight: 500; color: var(--text-soft);
       transition: color 0.15s;
     }
-    .sp-back:hover { color: #111; }
+    .sp-back:hover { color: var(--text); }
+    .sp-theme-toggle {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: transparent; color: var(--text-soft); border: none; cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .sp-theme-toggle:hover { color: var(--text); background: var(--accent-bg); }
 
     .sp-content {
       flex: 1; max-width: 680px; width: 100%;
@@ -44,14 +86,14 @@
       letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 32px;
     }
     .sp-card {
-      border: 1.5px solid #e8e8e8; border-radius: 16px;
-      padding: 32px; margin-bottom: 20px;
+      border: 1.5px solid var(--card-border); border-radius: 16px;
+      padding: 32px; margin-bottom: 20px; background: var(--card-bg);
     }
     .sp-card-title {
       font-size: 17px; font-weight: 600; margin-bottom: 8px;
     }
     .sp-card-body {
-      font-size: 15px; color: #555; line-height: 1.6; margin-bottom: 20px;
+      font-size: 15px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;
     }
     .sp-wa-btn {
       display: inline-flex; align-items: center; gap: 10px;
@@ -66,10 +108,10 @@
 
     .sp-footer {
       padding: 20px 24px; text-align: center;
-      font-size: 12px; color: #bbb; border-top: 1px solid #f0f0f0;
+      font-size: 12px; color: var(--text-faint); border-top: 1px solid var(--border);
     }
-    .sp-footer a { color: #bbb; margin: 0 8px; transition: color 0.15s; }
-    .sp-footer a:hover { color: #666; }
+    .sp-footer a { color: var(--text-faint); margin: 0 8px; transition: color 0.15s; }
+    .sp-footer a:hover { color: var(--text-soft); }
   </style>
 </head>
 <body>
@@ -78,6 +120,7 @@
       <img src="assets/brand/logo-air-sup.png" alt="Airsup" />
       Airsup
     </a>
+    <button type="button" class="sp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
   </header>
 
   <main class="sp-content">

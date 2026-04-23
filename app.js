@@ -494,6 +494,33 @@
     updateAuthUI();
   }
 
+  /* ── Theme helpers (used in Settings + Supplier profile) ── */
+  function renderThemePills() {
+    const current = (window.AirsupTheme && window.AirsupTheme.get()) || document.documentElement.dataset.theme || "light";
+    const pill = (value, label) =>
+      `<button type="button" class="theme-pill${current === value ? " theme-pill--active" : ""}" data-theme-value="${value}">${label}</button>`;
+    return `<div class="theme-pills">${pill("light", "Light")}${pill("dark", "Dark")}</div>`;
+  }
+  function wireThemePills(scopeEl) {
+    const root = scopeEl || document;
+    const syncActive = (v) => {
+      root.querySelectorAll("[data-theme-value]").forEach((b) => {
+        b.classList.toggle("theme-pill--active", b.getAttribute("data-theme-value") === v);
+      });
+    };
+    root.querySelectorAll("[data-theme-value]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const v = btn.getAttribute("data-theme-value");
+        if (window.AirsupTheme) window.AirsupTheme.set(v);
+        syncActive(v);
+      });
+    });
+    window.addEventListener("airsup:themechange", (e) => {
+      if (!root.isConnected || !root.querySelector("[data-theme-value]")) return;
+      syncActive(e.detail?.theme || (window.AirsupTheme && window.AirsupTheme.get()) || "light");
+    });
+  }
+
   /* ── Settings ── */
   async function loadSettings() {
     const root = $("settings-root");
@@ -512,12 +539,17 @@
       ${[["Display name","displayName","text"],["Company","company","text"],["Phone / WhatsApp","phone","tel"],["Location","location","text"],["Timezone","timezone","text"]].map(([l,k,t]) =>
         `<div class="settings-field"><label class="settings-label">${l}</label><input type="${t}" id="settings-${k}" class="settings-input" value="${escapeAttr(v[k])}" /></div>`).join("")}
       <div class="settings-field"><label class="settings-label">Bio</label><textarea id="settings-bio" class="settings-input" rows="3">${escapeHtml(v.bio)}</textarea></div>
+      <div class="settings-field">
+        <label class="settings-label">Theme</label>
+        ${renderThemePills()}
+      </div>
       <p class="settings-saved" id="settings-saved" hidden></p>
       <button type="button" class="btn-primary" id="settings-save">Save changes</button>
-      <div style="margin-top:40px;padding-top:24px;border-top:1px solid #f0f0f0;">
-        <p style="font-size:13px;color:#aaa;margin-bottom:10px;">Danger zone</p>
+      <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
+        <p style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">Danger zone</p>
         <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
       </div></div>`;
+    wireThemePills(root);
     $("settings-save")?.addEventListener("click", saveSettings);
     $("settings-delete-profile")?.addEventListener("click", async () => {
       if (!confirm("Delete your profile? It will be moved to the admin bin. You can ask support to restore it.")) return;
@@ -1045,15 +1077,15 @@
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.id = "admin-gate-overlay";
-      overlay.style.cssText = "position:fixed;inset:0;background:#fff;z-index:9999;display:flex;align-items:center;justify-content:center;";
+      overlay.style.cssText = "position:fixed;inset:0;background:var(--bg-page);color:var(--text);z-index:9999;display:flex;align-items:center;justify-content:center;";
       overlay.innerHTML = `
         <div style="text-align:center;max-width:320px;width:90%;padding:0 24px;">
           <h1 style="font-size:22px;font-weight:600;margin-bottom:8px;">Admin access</h1>
-          <p style="font-size:14px;color:#888;margin-bottom:24px;">Enter the admin password to continue.</p>
+          <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Enter the admin password to continue.</p>
           <div style="display:flex;flex-direction:column;gap:12px;">
-            <input type="password" id="admin-pw-input" style="padding:11px 14px;border-radius:999px;border:1.5px solid #e8e8e8;font-size:14px;outline:none;width:100%;font-family:inherit;" placeholder="Password" autocomplete="current-password" />
+            <input type="password" id="admin-pw-input" style="padding:11px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none;width:100%;font-family:inherit;" placeholder="Password" autocomplete="current-password" />
             <p id="admin-pw-error" style="color:#d93025;font-size:13px;display:none;margin:0;">Wrong password.</p>
-            <button type="button" id="admin-pw-btn" style="padding:11px;border-radius:999px;background:#111;color:#fff;font-size:14px;font-weight:500;border:none;cursor:pointer;">Unlock</button>
+            <button type="button" id="admin-pw-btn" style="padding:11px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:500;border:none;cursor:pointer;">Unlock</button>
           </div>
         </div>`;
       document.body.appendChild(overlay);
@@ -1209,15 +1241,13 @@
           : escapeHtml(item.name || "Unnamed factory");
         const sub = escapeHtml(item.location || "");
         const deletedAt = item.deleted_at ? new Date(item.deleted_at).toLocaleDateString() : "";
-        return `<div class="project-card bin-card" style="position:relative;border-color:#fdd;background:#fffafa;">
-          <div class="project-card-title">${label} <span style="font-size:11px;color:#bbb;font-weight:400;">${type}</span></div>
+        return `<div class="project-card bin-card" style="position:relative;">
+          <div class="project-card-title">${label} <span class="bin-card-type">${type}</span></div>
           ${sub ? `<div class="project-card-sub">${sub}</div>` : ""}
-          ${deletedAt ? `<div class="project-card-sub" style="color:#ccc;font-size:11px;">Deleted ${deletedAt}</div>` : ""}
-          <div class="project-card-meta" style="gap:8px;margin-top:10px;">
-            <button class="bin-restore-btn" data-type="${type}" data-id="${escapeAttr(String(item.id))}"
-              style="font-size:12px;padding:4px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;">Restore</button>
-            <button class="bin-hard-delete-btn" data-type="${type}" data-id="${escapeAttr(String(item.id))}"
-              style="font-size:12px;padding:4px 12px;border-radius:6px;border:1px solid #fbb;background:#fff;color:#c0392b;cursor:pointer;">Delete forever</button>
+          ${deletedAt ? `<div class="bin-card-meta">Deleted ${deletedAt}</div>` : ""}
+          <div class="bin-actions">
+            <button class="bin-btn bin-restore-btn" data-type="${type}" data-id="${escapeAttr(String(item.id))}">Restore</button>
+            <button class="bin-btn bin-btn--danger bin-hard-delete-btn" data-type="${type}" data-id="${escapeAttr(String(item.id))}">Delete forever</button>
           </div>
         </div>`;
       };
@@ -1276,12 +1306,17 @@
       <div class="settings-field"><label class="settings-label">Typical MOQ</label><input type="text" id="fp-moq" class="settings-input" value="${escapeAttr(c.moq || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Contact name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(ci.name || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Contact phone</label><input type="tel" id="fp-contact-phone" class="settings-input" value="${escapeAttr(ci.phone || "")}" /></div>
+      <div class="settings-field">
+        <label class="settings-label">Theme</label>
+        ${renderThemePills()}
+      </div>
       <p class="settings-saved" id="fp-saved" hidden></p>
       <button type="button" class="btn-primary" id="fp-save">Save profile</button>
-      <div style="margin-top:40px;padding-top:24px;border-top:1px solid #f0f0f0;">
-        <p style="font-size:13px;color:#aaa;margin-bottom:10px;">Danger zone</p>
+      <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
+        <p style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">Danger zone</p>
         <button type="button" class="btn-danger" id="fp-delete-profile">Delete my profile</button>
       </div></div>`;
+    wireThemePills(root);
     $("fp-save")?.addEventListener("click", async () => {
       const g = (k) => ($(`fp-${k}`)?.value || "").trim();
       const saved = $("fp-saved");
