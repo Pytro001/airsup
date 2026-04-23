@@ -14,8 +14,8 @@
     (function () {
       try {
         var t = localStorage.getItem("airsupTheme");
-        document.documentElement.dataset.theme = (t === "dark") ? "dark" : "light";
-      } catch (e) { document.documentElement.dataset.theme = "light"; }
+        document.documentElement.dataset.theme = (t === "light") ? "light" : "dark";
+      } catch (e) { document.documentElement.dataset.theme = "dark"; }
     })();
   </script>
   <script src="assets/theme.js" defer></script>

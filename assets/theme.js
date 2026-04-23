@@ -4,6 +4,7 @@
  * Sets document.documentElement.dataset.theme ("light" | "dark") and
  * persists the choice to localStorage.airsupTheme.
  *
+ * Default is dark; users who set "light" in localStorage keep it.
  * A tiny inline script in each page's <head> must set the attribute BEFORE
  * first paint to avoid a flash. This file wires up toggle buttons after load.
  */
@@ -11,7 +12,7 @@
   "use strict";
 
   var STORAGE_KEY = "airsupTheme";
-  var DEFAULT_THEME = "light";
+  var DEFAULT_THEME = "dark";
   var root = document.documentElement;
 
   // Sun icon (shown in dark mode: click to go light)

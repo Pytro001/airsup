@@ -19,8 +19,8 @@
     (function () {
       try {
         var t = localStorage.getItem("airsupTheme");
-        document.documentElement.dataset.theme = (t === "dark") ? "dark" : "light";
-      } catch (e) { document.documentElement.dataset.theme = "light"; }
+        document.documentElement.dataset.theme = (t === "light") ? "light" : "dark";
+      } catch (e) { document.documentElement.dataset.theme = "dark"; }
     })();
   </script>
   <script src="assets/theme.js" defer></script>
@@ -201,8 +201,8 @@
     <div class="lp-brand" aria-hidden="true"></div>
     <div class="lp-header-right">
       <a href="/workspace?role=supplier" class="lp-login-link">Supplier</a>
-      <button type="button" class="lp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
       <button type="button" class="lp-login-link" id="lp-login-toggle">Login</button>
+      <button type="button" class="lp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
     </div>
   </header>
 

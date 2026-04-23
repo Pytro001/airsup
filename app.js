@@ -503,7 +503,7 @@
 
   /* ── Theme helpers (used in Settings + Supplier profile) ── */
   function renderThemePills() {
-    const current = (window.AirsupTheme && window.AirsupTheme.get()) || document.documentElement.dataset.theme || "light";
+    const current = (window.AirsupTheme && window.AirsupTheme.get()) || document.documentElement.dataset.theme || "dark";
     const pill = (value, label) =>
       `<button type="button" class="theme-pill${current === value ? " theme-pill--active" : ""}" data-theme-value="${value}">${label}</button>`;
     return `<div class="theme-pills">${pill("light", "Light")}${pill("dark", "Dark")}</div>`;
