@@ -1187,7 +1187,12 @@
 
   /* ── Event wiring ── */
   $("logo-home")?.addEventListener("click", () => {
-    if (!currentUser) { setView("onboarding"); return; }
+    // Not logged in or still in onboarding → go to landing page
+    if (!currentUser || currentView === "onboarding") {
+      window.location.href = "/";
+      return;
+    }
+    // Fully onboarded → go to their dashboard
     setView(userRole === "supplier" ? "supplier-dashboard" : "chat");
   });
   $("user-menu-trigger")?.addEventListener("click", () => { const dd = $("user-menu-dropdown"); if (dd) dd.hidden = !dd.hidden; });
