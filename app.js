@@ -1018,6 +1018,53 @@
     }
   }
 
+  /* ── Admin password gate ── */
+  const ADMIN_HASH = "3c8b484eeb21caeb34912fe71d43ad6df0ff0aa4d4846bc055da61587b63781c";
+
+  async function hashPassword(pw) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function showAdminGate() {
+    if (sessionStorage.getItem("admin_unlocked") === "1") {
+      setView("admin");
+      return;
+    }
+    const page = $("page-admin");
+    if (page) {
+      page.classList.add("active");
+      page.innerHTML = `
+        <div class="page-content page-content--narrow" style="padding-top:96px;text-align:center;">
+          <h1 class="page-title" style="margin-bottom:8px;">Admin access</h1>
+          <p class="page-lead" style="margin-bottom:24px;">Enter the admin password to continue.</p>
+          <div style="display:flex;flex-direction:column;gap:12px;max-width:320px;margin:0 auto;">
+            <input type="password" id="admin-pw-input" class="settings-input" placeholder="Password" autocomplete="current-password" />
+            <p id="admin-pw-error" style="color:#d93025;font-size:13px;display:none;">Wrong password.</p>
+            <button type="button" class="btn-primary" id="admin-pw-btn">Unlock</button>
+          </div>
+        </div>`;
+      const input = $("admin-pw-input");
+      const btn = $("admin-pw-btn");
+      const err = $("admin-pw-error");
+      async function tryUnlock() {
+        const hash = await hashPassword((input?.value || "").trim());
+        if (hash === ADMIN_HASH) {
+          sessionStorage.setItem("admin_unlocked", "1");
+          page.innerHTML = "";
+          page.classList.remove("active");
+          setView("admin");
+        } else {
+          if (err) err.style.display = "block";
+          if (input) { input.value = ""; input.focus(); }
+        }
+      }
+      btn?.addEventListener("click", tryUnlock);
+      input?.addEventListener("keydown", (e) => { if (e.key === "Enter") tryUnlock(); });
+      setTimeout(() => input?.focus(), 100);
+    }
+  }
+
   async function loadAdminOverview() {
     const stats = $("admin-stats");
     const custEl = $("admin-customers");
@@ -1184,7 +1231,7 @@
     if (account) account.hidden = true;
     const nav = $("header-nav");
     if (nav) nav.style.display = "none";
-    setView("admin");
+    showAdminGate();
   } else {
     ensureSession().then(() => initAuthState());
   }
