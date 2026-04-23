@@ -169,11 +169,9 @@
         <g id="pupil-r-g">
           <rect x="129" y="61" width="26" height="28" rx="6" fill="#000"/>
         </g>
-        <!-- eyelids (black, slide down from top of each eye to cover it) -->
-        <clipPath id="clip-l"><rect x="23" y="37" width="72" height="76" rx="12"/></clipPath>
-        <clipPath id="clip-r"><rect x="106" y="37" width="72" height="76" rx="12"/></clipPath>
-        <rect id="lid-l" x="23" y="37" width="72" height="0" rx="12" fill="#000" clip-path="url(#clip-l)"/>
-        <rect id="lid-r" x="106" y="37" width="72" height="0" rx="12" fill="#000" clip-path="url(#clip-r)"/>
+        <!-- eyelids: grow downward from top of each eye, covering the white -->
+        <rect id="lid-l" x="23" y="37" width="72" height="0" fill="#000"/>
+        <rect id="lid-r" x="106" y="37" width="72" height="0" fill="#000"/>
       </svg>
     </div>
 
@@ -328,42 +326,38 @@
     }
     requestAnimationFrame(tick);
 
-    // Blink: eyelids slide down to cover the eyes then back up
+    // Blink: black eyelids grow down to cover each eye, then retract
     const lidL = document.getElementById("lid-l");
     const lidR = document.getElementById("lid-r");
     const EYE_H = 76; // full eye height in SVG units
 
     function animateBlink() {
-      const duration = 180; // ms per half (close or open)
-      let closeStart = performance.now();
+      const CLOSE_MS = 120;
+      const OPEN_MS  = 150;
 
-      function closeStep(now) {
-        const t = Math.min((now - closeStart) / duration, 1);
-        const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
-        const h = (EYE_H * ease).toFixed(1);
-        lidL.setAttribute("height", h);
-        lidR.setAttribute("height", h);
-        if (t < 1) { requestAnimationFrame(closeStep); }
-        else {
-          let openStart = performance.now();
-          requestAnimationFrame(function openStep(n) {
-            const t2 = Math.min((n - openStart) / duration, 1);
-            const ease2 = t2 < 0.5 ? 2*t2*t2 : -1+(4-2*t2)*t2;
-            const h2 = (EYE_H * (1 - ease2)).toFixed(1);
-            lidL.setAttribute("height", h2);
-            lidR.setAttribute("height", h2);
-            if (t2 < 1) requestAnimationFrame(openStep);
-            else scheduleBlink();
-          });
-        }
+      function run(startH, endH, duration, onDone) {
+        const t0 = performance.now();
+        (function frame(now) {
+          const p = Math.min((now - t0) / duration, 1);
+          const e = p < 0.5 ? 2*p*p : -1+(4-2*p)*p; // ease in-out
+          const h = (startH + (endH - startH) * e).toFixed(1);
+          lidL.setAttribute("height", h);
+          lidR.setAttribute("height", h);
+          if (p < 1) requestAnimationFrame(frame);
+          else onDone();
+        })(t0);
       }
-      requestAnimationFrame(closeStep);
+
+      run(0, EYE_H, CLOSE_MS, () => {
+        run(EYE_H, 0, OPEN_MS, scheduleBlink);
+      });
     }
 
     function scheduleBlink() {
-      setTimeout(animateBlink, 3000 + Math.random() * 2000);
+      setTimeout(animateBlink, 2000 + Math.random() * 3000);
     }
-    scheduleBlink();
+    // First blink after 1.5s so it's visible quickly
+    setTimeout(animateBlink, 1500);
   </script>
 </body>
 </html>
