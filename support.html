@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support — Airsup</title>
+  <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fff; color: #111; line-height: 1.6;
+      min-height: 100dvh; -webkit-font-smoothing: antialiased;
+      display: flex; flex-direction: column;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    .sp-header {
+      padding: 20px 28px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid #f0f0f0;
+    }
+    .sp-brand {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-weight: 600; font-size: 16px; color: #111;
+    }
+    .sp-brand img { height: 22px; width: 22px; border-radius: 5px; }
+    .sp-back {
+      font-size: 14px; font-weight: 500; color: #888;
+      transition: color 0.15s;
+    }
+    .sp-back:hover { color: #111; }
+
+    .sp-content {
+      flex: 1; max-width: 680px; width: 100%;
+      margin: 0 auto; padding: 56px 24px 80px;
+    }
+    .sp-tag {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #aaa; margin-bottom: 12px;
+    }
+    h1 {
+      font-size: clamp(28px, 4vw, 40px); font-weight: 600;
+      letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 32px;
+    }
+    .sp-card {
+      border: 1.5px solid #e8e8e8; border-radius: 16px;
+      padding: 32px; margin-bottom: 20px;
+    }
+    .sp-card-title {
+      font-size: 17px; font-weight: 600; margin-bottom: 8px;
+    }
+    .sp-card-body {
+      font-size: 15px; color: #555; line-height: 1.6; margin-bottom: 20px;
+    }
+    .sp-wa-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: #25D366; color: #fff;
+      padding: 13px 24px; border-radius: 999px;
+      font-size: 15px; font-weight: 600;
+      transition: background 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+    .sp-wa-btn:hover { background: #1ebe5d; transform: translateY(-1px); }
+    .sp-wa-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+    .sp-email-link {
+      color: #111; border-bottom: 1px solid #e0e0e0;
+      transition: border-color 0.15s;
+    }
+    .sp-email-link:hover { border-color: #111; }
+
+    .sp-hours {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-top: 20px;
+    }
+    .sp-hours-item {
+      background: #f8f8f8; border-radius: 10px; padding: 16px;
+    }
+    .sp-hours-label { font-size: 12px; color: #aaa; font-weight: 500; margin-bottom: 4px; }
+    .sp-hours-value { font-size: 14px; font-weight: 600; }
+
+    .sp-footer {
+      padding: 20px 24px; text-align: center;
+      font-size: 12px; color: #bbb; border-top: 1px solid #f0f0f0;
+    }
+    .sp-footer a { color: #bbb; margin: 0 8px; transition: color 0.15s; }
+    .sp-footer a:hover { color: #666; }
+
+    @media (max-width: 480px) {
+      .sp-hours { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="sp-header">
+    <a href="/" class="sp-brand">
+      <img src="assets/brand/logo-air-sup.png" alt="Airsup" />
+      Airsup
+    </a>
+    <a href="/" class="sp-back">← Home</a>
+  </header>
+
+  <main class="sp-content">
+    <p class="sp-tag">Support</p>
+    <h1>We're here to help</h1>
+
+    <div class="sp-card">
+      <p class="sp-card-title">Chat with us on WhatsApp</p>
+      <p class="sp-card-body">
+        The fastest way to reach us. Send a message any time — we typically reply within a few hours during business hours.
+      </p>
+      <a href="https://wa.me/4917643666380" target="_blank" rel="noopener" class="sp-wa-btn">
+        <!-- WhatsApp logo -->
+        <svg class="sp-wa-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#fff" d="M16 2C8.268 2 2 8.268 2 16c0 2.444.658 4.737 1.804 6.714L2 30l7.52-1.776A13.944 13.944 0 0016 30c7.732 0 14-6.268 14-14S23.732 2 16 2z"/>
+          <path fill="#25D366" d="M16 4.4C9.59 4.4 4.4 9.59 4.4 16c0 2.22.63 4.297 1.72 6.05l.22.35-1.02 3.73 3.84-.99.34.2A11.562 11.562 0 0016 27.6c6.41 0 11.6-5.19 11.6-11.6S22.41 4.4 16 4.4z"/>
+          <path fill="#fff" d="M12.34 10.26c-.27-.6-.55-.62-.8-.63-.21-.01-.45-.01-.69-.01-.24 0-.63.09-.96.45-.33.36-1.26 1.23-1.26 3s1.29 3.48 1.47 3.72c.18.24 2.52 4.02 6.21 5.47 3.07 1.21 3.69.97 4.36.91.67-.06 2.16-.88 2.46-1.73.3-.85.3-1.58.21-1.73-.09-.15-.33-.24-.69-.42-.36-.18-2.16-1.07-2.49-1.19-.33-.12-.57-.18-.81.18-.24.36-.93 1.19-1.14 1.43-.21.24-.42.27-.78.09-.36-.18-1.52-.56-2.89-1.79-1.07-.96-1.79-2.14-2-2.5-.21-.36-.02-.55.16-.73.16-.16.36-.42.54-.63.18-.21.24-.36.36-.6.12-.24.06-.45-.03-.63-.09-.18-.78-1.95-1.09-2.66z"/>
+        </svg>
+        WhatsApp
+      </a>
+    </div>
+
+    <div class="sp-card">
+      <p class="sp-card-title">Email</p>
+      <p class="sp-card-body">
+        For non-urgent questions, billing, or partnership inquiries, drop us an email. We'll get back to you within 1–2 business days.
+      </p>
+      <a href="mailto:hello@airsup.ai" class="sp-email-link">hello@airsup.ai</a>
+    </div>
+
+    <div class="sp-card">
+      <p class="sp-card-title">Response times</p>
+      <div class="sp-hours">
+        <div class="sp-hours-item">
+          <p class="sp-hours-label">WhatsApp</p>
+          <p class="sp-hours-value">Within a few hours</p>
+        </div>
+        <div class="sp-hours-item">
+          <p class="sp-hours-label">Email</p>
+          <p class="sp-hours-value">1–2 business days</p>
+        </div>
+        <div class="sp-hours-item">
+          <p class="sp-hours-label">Business hours</p>
+          <p class="sp-hours-value">Mon–Fri, 9am–6pm CET</p>
+        </div>
+        <div class="sp-hours-item">
+          <p class="sp-hours-label">Emergency</p>
+          <p class="sp-hours-value">WhatsApp is fastest</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="sp-footer">
+    <span>&copy; <span id="yr"></span> Airsup Inc.</span>
+    <a href="https://wa.me/4917643666380" target="_blank" rel="noopener">Support</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+  </footer>
+  <script>document.getElementById("yr").textContent = new Date().getFullYear();</script>
+</body>
+</html>
