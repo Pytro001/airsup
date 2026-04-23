@@ -3,160 +3,225 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Airsup — AI Manufacturing Sourcing</title>
+  <title>Airsup — AI sourcing from idea to factory</title>
+  <meta name="description" content="Airsup connects hardware startups directly with factory engineers. Describe what you need — AI finds the right manufacturer and handles the brief." />
+  <meta property="og:title" content="Airsup — AI sourcing from idea to factory" />
+  <meta property="og:description" content="No brokers, no cold emails. AI matches you with the right factory and connects you directly with the engineer." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/assets/brand/logo-air-sup.png" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
   <link rel="apple-touch-icon" href="assets/brand/logo-air-sup.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fff; color: #111; line-height: 1.55;
+      min-height: 100dvh; -webkit-font-smoothing: antialiased;
+      display: flex; flex-direction: column;
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input { font-family: inherit; font-size: inherit; }
+    button { cursor: pointer; border: none; background: none; }
+    img { display: block; max-width: 100%; }
+
+    /* ── Header ── */
+    .lp-header {
+      padding: 20px 28px; display: flex; align-items: center;
+      justify-content: space-between;
+    }
+    .lp-brand {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-weight: 600; font-size: 16px; color: #111;
+    }
+    .lp-brand img { height: 22px; width: 22px; border-radius: 5px; }
+    .lp-login-link {
+      font-size: 14px; font-weight: 500; color: #666;
+      padding: 8px 0; transition: color 0.15s;
+    }
+    .lp-login-link:hover { color: #111; }
+
+    /* ── Main ── */
+    .lp-main {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 48px 24px 64px;
+      text-align: center;
+    }
+    .lp-headline {
+      font-size: clamp(34px, 5.5vw, 58px); line-height: 1.05;
+      letter-spacing: -0.03em; font-weight: 600; margin-bottom: 14px;
+    }
+    .lp-sub {
+      font-size: 17px; color: #666; margin-bottom: 44px; max-width: 440px;
+    }
+
+    /* ── Choice cards ── */
+    .lp-choices {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+      width: 100%; max-width: 560px; margin-bottom: 48px;
+    }
+    .lp-choice {
+      display: flex; flex-direction: column; align-items: flex-start;
+      padding: 26px 24px; border-radius: 14px;
+      border: 1.5px solid #e8e8e8; background: #fff;
+      text-align: left; cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+      text-decoration: none; color: #111;
+    }
+    .lp-choice:hover {
+      border-color: #111;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+      transform: translateY(-1px);
+    }
+    .lp-choice-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      background: #f5f5f5; display: flex; align-items: center;
+      justify-content: center; margin-bottom: 14px; flex-shrink: 0;
+    }
+    .lp-choice-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .lp-choice-sub { font-size: 13px; color: #888; line-height: 1.4; }
+
+    /* ── Login ── */
+    .lp-login { width: 100%; max-width: 360px; }
+    .lp-login-label {
+      font-size: 13px; color: #999; margin-bottom: 10px;
+    }
+    .lp-login-row {
+      display: flex; gap: 8px;
+    }
+    .lp-email-input {
+      flex: 1; padding: 11px 14px; border-radius: 999px;
+      border: 1.5px solid #e8e8e8; font-size: 14px; outline: none;
+      transition: border-color 0.15s; background: #fff;
+    }
+    .lp-email-input:focus { border-color: #111; }
+    .lp-email-btn {
+      padding: 11px 20px; border-radius: 999px;
+      background: #111; color: #fff;
+      font-size: 14px; font-weight: 500;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .lp-email-btn:hover { background: #333; }
+    .lp-email-btn:disabled { opacity: 0.5; cursor: default; }
+    .lp-login-msg {
+      font-size: 13px; margin-top: 10px; min-height: 18px;
+      color: #666; display: none;
+    }
+    .lp-login-msg--error { color: #d93025; }
+
+    /* ── Footer ── */
+    .lp-footer {
+      padding: 20px 24px; text-align: center;
+      font-size: 12px; color: #bbb; border-top: 1px solid #f0f0f0;
+    }
+    .lp-footer a { color: #bbb; margin: 0 8px; transition: color 0.15s; }
+    .lp-footer a:hover { color: #666; }
+
+    @media (max-width: 480px) {
+      .lp-choices { grid-template-columns: 1fr; }
+      .lp-login-row { flex-direction: column; }
+      .lp-email-btn { border-radius: 999px; }
+    }
+  </style>
 </head>
 <body>
-  <header class="header" id="site-header">
-    <div id="auth-banner" class="auth-banner" role="status" hidden></div>
-    <div class="header-inner">
-      <button type="button" id="logo-home" class="site-logo" aria-label="Home">
-        <img src="assets/brand/logo-air-sup.png" alt="Airsup" />
-      </button>
-      <div class="header-right" id="header-account" hidden>
-        <button type="button" class="avatar-btn" id="user-menu-trigger" aria-label="Account menu">
-          <span class="avatar-letter" id="avatar-letter">?</span>
-        </button>
-        <div class="dropdown" id="user-menu-dropdown" hidden>
-          <button type="button" class="dropdown-item" id="menu-settings">Settings</button>
-          <button type="button" class="dropdown-item" id="menu-signout">Log out</button>
-        </div>
-      </div>
-      <nav class="header-nav" id="header-nav"></nav>
+  <header class="lp-header">
+    <div class="lp-brand">
+      <img src="assets/brand/logo-air-sup.png" alt="Airsup" />
+      Airsup
     </div>
+    <button type="button" class="lp-login-link" id="lp-login-toggle">Already have an account?</button>
   </header>
 
-  <main>
-    <!-- Onboarding -->
-    <section class="page active" id="page-onboarding">
-      <div class="onboard">
-        <div class="onboard-progress" id="onboard-progress"><div class="onboard-progress-bar" id="onboard-bar"></div></div>
-        <div class="onboard-stage" id="onboard-stage"></div>
-      </div>
-    </section>
+  <main class="lp-main">
+    <h1 class="lp-headline">From idea to factory,<br>in one conversation.</h1>
+    <p class="lp-sub">AI sourcing — no brokers, no cold emails.</p>
 
-    <!-- Chat (buyer) -->
-    <section class="page" id="page-chat">
-      <div class="chat-container">
-        <div class="chat-messages" id="chat-messages">
-          <div class="chat-welcome" id="chat-welcome">
-            <h2>Welcome to Airsup</h2>
-            <p>Tell me what you need manufactured. I'll find the right factory and connect you directly with the engineer who'll build it.</p>
-          </div>
+    <div class="lp-choices">
+      <a href="/dashboard?role=startup" class="lp-choice">
+        <div class="lp-choice-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         </div>
-        <div class="chat-composer">
-          <div class="composer-inner">
-            <label class="composer-attach" id="chat-attach-label" aria-label="Attach file">
-              <input type="file" id="chat-file-input" hidden multiple accept=".pdf,.png,.jpg,.jpeg,.step,.stp,.stl,.dxf,.dwg,.ai,.eps,.svg" />
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-            </label>
-            <textarea class="composer-input" id="chat-input" rows="1" placeholder="Describe what you need…" autocomplete="off"></textarea>
-            <button type="button" class="composer-send" id="chat-send" aria-label="Send" disabled>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-            </button>
-          </div>
-          <div class="composer-files" id="composer-files" hidden></div>
+        <div class="lp-choice-title">I need something manufactured</div>
+        <div class="lp-choice-sub">Find the right factory and talk directly with the engineer.</div>
+      </a>
+      <a href="/dashboard?role=supplier" class="lp-choice">
+        <div class="lp-choice-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         </div>
-      </div>
-    </section>
+        <div class="lp-choice-title">I'm a factory / supplier</div>
+        <div class="lp-choice-sub">Get AI-matched briefs from serious buyers, no spam.</div>
+      </a>
+    </div>
 
-    <!-- Projects (buyer) -->
-    <section class="page" id="page-projects">
-      <div class="page-content">
-        <h1 class="page-title">Projects</h1>
-        <p class="page-lead" id="projects-lead">Sourcing requests created from your conversations.</p>
-        <div id="projects-list" class="projects-grid"></div>
+    <div class="lp-login" id="lp-login-section" style="display:none;">
+      <p class="lp-login-label">Enter your email — we'll send a login link.</p>
+      <div class="lp-login-row">
+        <input type="email" class="lp-email-input" id="lp-email" placeholder="you@example.com" autocomplete="email" />
+        <button type="button" class="lp-email-btn" id="lp-send-btn">Send link</button>
       </div>
-    </section>
-
-    <!-- Connections (buyer) -->
-    <section class="page" id="page-connections">
-      <div class="page-content">
-        <h1 class="page-title">Connections</h1>
-        <p class="page-lead">Direct lines to the designers and engineers working on your product.</p>
-        <div id="connections-list" class="connections-list"></div>
-        <div id="connection-chat-wrap" class="conn-chat-wrap" hidden>
-          <div class="conn-chat-header">
-            <button type="button" class="btn-outline conn-chat-back" id="conn-chat-back">&larr;</button>
-            <span class="conn-chat-title" id="conn-chat-title">Factory</span>
-          </div>
-          <div id="conn-chat-files" class="conn-chat-files" hidden></div>
-          <div class="conn-chat-messages" id="conn-chat-messages"></div>
-          <div class="conn-chat-composer">
-            <div class="composer-inner">
-              <textarea class="composer-input" id="conn-chat-input" rows="1" placeholder="Message the engineer\u2026" autocomplete="off"></textarea>
-              <button type="button" class="composer-send" id="conn-chat-send" aria-label="Send" disabled>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Supplier Dashboard -->
-    <section class="page" id="page-supplier-dashboard">
-      <div class="page-content">
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-lead">Incoming project briefs and your active work.</p>
-        <div class="supplier-stats" id="supplier-stats"></div>
-        <h2 class="section-title">Incoming briefs</h2>
-        <p class="section-sub">AI-curated projects that match your capabilities. Review and accept to start working directly with the buyer.</p>
-        <div id="supplier-briefs" class="projects-grid"></div>
-        <h2 class="section-title" style="margin-top:40px;">Active projects</h2>
-        <div id="supplier-active" class="projects-grid"></div>
-      </div>
-    </section>
-
-    <!-- Supplier Profile -->
-    <section class="page" id="page-supplier-profile">
-      <div class="page-content page-content--narrow">
-        <h1 class="page-title">Factory profile</h1>
-        <p class="page-lead">This is what buyers and AI see about your factory.</p>
-        <div id="supplier-profile-root"></div>
-      </div>
-    </section>
-
-    <!-- Admin (public, no auth) -->
-    <section class="page" id="page-admin">
-      <div class="page-content page-content--wide">
-        <h1 class="page-title">Admin overview</h1>
-        <p class="page-lead" id="admin-lead">Customers, factories, and AI-made connections.</p>
-        <div class="admin-stats" id="admin-stats"></div>
-        <div class="admin-grid">
-          <div class="admin-col">
-            <h2 class="section-title">Customers</h2>
-            <p class="section-sub" id="admin-customers-sub">Buyers on the platform.</p>
-            <div id="admin-customers" class="projects-grid"></div>
-          </div>
-          <div class="admin-col">
-            <h2 class="section-title">Factories</h2>
-            <p class="section-sub" id="admin-factories-sub">Manufacturers on the platform.</p>
-            <div id="admin-factories" class="projects-grid"></div>
-          </div>
-        </div>
-        <h2 class="section-title" style="margin-top:40px;">AI-made connections</h2>
-        <p class="section-sub">Matches that link a customer to a factory.</p>
-        <div id="admin-connections" class="projects-grid"></div>
-      </div>
-    </section>
-
-    <!-- Settings -->
-    <section class="page" id="page-settings">
-      <div class="page-content page-content--narrow">
-        <h1 class="page-title">Settings</h1>
-        <div id="settings-root"></div>
-      </div>
-    </section>
+      <p class="lp-login-msg" id="lp-login-msg"></p>
+    </div>
   </main>
+
+  <footer class="lp-footer">
+    <span>&copy; <span id="lp-year"></span> Airsup</span>
+    <a href="mailto:hello@airsup.ai">Contact</a>
+  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script>
+    document.getElementById("lp-year").textContent = new Date().getFullYear();
+
+    const cfg = window.AIRSUP_CONFIG || {};
+    const sb = cfg.supabaseUrl && cfg.supabaseAnonKey
+      ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey)
+      : null;
+
+    // Toggle login section
+    const loginToggle = document.getElementById("lp-login-toggle");
+    const loginSection = document.getElementById("lp-login-section");
+    loginToggle.addEventListener("click", () => {
+      const visible = loginSection.style.display !== "none";
+      loginSection.style.display = visible ? "none" : "block";
+      loginToggle.textContent = visible ? "Already have an account?" : "Hide login";
+      if (!visible) document.getElementById("lp-email").focus();
+    });
+
+    // Magic link login
+    const emailInput = document.getElementById("lp-email");
+    const sendBtn = document.getElementById("lp-send-btn");
+    const msgEl = document.getElementById("lp-login-msg");
+
+    function showMsg(text, isError) {
+      msgEl.textContent = text;
+      msgEl.style.display = "block";
+      msgEl.className = "lp-login-msg" + (isError ? " lp-login-msg--error" : "");
+    }
+
+    async function sendLoginLink() {
+      const email = emailInput.value.trim();
+      if (!email || !email.includes("@")) { showMsg("Enter a valid email address.", true); return; }
+      if (!sb) { showMsg("Supabase not configured.", true); return; }
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending…";
+      const redirectTo = (cfg.apiUrl || window.location.origin) + "/dashboard";
+      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Send link";
+      if (error) { showMsg(error.message || "Could not send link.", true); }
+      else { showMsg("Check your email — link is on its way.", false); emailInput.value = ""; }
+    }
+
+    sendBtn.addEventListener("click", sendLoginLink);
+    emailInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendLoginLink(); });
+  </script>
 </body>
 </html>
