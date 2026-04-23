@@ -20,7 +20,10 @@
     { "source": "/health", "destination": "/api" },
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/admin/", "destination": "/index.html" },
+    { "source": "/app", "destination": "/index.html" },
+    { "source": "/app/", "destination": "/index.html" },
     { "source": "/landingpage", "destination": "/landingpage.html" },
-    { "source": "/landingpage/", "destination": "/landingpage.html" }
+    { "source": "/landingpage/", "destination": "/landingpage.html" },
+    { "source": "/", "destination": "/landingpage.html" }
   ]
 }

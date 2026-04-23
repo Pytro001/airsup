@@ -1226,6 +1226,14 @@
   /* ── Init ── */
   updateAuthUI();
   setupAuthListener();
+  // Pre-select role when arriving from the landing page (/app?role=startup|supplier)
+  const roleParam = new URLSearchParams(window.location.search).get("role");
+  if (roleParam === "startup" || roleParam === "supplier") {
+    onboardData.role = roleParam;
+    onboardStep = 1; // skip the "who are you?" choice screen
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+
   if (window.location.pathname.replace(/\/+$/, "") === "/admin") {
     const account = $("header-account");
     if (account) account.hidden = true;
