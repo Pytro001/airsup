@@ -39,7 +39,7 @@ paymentsRouter.post("/create", requireAuth, async (req: AuthRequest, res: Respon
       status: "held",
     }).select("id").single();
 
-    res.json({ beta: true, paymentId: payment?.id, message: "Free during beta — no payment required." });
+    res.json({ beta: true, paymentId: payment?.id, message: "Free during beta. No payment required." });
     return;
   }
 

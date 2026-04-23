@@ -35,7 +35,7 @@ factoriesRouter.get("/me", async (req: Request, res: Response) => {
 /**
  * PUT /api/factories/me
  * Upserts the factory profile for the authenticated supplier.
- * Uses service role to bypass RLS — the user is authenticated via JWT.
+ * Uses service role to bypass RLS. The user is authenticated via JWT.
  */
 factoriesRouter.put("/me", async (req: Request, res: Response) => {
   const userId = await resolveUserId(req);

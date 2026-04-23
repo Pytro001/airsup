@@ -30,9 +30,9 @@ export async function processMatch(matchId: string): Promise<void> {
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 512,
-    system: `Generate a concise context summary and next steps for a buyer-to-engineer introduction. This is NOT a sales introduction — the buyer is being connected directly to the designer or engineer at the factory who will work on their product.
+    system: `Generate a concise context summary and next steps for a buyer-to-engineer introduction. This is NOT a sales introduction. The buyer is being connected directly to the designer or engineer at the factory who will work on their product.
 
-The AI has already briefed the factory's technical team with full project context, so the engineer can start working immediately. The goal is fast iteration — getting a first drawing, design, or sample back quickly.
+The AI has already briefed the factory's technical team with full project context, so the engineer can start working immediately. The goal is fast iteration: getting a first drawing, design, or sample back quickly.
 
 Respond with JSON: { "summary": "...", "next_steps": "...", "key_context_for_buyer": "...", "key_context_for_engineer": "...", "first_deliverable": "...", "expected_turnaround": "..." }
 
@@ -42,7 +42,7 @@ Respond with JSON: { "summary": "...", "next_steps": "...", "key_context_for_buy
     messages: [
       {
         role: "user",
-        content: `Project: ${project.title} — ${project.description}
+        content: `Project: ${project.title}. ${project.description}
 Requirements: ${JSON.stringify(project.requirements)}
 Company: ${project.companies?.name || "Buyer"}
 Factory: ${factory.name} in ${factory.location} (${factory.category})
@@ -74,7 +74,7 @@ Generate the introduction context.`,
     },
   }).eq("id", matchId);
 
-  const introMsg = `Great news! I found a match for "${project.title}":\n\n**${factory.name}** (${factory.location})\n\n${intro.summary}\n\nQuote: ${match.quote?.unit_price || "See details"} per unit, ${match.quote?.lead_time || "TBD"} lead time.${intro.first_deliverable ? `\n\nFirst deliverable: ${intro.first_deliverable}${intro.expected_turnaround ? ` (${intro.expected_turnaround})` : ""}` : ""}\n\nYou'll be working directly with their designer/engineer — no sales middleman. ${intro.next_steps}\n\nHead to the **Connections** tab to start chatting with them directly.`;
+  const introMsg = `Great news! I found a match for "${project.title}":\n\n**${factory.name}** (${factory.location})\n\n${intro.summary}\n\nQuote: ${match.quote?.unit_price || "See details"} per unit, ${match.quote?.lead_time || "TBD"} lead time.${intro.first_deliverable ? `\n\nFirst deliverable: ${intro.first_deliverable}${intro.expected_turnaround ? ` (${intro.expected_turnaround})` : ""}` : ""}\n\nYou'll be working directly with their designer or engineer, no sales middleman. ${intro.next_steps}\n\nHead to the **Connections** tab to start chatting with them directly.`;
 
   await supabaseAdmin.from("conversations").insert({
     user_id: project.user_id,

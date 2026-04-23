@@ -86,7 +86,7 @@
   }
 
   function formatMatchStatusLabel(status) {
-    if (status === "intro_sent") return "Intro sent \u2014 say hello";
+    if (status === "intro_sent") return "Intro sent, say hello";
     if (status === "in_production") return "In production";
     return String(status || "").replace(/_/g, " ") || "";
   }
@@ -175,7 +175,7 @@
             " Create the \u201cproject-files\u201d bucket (run Supabase migration 009) and Storage policies (010/011).";
         } else if (/row-level security|RLS|permission denied|not authorized/i.test(msg)) {
           msg +=
-            " [Storage upload \u2014 Network tab: storage/v1/object/...] First path segment must be your user id; apply migrations 010 and 011.";
+            " [Storage upload, Network tab: storage/v1/object/...] First path segment must be your user id; apply migrations 010 and 011.";
         }
         return { filenames: [], err: msg };
       }
@@ -312,7 +312,7 @@
      ONBOARDING
      ══════════════════════════════════════ */
   const STARTUP_STEPS = [
-    { id: "company", type: "form", title: "Tell us about your company.", sub: "Our AI remembers everything \u2014 so the factory\u2019s engineer gets full context from day one.",
+    { id: "company", type: "form", title: "Tell us about your company.", sub: "Our AI remembers everything, so the factory\u2019s engineer gets full context from day one.",
       fields: [
         { key: "companyName", label: "Company name", required: true },
         { key: "companyDescription", label: "Short company description", type: "textarea" },
@@ -337,7 +337,7 @@
   ];
 
   const SUPPLIER_STEPS = [
-    { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers never talk to sales \u2014 AI briefs your designers and engineers directly. Less overhead, faster iterations.",
+    { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers hate talking to sales. Our AI briefs your designers and engineers directly. Less overhead, faster iterations.",
       fields: [
         { key: "companyName", label: "Factory / company name", required: true },
         { key: "location", label: "Location", required: true },
@@ -351,7 +351,7 @@
           { key: "moq", label: "Typical MOQ" },
         ]},
       ] },
-    { id: "contact", type: "form", title: "Who should buyers work with?", sub: "We\u2019ll connect projects directly to your designer or engineer \u2014 not a sales team. This is your competitive advantage.",
+    { id: "contact", type: "form", title: "Who should buyers work with?", sub: "We\u2019ll connect projects directly to your designer or engineer, not a sales team. This is your competitive advantage.",
       fields: [
         { row: [
           { key: "fullName", label: "Contact name", required: true },
@@ -377,7 +377,7 @@
       stage.innerHTML = `
         <div class="onboard-question">
           <h1 class="onboard-title">Welcome to Airsup.</h1>
-          <p class="onboard-sub">We use AI to connect startups directly with factory engineers \u2014 no sales people, no middlemen. Faster iterations, better products.</p>
+          <p class="onboard-sub">We use AI to connect startups directly with factory engineers. No sales people, no middlemen. Faster iterations, better products.</p>
           <div class="onboard-choices">
             <button type="button" class="onboard-choice" data-value="startup">I need something manufactured</button>
             <button type="button" class="onboard-choice" data-value="supplier">I\u2019m a factory / supplier</button>
@@ -400,7 +400,7 @@
         <div class="onboard-question">
           <h1 class="onboard-title">${isSupplier ? "Your factory is live." : "You\u2019re all set."}</h1>
           <p class="onboard-sub">${isSupplier
-            ? "Our AI will start sending you project briefs that match your capabilities. You\u2019ll work directly with buyers \u2014 no sales needed."
+            ? "Our AI will start sending you project briefs that match your capabilities. You\u2019ll work directly with buyers, no sales needed."
             : "Our AI now knows your business. We\u2019ll find the right factory and connect you directly with the engineer who\u2019ll build your product."}</p>
           <div class="onboard-actions">
             <button type="button" class="btn-primary btn-lg" id="onboard-go">${isSupplier ? "Go to dashboard" : "Start chatting"}</button>

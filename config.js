@@ -3,7 +3,7 @@
  *
  * Set supabaseAnonKey here OR use config.local.js (see config.local.example.js).
  *
- * No login UI — the app uses Supabase Anonymous sign-ins for a silent session:
+ * No login UI. The app uses Supabase Anonymous sign-ins for a silent session:
  * - Authentication → Providers → Anonymous sign-ins → ON → Save.
  * - Run SQL migrations (003_platform_pivot.sql, 004_profile_trigger_names.sql) so new users get profiles rows.
  *

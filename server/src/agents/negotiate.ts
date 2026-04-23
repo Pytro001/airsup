@@ -46,9 +46,9 @@ export async function runNegotiation(outreachId: string): Promise<void> {
       : "";
   const buyerCompanyBlock = `## Buyer company
 Name: ${co?.name || "Unknown"}
-Location: ${co?.location || "—"}
-About: ${co?.description || "—"}
-Sector: ${co?.industry || "—"}
+Location: ${co?.location || "N/A"}
+About: ${co?.description || "N/A"}
+Sector: ${co?.industry || "N/A"}
 ${akLines ? `Other notes:\n${akLines}` : ""}`;
 
   const anthropic = getAnthropicClient();
@@ -59,7 +59,7 @@ ${akLines ? `Other notes:\n${akLines}` : ""}`;
     system: `You are negotiating with a factory on behalf of a buyer. Your goal is to:
 1. Confirm the factory can handle the project
 2. Get a preliminary quote (unit price, total, timeline)
-3. Negotiate iteration terms — how many free/included design iterations, turnaround for first drawing or sample
+3. Negotiate iteration terms: how many free or included design iterations, turnaround for first drawing or sample
 4. Identify the specific designer or engineer who will work on this project (NOT a sales person)
 5. Identify any concerns or deal-breakers
 6. Determine if this is a good match

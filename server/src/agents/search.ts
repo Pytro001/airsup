@@ -177,7 +177,7 @@ export async function runFactorySearch(searchId: string): Promise<void> {
         max_tokens: 512,
         system: `You are an expert manufacturing sourcing analyst. Evaluate whether a factory is a good potential match for a sourcing project.
 
-Key priority: we connect buyers DIRECTLY to the factory's designer or engineer — not sales staff. Evaluate whether this factory can provide direct technical contact for fast iteration. Factories with in-house design/engineering teams score higher.
+Key priority: we connect buyers DIRECTLY to the factory's designer or engineer, not sales staff. Evaluate whether this factory can provide direct technical contact for fast iteration. Factories with in-house design/engineering teams score higher.
 
 Respond with JSON: { "match_score": 0-100, "reasoning": "...", "suggested_brief": "...", "ideal_contact_role": "..." }.
 - suggested_brief: 2-3 sentences for the factory's technical team. MUST mention product type, quantity/timeline if known from requirements or AI summary, and what you need from them first (e.g. first CAD, sample, DFM). Not a sales pitch.

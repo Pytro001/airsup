@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Airsup — AI sourcing from idea to factory</title>
-  <meta name="description" content="Airsup connects hardware startups directly with factory engineers. Describe what you need — AI finds the right manufacturer and handles the brief." />
-  <meta property="og:title" content="Airsup — AI sourcing from idea to factory" />
+  <title>Airsup · AI sourcing from idea to factory</title>
+  <meta name="description" content="Airsup connects hardware startups directly with factory engineers. Describe what you need. AI finds the right manufacturer and handles the brief." />
+  <meta property="og:title" content="Airsup · AI sourcing from idea to factory" />
   <meta property="og:description" content="No brokers, no cold emails. AI matches you with the right factory and connects you directly with the engineer." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="/assets/brand/logo-air-sup.png" />
@@ -159,13 +159,13 @@
         <rect x="0" y="0" width="200" height="200" rx="22" fill="#000"/>
         <!-- left eye white rounded square -->
         <rect x="23" y="37" width="72" height="76" rx="12" fill="#fff"/>
-        <!-- left pupil — centered at (59, 75) -->
+        <!-- left pupil, centered at (59, 75) -->
         <g id="pupil-l-g">
           <rect x="46" y="61" width="26" height="28" rx="6" fill="#000"/>
         </g>
         <!-- right eye white rounded square -->
         <rect x="106" y="37" width="72" height="76" rx="12" fill="#fff"/>
-        <!-- right pupil — centered at (142, 75) -->
+        <!-- right pupil, centered at (142, 75) -->
         <g id="pupil-r-g">
           <rect x="129" y="61" width="26" height="28" rx="6" fill="#000"/>
         </g>
@@ -181,7 +181,7 @@
     </div>
 
     <div class="lp-login" id="lp-login-section" style="display:none;">
-      <p class="lp-login-label">Enter your email — we'll send a login link.</p>
+      <p class="lp-login-label">Enter your email. We'll send a login link.</p>
       <div class="lp-login-row">
         <input type="email" class="lp-email-input" id="lp-email" placeholder="you@example.com" autocomplete="email" />
         <button type="button" class="lp-email-btn" id="lp-send-btn">Send link</button>
@@ -239,7 +239,7 @@
       sendBtn.disabled = false;
       sendBtn.textContent = "Send link";
       if (error) { showMsg(error.message || "Could not send link.", true); }
-      else { showMsg("Check your email — link is on its way.", false); emailInput.value = ""; }
+      else { showMsg("Check your email. Your link is on the way.", false); emailInput.value = ""; }
     }
 
     sendBtn.addEventListener("click", sendLoginLink);
@@ -279,7 +279,7 @@
         eye.tx = Math.cos(angle) * MAX_OFFSET * dist;
         eye.ty = Math.sin(angle) * MAX_OFFSET * dist;
 
-        // Lerp current toward target — smooth lazy follow
+        // Lerp current toward target (smooth follow)
         eye.cx += (eye.tx - eye.cx) * LERP;
         eye.cy += (eye.ty - eye.cy) * LERP;
 

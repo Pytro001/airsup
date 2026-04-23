@@ -122,7 +122,7 @@ export async function listFilesForProjectWithUrls(projectId: string): Promise<
   return out;
 }
 
-/** Text block for AI prompts (no signed URLs — filenames + project only). */
+/** Text block for AI prompts (no signed URLs; filenames and project only). */
 export async function formatFilesForPrompt(userId: string): Promise<string> {
   const { data: rows, error } = await supabaseAdmin
     .from("project_files")
@@ -143,7 +143,7 @@ export async function formatFilesForPrompt(userId: string): Promise<string> {
   const lines = rows.map((r) => {
     const title = r.project_id ? titleMap[r.project_id] || "Project" : "Unassigned";
     const sz = r.bytes != null ? ` (${formatBytes(r.bytes)})` : "";
-    return `- ${r.filename}${sz} — ${title}`;
+    return `- ${r.filename}${sz} (${title})`;
   });
 
   return (
