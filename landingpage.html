@@ -145,20 +145,30 @@
   <main class="lp-main">
     <!-- cursor-tracking face -->
     <div style="margin-bottom:32px;">
-      <svg id="face-svg" viewBox="0 0 220 110" width="140" height="70" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto;">
-        <!-- black background -->
-        <rect x="0" y="0" width="220" height="110" rx="18" ry="18" fill="#000"/>
-        <!-- left eye: white rounded square -->
-        <rect x="15" y="10" width="88" height="88" rx="14" ry="14" fill="#fff"/>
-        <!-- left pupil (will be translated by JS) -->
+      <!--
+        viewBox 200×200 matches the square logo 1:1.
+        Proportions derived from the 1024×1024 source image:
+          Eyes span y=37–113 (38% height), black space fills below.
+          Left eye:  x=23, y=37, w=72, h=76  → center (59, 75)
+          Right eye: x=106,y=37, w=72, h=76  → center (142,75)
+          Pupils: 26×28, lower-left of each eye
+      -->
+      <svg id="face-svg" viewBox="0 0 200 200" width="120" height="120"
+           xmlns="http://www.w3.org/2000/svg"
+           style="display:block;margin:0 auto;">
+        <!-- full black square body -->
+        <rect x="0" y="0" width="200" height="200" fill="#000"/>
+        <!-- left eye white rounded square -->
+        <rect x="23" y="37" width="72" height="76" rx="12" fill="#fff"/>
+        <!-- left pupil -->
         <g id="pupil-l-g">
-          <rect x="30" y="44" width="34" height="34" rx="7" ry="7" fill="#000"/>
+          <rect x="34" y="64" width="26" height="28" rx="6" fill="#000"/>
         </g>
-        <!-- right eye: white rounded square -->
-        <rect x="117" y="10" width="88" height="88" rx="14" ry="14" fill="#fff"/>
-        <!-- right pupil (will be translated by JS) -->
+        <!-- right eye white rounded square -->
+        <rect x="106" y="37" width="72" height="76" rx="12" fill="#fff"/>
+        <!-- right pupil -->
         <g id="pupil-r-g">
-          <rect x="132" y="44" width="34" height="34" rx="7" ry="7" fill="#000"/>
+          <rect x="117" y="64" width="26" height="28" rx="6" fill="#000"/>
         </g>
       </svg>
     </div>
@@ -237,35 +247,36 @@
     emailInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendLoginLink(); });
 
     // Cursor-tracking eyes
-    // SVG viewBox: 220×110
-    // Left eye white square: x15 y10 w88 h88 → center: (59, 54)
-    // Right eye white square: x117 y10 w88 h88 → center: (161, 54)
-    // Pupils start offset (natural resting: lower-left of each eye center)
-    // Pupil rect size 34×34 → pupil center is 17px from rect origin
-    // Left pupil default origin: x30 y44 → center at (47, 61) — offset (-12, +7) from eye center
-    // Right pupil default origin: x132 y44 → center at (149, 61)
-    const MAX_OFFSET = 10;
+    // viewBox is 200×200 (square). Eye centers in SVG units:
+    //   Left  eye: x=23, y=37, w=72, h=76 → center (59, 75)
+    //   Right eye: x=106,y=37, w=72, h=76 → center (142, 75)
+    // Direction is computed in SCREEN px (so up/down/left/right all work),
+    // then the offset is expressed in SVG units.
+    const SVG_SIZE = 200;
+    const MAX_OFFSET = 13; // SVG units (~half pupil width — stays well inside eye)
     const eyeDefs = [
-      { group: document.getElementById("pupil-l-g"), ecx: 59, ecy: 54, px: 30, py: 44 },
-      { group: document.getElementById("pupil-r-g"), ecx: 161, ecy: 54, px: 132, py: 44 },
+      { group: document.getElementById("pupil-l-g"), ecx: 59,  ecy: 75 },
+      { group: document.getElementById("pupil-r-g"), ecx: 142, ecy: 75 },
     ];
 
     document.addEventListener("mousemove", (e) => {
       const svg = document.getElementById("face-svg");
       const r = svg.getBoundingClientRect();
-      const scaleX = 220 / r.width;
-      const scaleY = 110 / r.height;
-      const mx = (e.clientX - r.left) * scaleX;
-      const my = (e.clientY - r.top)  * scaleY;
 
       for (const eye of eyeDefs) {
-        const dx = mx - eye.ecx;
-        const dy = my - eye.ecy;
+        // Eye centre in screen pixels
+        const ex = r.left + (eye.ecx / SVG_SIZE) * r.width;
+        const ey = r.top  + (eye.ecy / SVG_SIZE) * r.height;
+
+        const dx = e.clientX - ex;
+        const dy = e.clientY - ey;
         const angle = Math.atan2(dy, dx);
-        const dist  = Math.min(Math.hypot(dx, dy) / 60, 1);
+        // dist reaches 1 when cursor is 200+ screen px away
+        const dist = Math.min(Math.hypot(dx, dy) / 200, 1);
+
         const ox = Math.cos(angle) * MAX_OFFSET * dist;
         const oy = Math.sin(angle) * MAX_OFFSET * dist;
-        eye.group.setAttribute("transform", "translate(" + ox + "," + oy + ")");
+        eye.group.setAttribute("transform", "translate(" + ox.toFixed(2) + "," + oy.toFixed(2) + ")");
       }
     });
   </script>
