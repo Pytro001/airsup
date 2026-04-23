@@ -1226,7 +1226,7 @@
   /* ── Init ── */
   updateAuthUI();
   setupAuthListener();
-  // Pre-select role when arriving from the landing page (/app?role=startup|supplier)
+  // Pre-select role when arriving from the landing page (/dashboard?role=startup|supplier)
   const roleParam = new URLSearchParams(window.location.search).get("role");
   if (roleParam === "startup" || roleParam === "supplier") {
     onboardData.role = roleParam;

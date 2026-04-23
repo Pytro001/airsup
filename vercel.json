@@ -14,14 +14,18 @@
       "maxDuration": 30
     }
   },
+  "redirects": [
+    { "source": "/app", "destination": "/dashboard", "permanent": true },
+    { "source": "/app/", "destination": "/dashboard", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/webhooks/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/admin/", "destination": "/index.html" },
-    { "source": "/app", "destination": "/index.html" },
-    { "source": "/app/", "destination": "/index.html" },
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/dashboard/", "destination": "/index.html" },
     { "source": "/landingpage", "destination": "/landingpage.html" },
     { "source": "/landingpage/", "destination": "/landingpage.html" },
     { "source": "/", "destination": "/landingpage.html" }
