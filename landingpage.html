@@ -143,6 +143,13 @@
       box-shadow: var(--shadow-card);
       transform: translateY(-1px);
     }
+    /* Calmer CTA hover in dark mode: no lift, no bright “white” ring, no heavy glow */
+    html[data-theme="dark"] .lp-choice:hover {
+      border-color: rgba(255, 255, 255, 0.14);
+      box-shadow: none;
+      transform: none;
+      background: #141418;
+    }
     .lp-choice-icon {
       width: 36px; height: 36px; border-radius: 9px;
       background: var(--accent-bg); display: flex; align-items: center;
