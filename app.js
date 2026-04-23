@@ -475,7 +475,6 @@
 
     if (d.role === "supplier") {
       const facPayload = {
-        user_id: currentUser.id,
         name: d.companyName,
         location: d.location,
         category: d.specialization,
@@ -483,9 +482,7 @@
         contact_info: { name: d.fullName, email: d.email, phone: d.phone },
         active: true,
       };
-      const { data: facRow } = await supabaseClient.from("factories").select("id").eq("user_id", currentUser.id).maybeSingle();
-      if (facRow?.id) await supabaseClient.from("factories").update(facPayload).eq("id", facRow.id);
-      else await supabaseClient.from("factories").insert(facPayload);
+      await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify(facPayload) });
     } else {
       const coPayload = {
         user_id: currentUser.id,
@@ -1100,9 +1097,16 @@
 
   async function loadSupplierProfile() {
     const root = $("supplier-profile-root");
-    if (!root || !supabaseClient || !currentUser) return;
+    if (!root) return;
     root.innerHTML = '<p class="settings-hint">Loading\u2026</p>';
-    const { data: factory } = await supabaseClient.from("factories").select("*").eq("user_id", currentUser.id).maybeSingle();
+    let factory;
+    try {
+      const res = await apiCall("/api/factories/me");
+      factory = res.factory;
+    } catch (err) {
+      root.innerHTML = `<p class="settings-hint">Could not load factory profile: ${escapeHtml(err.message || String(err))}</p>`;
+      return;
+    }
     if (!factory) { root.innerHTML = '<p class="settings-hint">No factory profile found. Complete onboarding as a supplier.</p>'; return; }
     const c = factory.capabilities || {};
     const ci = factory.contact_info || {};
@@ -1120,14 +1124,17 @@
       <button type="button" class="btn-primary" id="fp-save">Save profile</button></div>`;
     $("fp-save")?.addEventListener("click", async () => {
       const g = (k) => ($(`fp-${k}`)?.value || "").trim();
-      const { error } = await supabaseClient.from("factories").update({
-        name: g("name"), location: g("location"), category: g("category"),
-        capabilities: { description: g("capabilities"), certifications: g("certifications"), moq: g("moq") },
-        contact_info: { name: g("contact-name"), email: g("contact-email"), phone: g("contact-phone") },
-      }).eq("user_id", currentUser.id);
       const saved = $("fp-saved");
-      if (error) { if (saved) { saved.hidden = false; saved.textContent = "Error: " + error.message; saved.style.color = "#d93025"; } return; }
-      if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
+      try {
+        await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify({
+          name: g("name"), location: g("location"), category: g("category"),
+          capabilities: { description: g("capabilities"), certifications: g("certifications"), moq: g("moq") },
+          contact_info: { name: g("contact-name"), email: g("contact-email"), phone: g("contact-phone") },
+        })});
+        if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
+      } catch (err) {
+        if (saved) { saved.hidden = false; saved.textContent = "Error: " + (err.message || String(err)); saved.style.color = "#d93025"; }
+      }
     });
   }
 

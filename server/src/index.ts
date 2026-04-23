@@ -12,6 +12,7 @@ import { stripeWebhookRouter } from "./routes/webhooks/stripe.js";
 import { internalRouter } from "./routes/internal.js";
 import { outreachRouter } from "./routes/outreach.js";
 import { adminRouter } from "./routes/admin.js";
+import { factoriesRouter } from "./routes/factories.js";
 import { startWorker } from "./jobs/worker.js";
 
 const app = express();
@@ -31,6 +32,7 @@ app.use("/api/connections", connectionChatRouter);
 app.use("/api/internal", internalRouter);
 app.use("/api/outreach", outreachRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/factories", factoriesRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 
