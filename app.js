@@ -58,6 +58,7 @@
   let onboardingProjectFiles = [];
   let latestProjectId = null;
   let activeConnectionMatchId = null;
+  let visitsMatchesCache = [];
 
   function resetOnboardData() {
     onboardingProjectFiles = [];
@@ -564,7 +565,7 @@
     if (userRole === "supplier") {
       nav.innerHTML = '<button type="button" class="nav-link active" data-view="supplier-dashboard">Dashboard</button><button type="button" class="nav-link" data-view="supplier-profile">Factory profile</button>';
     } else {
-      nav.innerHTML = '<button type="button" class="nav-link active" data-view="chat">Chat</button><button type="button" class="nav-link" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections</button>';
+      nav.innerHTML = '<button type="button" class="nav-link active" data-view="chat">Chat</button><button type="button" class="nav-link" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections</button><button type="button" class="nav-link" data-view="visits">Visits</button>';
     }
     nav.querySelectorAll(".nav-link").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -623,6 +624,7 @@
     if (name === "chat") loadChatHistory();
     if (name === "projects") loadProjects();
     if (name === "connections") loadConnections();
+    if (name === "visits") loadVisits();
     if (name === "settings") void loadSettings();
     if (name === "onboarding") renderOnboardStep();
     if (name === "supplier-dashboard") loadSupplierDashboard();
@@ -639,7 +641,7 @@
         { key: "companyName", label: "Company name", required: true },
         { key: "location", label: "Location" },
       ] },
-    { id: "brief", type: "brief", title: "Bring your brief from ChatGPT, Claude, or Grok", sub: "We turn it into your manufacturing project and find the best suppliers for you. You can add images, PDFs, and documents (up to 8 files, 20 MB each). 3D and CAD files are not supported here \u2014 use your chat link or a written brief, then share models later with your supplier in chat if needed." },
+    { id: "brief", type: "brief", title: "Bring your brief from ChatGPT, Claude, or Grok", sub: "We turn it into your manufacturing project and find the best suppliers for you." },
     { id: "contact", type: "form", title: "How can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { key: "fullName", label: "Full name", required: true },
@@ -1692,6 +1694,248 @@
       errDiv.className = "chat-status";
       errDiv.textContent = "Failed to send message.";
       msgContainer.appendChild(errDiv);
+    }
+  }
+
+  /* ══════════════════════════════════════
+     VISITS
+     ══════════════════════════════════════ */
+  async function loadVisits() {
+    const form = $("visits-plan-form");
+    const msg = $("visits-plan-message");
+    if (msg) {
+      msg.hidden = true;
+      msg.textContent = "";
+    }
+    if (!(await ensureSession())) return;
+    try {
+      const { matches } = await apiCall("/api/matches");
+      visitsMatchesCache = matches || [];
+      renderVisitsForm();
+    } catch (_) {
+      if (form) form.innerHTML = '<p class="projects-empty">Could not load connections.</p>';
+    }
+    await loadVisitsPlans();
+  }
+
+  function renderVisitsForm() {
+    const form = $("visits-plan-form");
+    if (!form) return;
+    const rows = (visitsMatchesCache || []).filter((m) => m.status !== "cancelled" && m.status !== "disputed");
+    if (!rows.length) {
+      form.innerHTML =
+        '<p class="projects-empty">No connections yet. Create a project and match with suppliers to plan visits.</p>';
+      return;
+    }
+    form.innerHTML =
+      '<h2 class="section-title">Plan a trip</h2><p class="section-sub">Choose which connections to visit, then pick the first travel day.</p>' +
+      '<div class="visits-match-grid">' +
+      rows
+        .map((m) => {
+          const f = m.factories;
+          const p = m.projects;
+          return (
+            '<label class="visits-match-row"><input type="checkbox" name="visits-m" value="' +
+            escapeAttr(m.id) +
+            '" /> <span class="visits-match-label"><strong>' +
+            escapeHtml(f && f.name ? f.name : "Factory") +
+            "</strong> · " +
+            escapeHtml(p && p.title ? p.title : "") +
+            "</span></label>"
+          );
+        })
+        .join("") +
+      '</div><div class="visits-date-row">' +
+      '<label class="visits-date-label">Start date <input type="date" id="visits-start-date" class="settings-input visits-date-input" /></label> ' +
+      '<button type="button" class="btn-primary" id="visits-plan-submit">Create plan</button></div>';
+    const start = $("visits-start-date");
+    if (start) {
+      const t = new Date();
+      t.setDate(t.getDate() + 1);
+      start.value = t.toISOString().split("T")[0];
+    }
+    $("visits-plan-submit")?.addEventListener("click", submitVisitsPlan);
+  }
+
+  async function submitVisitsPlan() {
+    const msg = $("visits-plan-message");
+    const checked = Array.from(document.querySelectorAll('input[name="visits-m"]:checked')).map((el) => el.value);
+    const startEl = $("visits-start-date");
+    const start = startEl && startEl.value;
+    if (!checked.length) {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = "Select at least one connection.";
+      }
+      return;
+    }
+    if (!start) {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = "Pick a start date.";
+      }
+      return;
+    }
+    if (!(await ensureSession())) return;
+    if (msg) {
+      msg.hidden = false;
+      msg.textContent = "Planning…";
+    }
+    try {
+      const data = await apiCall("/api/visits/plan", {
+        method: "POST",
+        body: JSON.stringify({ match_ids: checked, start_date: start }),
+      });
+      const warn = (data.warnings && data.warnings.length ? data.warnings.join(" ") + " " : "") + "Plan saved.";
+      if (msg) msg.textContent = warn.trim();
+      await loadVisitsPlans();
+    } catch (e) {
+      if (msg) {
+        msg.hidden = false;
+        msg.textContent = e && e.message ? e.message : "Planning failed.";
+      }
+    }
+  }
+
+  async function loadVisitsPlans() {
+    const cal = $("visits-calendar");
+    if (!cal) return;
+    try {
+      const { plans } = await apiCall("/api/visits");
+      if (!plans || !plans.length) {
+        cal.innerHTML = '<p class="projects-empty visits-empty-hint">No visit plans yet. Use the form above to create one.</p>';
+        return;
+      }
+      cal.innerHTML = plans.map((p) => renderVisitPlanCard(p)).join("");
+      cal.querySelectorAll("[data-visits-delete]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-visits-delete");
+          if (!id || !(await ensureSession())) return;
+          if (!window.confirm("Delete this visit day?")) return;
+          try {
+            await apiCall("/api/visits/" + encodeURIComponent(id), { method: "DELETE" });
+            await loadVisitsPlans();
+          } catch (e) {
+            window.alert(e && e.message ? e.message : "Delete failed.");
+          }
+        });
+      });
+      cal.querySelectorAll("[data-visits-propose]").forEach((btn) => {
+        btn.addEventListener("click", () => loadVisitProposalDrafts(btn.getAttribute("data-visits-propose")));
+      });
+    } catch (_) {
+      cal.innerHTML = '<p class="projects-empty">Could not load visits.</p>';
+    }
+  }
+
+  function renderVisitPlanCard(p) {
+    const route = p.route || {};
+    const details = route.stop_details || [];
+    const detailByFid = {};
+    details.forEach((d) => {
+      if (d && typeof d.factory_id === "number") detailByFid[d.factory_id] = d;
+    });
+    const stops = p.visit_stops || [];
+    const stopRows = stops
+      .map((s) => {
+        const fac = s.factories;
+        const det = detailByFid[s.factory_id];
+        const zh = det && det.location_zh ? det.location_zh : fac && fac.location ? fac.location : "";
+        const reason = det && det.project_title ? det.project_title : "";
+        const amap = det && det.amap_url ? det.amap_url : null;
+        const time = s.scheduled_time || "";
+        const note = s.notes ? String(s.notes) : "";
+        const mapLine = amap
+          ? '<a class="visits-map-link" href="' +
+            escapeAttr(amap) +
+            '" target="_blank" rel="noopener">Open in 高德</a>'
+          : '<span class="visits-map-fallback">Confirm address in maps (GCJ-02 in China)</span>';
+        return (
+          '<li class="visits-stop"><div class="visits-stop-head"><span class="visits-stop-time">' +
+          escapeHtml(time) +
+          '</span><span class="visits-stop-factory">' +
+          escapeHtml(fac && fac.name ? fac.name : "Factory") +
+          "</span></div>" +
+          (reason ? '<div class="visits-stop-reason">Project: ' + escapeHtml(reason) + "</div>" : "") +
+          (note ? '<div class="visits-stop-note">' + escapeHtml(note) + "</div>" : "") +
+          '<div class="visits-stop-addr" lang="zh">' +
+          escapeHtml(zh) +
+          "</div>" +
+          '<div class="visits-stop-actions">' +
+          mapLine +
+          "</div></li>"
+        );
+      })
+      .join("");
+    return (
+      '<article class="visits-day-card" data-visit-plan-id="' +
+      escapeAttr(p.id) +
+      '"><div class="visits-day-head"><h2 class="visits-day-title">' +
+      escapeHtml(p.travel_date) +
+      ' — ' +
+      escapeHtml(p.region || "Region TBD") +
+      '</h2><div class="visits-day-actions"><button type="button" class="btn-outline btn-sm" data-visits-propose="' +
+      escapeAttr(p.id) +
+      '">Draft chat messages</button> <button type="button" class="btn-outline btn-sm btn-danger-outline" data-visits-delete="' +
+      escapeAttr(p.id) +
+      '">Delete</button></div></div><ol class="visits-stop-list">' +
+      stopRows +
+      "</ol>" +
+      '<div class="visits-drafts-host" id="visits-drafts-' +
+      escapeAttr(p.id) +
+      '" hidden></div></article>'
+    );
+  }
+
+  async function loadVisitProposalDrafts(planId) {
+    if (!planId || !(await ensureSession())) return;
+    const host = document.getElementById("visits-drafts-" + planId);
+    if (!host) return;
+    host.hidden = false;
+    host.innerHTML = '<p class="visits-drafts-loading">Drafting messages…</p>';
+    try {
+      const data = await apiCall("/api/visits/" + encodeURIComponent(planId) + "/propose-messages", {
+        method: "POST",
+        body: "{}",
+      });
+      const drafts = data.drafts || [];
+      if (!drafts.length) {
+        host.innerHTML = '<p class="visits-drafts-empty">No drafts.</p>';
+        return;
+      }
+      host.innerHTML =
+        '<h3 class="visits-drafts-h">Message drafts (review before sending in Connections)</h3><div class="visits-drafts-list">' +
+        drafts
+          .map((d) => {
+            const combined = (d.en || "") + "\n\n" + (d.zh || "");
+            const bid = "vdraft-" + planId + "-" + d.match_id;
+            return (
+              '<div class="visits-draft"><div class="visits-draft-title">' +
+              escapeHtml(d.factory_name) +
+              " · " +
+              escapeHtml(d.scheduled_time || "") +
+              '</div><textarea class="visits-draft-text" id="' +
+              bid +
+              '" rows="5" readonly>' +
+              escapeHtml(combined) +
+              '</textarea><div class="visits-draft-actions"><button type="button" class="btn-outline btn-sm" data-copy-target="' +
+              bid +
+              '">Copy</button></div></div>'
+            );
+          })
+          .join("") +
+        "</div>";
+      host.querySelectorAll("[data-copy-target]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-copy-target");
+          const el = id && document.getElementById(id);
+          if (el && el.value) {
+            void navigator.clipboard.writeText(el.value);
+          }
+        });
+      });
+    } catch (e) {
+      host.innerHTML = '<p class="visits-drafts-error">' + escapeHtml((e && e.message) || "Failed to draft messages.") + "</p>";
     }
   }
 
