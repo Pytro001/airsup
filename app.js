@@ -63,7 +63,7 @@
     onboardingProjectFiles = [];
     onboardData = {
       role: "", fullName: "", phone: "", companyName: "", location: "",
-      briefUrl: "", briefText: "", briefSource: "", briefFileName: "",
+      briefUrl: "", briefPastedText: "", briefText: "", briefSource: "", briefFileName: "",
       capabilities: "", certifications: "", moq: "", specialization: "",
     };
   }
@@ -653,8 +653,21 @@
             : "We will read your chat export and start searching for matching factories. You can review your project, files, and connections in the app."}</p>
           <div class="onboard-actions">
             <button type="button" class="btn-primary btn-lg" id="onboard-go">${isSupplier ? "Go to dashboard" : "See your project"}</button>
+            ${isSupplier ? "" : '<button type="button" class="btn-outline onboard-skip" id="onboard-final-back">Back to edit brief</button>'}
           </div>
         </div>`;
+      $("onboard-final-back")?.addEventListener("click", function () {
+        const steps = getSteps();
+        var bi = -1;
+        for (var si = 0; si < steps.length; si++) {
+          if (steps[si].id === "brief") {
+            bi = si;
+            break;
+          }
+        }
+        onboardStep = bi >= 0 ? bi + 1 : 1;
+        renderOnboardStep();
+      });
       $("onboard-go")?.addEventListener("click", async () => {
         if (!(await ensureSession())) return;
         const goBtn = $("onboard-go");
@@ -674,7 +687,21 @@
             await loadProjectDetail(result.importedProjectId);
             return;
           }
-          setView("chat");
+          alert(
+            "We could not create your project. Add a working share link, paste the chat on the brief step, or upload files, then try again."
+          );
+          const steps = getSteps();
+          var bi = -1;
+          for (var si = 0; si < steps.length; si++) {
+            if (steps[si].id === "brief") {
+              bi = si;
+              break;
+            }
+          }
+          if (bi >= 0) {
+            onboardStep = bi + 1;
+            renderOnboardStep();
+          }
         } catch (err) {
           alert(err && err.message ? err.message : String(err));
         } finally {
@@ -703,7 +730,11 @@
         '<div class="onboard-field onboard-brief-upload-field">' +
         '<input class="onboard-brief-file-input" type="file" id="onboard-brief-file" multiple ' +
         'accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.mdown,.csv,.tsv,.xlsx,.xls,.ppt,.pptx,.odt,.ods,.odp,.rtf,.html,.htm,.json,.xml,.heic" hidden />' +
-        '<button type="button" class="onboard-brief-file-btn" id="onboard-brief-file-btn">' + fileBtnLabel + "</button></div></div>" +
+        '<button type="button" class="onboard-brief-file-btn" id="onboard-brief-file-btn">' + fileBtnLabel + "</button></div>" +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-paste">Paste the conversation (optional)</label>' +
+        '<textarea class="onboard-textarea onboard-input" id="onboard-brief-paste" rows="5" placeholder="If a share link fails to import, paste the chat here. You can also paste only, without a link.">' +
+        escapeHtml(onboardData.briefPastedText || "") +
+        "</textarea></div></div>" +
         '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
         '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
       stage.innerHTML = htmlB;
@@ -739,13 +770,17 @@
       $("onboard-back")?.addEventListener("click", function () {
         var u = $("onboard-brief-url");
         if (u) onboardData.briefUrl = (u.value || "").trim();
+        var pasteEl = $("onboard-brief-paste");
+        if (pasteEl) onboardData.briefPastedText = (pasteEl.value || "").trim();
         onboardStep--;
         renderOnboardStep();
       });
       $("onboard-next")?.addEventListener("click", function () {
         const urlEl = $("onboard-brief-url");
         const fileEl = $("onboard-brief-file");
+        const pasteEl = $("onboard-brief-paste");
         const u = (urlEl && urlEl.value ? urlEl.value : "").trim();
+        if (pasteEl) onboardData.briefPastedText = (pasteEl.value || "").trim();
         var raw =
           fileEl && fileEl.files && fileEl.files.length
             ? Array.prototype.slice.call(fileEl.files, 0)
@@ -757,8 +792,9 @@
         }
         onboardingProjectFiles = v.files;
         onboardData.briefUrl = u;
-        if (!u && !onboardingProjectFiles.length) {
-          alert("Add a chat link or choose at least one file.");
+        const pasted = (onboardData.briefPastedText && String(onboardData.briefPastedText).trim()) || "";
+        if (!u && !onboardingProjectFiles.length && !pasted) {
+          alert("Add a chat link, paste the chat, or choose at least one file.");
           return;
         }
         onboardStep++;
@@ -863,7 +899,9 @@
         throw new Error(vFiles.error);
       }
     }
-    var textForImport = hasFiles ? String((await buildTextForImportFromFiles(files)) || "").trim() : "";
+    var textFromFiles = hasFiles ? String((await buildTextForImportFromFiles(files)) || "").trim() : "";
+    const pasted = (d.briefPastedText && String(d.briefPastedText).trim()) || "";
+    var textForImport = textFromFiles || pasted;
     const hasTextImport = textForImport.length > 0;
     if (!hasUrl && !hasTextImport && !hasFiles) {
       currentUser.displayName = displayName;
