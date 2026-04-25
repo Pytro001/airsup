@@ -336,7 +336,7 @@
         { key: "companyName", label: "Company name", required: true },
         { key: "location", label: "Location" },
       ] },
-    { id: "brief", type: "brief", title: "Bring your brief", sub: "Paste a public share link to your chat, or paste the conversation, or upload a .txt or .md export. We will turn it into a manufacturing project on the platform. Nothing is sent to a factory until you are ready to connect." },
+    { id: "brief", type: "brief", title: "Bring your brief from ChatGPT, Claude, or Grok", sub: "We turn that into your manufacturing project and start factory matching." },
     { id: "contact", type: "form", title: "How can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { key: "fullName", label: "Full name", required: true },
@@ -442,28 +442,36 @@
 
     const step = steps[stepIdx];
     if (step.type === "brief") {
+      const fileBtnLabel = onboardData.briefFileName ? escapeHtml(onboardData.briefFileName) : "Upload .txt or .md";
       const htmlB =
         '<div class="onboard-question"><h1 class="onboard-title">' + step.title + "</h1>" +
         (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
         '<div class="onboard-form onboard-brief">' +
-        '<p class="onboard-brief-hint">We pull product, materials, quantity, and timing from the chat if they are there. Prototype and speed are fine as defaults. Your chat stays in Airsup until you choose to connect with a factory.</p>' +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-url">Share link (optional)</label>' +
-        '<input class="onboard-input" type="url" id="onboard-brief-url" name="onboard-brief-url" value="' +
+        '<div class="onboard-field"><input class="onboard-input" type="url" id="onboard-brief-url" name="onboard-brief-url" value="' +
         escapeAttr(onboardData.briefUrl || "") +
-        '" autocomplete="url" />' +
-        '<p class="onboard-brief-fine">Public share links from ChatGPT, Claude, or Grok only. If a link does not work, use paste or a file below.</p></div>' +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-text">Paste the conversation (optional)</label>' +
-        '<textarea class="onboard-textarea" id="onboard-brief-text" rows="6" placeholder="">' +
-        escapeHtml(onboardData.briefText || "") +
+        '" autocomplete="url" /></div>' +
+        '<div class="onboard-field"><textarea class="onboard-textarea onboard-brief-paste" id="onboard-brief-text" rows="3">' +
+        escapeHtml(onboardData.briefText && onboardData.briefSource !== "file" ? onboardData.briefText : "") +
         "</textarea></div>" +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-file">Or upload a file</label>' +
-        '<input class="onboard-brief-file" type="file" id="onboard-brief-file" accept=".txt,.md,text/plain" />' +
-        (onboardData.briefFileName ? '<p class="onboard-brief-fine">Last selected: ' + escapeHtml(onboardData.briefFileName) + "</p>" : "") +
-        "</div></div>" +
+        '<div class="onboard-field onboard-brief-upload-field">' +
+        '<input class="onboard-brief-file-input" type="file" id="onboard-brief-file" accept=".txt,.md,text/plain" hidden />' +
+        '<button type="button" class="onboard-brief-file-btn" id="onboard-brief-file-btn">' + fileBtnLabel + "</button></div></div>" +
         '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
         '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
       stage.innerHTML = htmlB;
-      $("onboard-back")?.addEventListener("click", () => {
+      const fileInput = stage.querySelector("#onboard-brief-file");
+      const fileBtn = stage.querySelector("#onboard-brief-file-btn");
+      fileBtn &&
+        fileInput &&
+        fileBtn.addEventListener("click", function () {
+          fileInput.click();
+        });
+      fileInput &&
+        fileInput.addEventListener("change", function () {
+          var f = fileInput.files && fileInput.files[0];
+          if (f && fileBtn) fileBtn.textContent = f.name;
+        });
+      $("onboard-back")?.addEventListener("click", function () {
         var u = $("onboard-brief-url");
         var tx = $("onboard-brief-text");
         if (u) onboardData.briefUrl = (u.value || "").trim();
@@ -479,27 +487,30 @@
           const u = (urlEl && urlEl.value ? urlEl.value : "").trim();
           const pasted = (textEl && textEl.value ? textEl.value : "").trim();
           var file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
-          var fromFile = "";
+          onboardData.briefUrl = u;
           if (file) {
             try {
-              fromFile = await readFileAsText(file);
+              onboardData.briefText = await readFileAsText(file);
             } catch (e) {
               alert("Could not read the file. Try a .txt or .md file.");
               return;
             }
-          }
-          onboardData.briefUrl = u;
-          if (file) {
-            onboardData.briefText = fromFile;
             onboardData.briefSource = "file";
             onboardData.briefFileName = file.name;
-          } else {
+          } else if (pasted) {
             onboardData.briefText = pasted;
             onboardData.briefSource = "text";
             onboardData.briefFileName = "";
+          } else if (onboardData.briefSource === "file" && (onboardData.briefText || "").trim()) {
+            /* file chosen earlier this session; input may clear after back nav */
+          } else {
+            onboardData.briefText = "";
+            onboardData.briefFileName = "";
+            onboardData.briefSource = "text";
           }
-          if (!u && !pasted && !fromFile) {
-            alert("Add a share link, paste your chat, or upload a .txt or .md file.");
+          var hasBody = (onboardData.briefText || "").trim();
+          if (!u && !hasBody) {
+            alert("Add a link, paste your chat, or choose a file.");
             return;
           }
           onboardStep++;

@@ -286,11 +286,19 @@ html[data-theme="dark"] .site-logo img {
 .onboard-input::placeholder, .onboard-textarea::placeholder { color: var(--text-soft); }
 .onboard-textarea { resize: vertical; min-height: 80px; line-height: 1.5; font-family: inherit; }
 .onboard-actions { display: flex; gap: 12px; margin-top: 12px; }
-.onboard-brief { gap: 16px; }
-.onboard-brief .onboard-textarea { min-height: 120px; }
-.onboard-brief-hint, .onboard-brief-fine { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0; }
-.onboard-brief-fine { font-size: 12px; margin-top: 4px; }
-.onboard-brief-file { font-size: 14px; color: var(--text-muted); }
+.onboard-brief { gap: 14px; }
+.onboard-brief .onboard-brief-paste { min-height: 72px; max-height: 120px; resize: vertical; }
+.onboard-brief-file-btn {
+  display: block; width: 100%; box-sizing: border-box;
+  padding: 12px 14px; font-size: 15px; line-height: 1.4; font-family: inherit; text-align: left;
+  color: var(--text-muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: border-color 0.15s;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.onboard-brief-file-btn:hover { border-color: var(--text-soft); }
+.onboard-brief-file-btn:focus { outline: none; border-color: var(--primary); }
+.onboard-brief-upload-field { margin: 0; }
 
 .onboard-skip {
   font-size: 14px; color: var(--text-muted); padding: 12px 0;
