@@ -307,11 +307,20 @@ html[data-theme="dark"] .site-logo img {
   z-index: 30;
   list-style: none;
   margin: 4px 0 0 0; padding: 0;
-  max-height: 220px; overflow-y: auto;
+  max-height: 10rem; overflow: hidden; overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-md);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.location-autocomplete-suggestions.is-open {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
 }
 .location-autocomplete-item {
   padding: 10px 12px;
@@ -319,8 +328,22 @@ html[data-theme="dark"] .site-logo img {
   line-height: 1.35;
   color: var(--text);
   cursor: pointer;
+  opacity: 0;
+  animation: locSuggestItem 0.22s ease forwards;
 }
+.location-autocomplete-suggestions.is-open .location-autocomplete-item:nth-child(1) { animation-delay: 0.02s; }
+.location-autocomplete-suggestions.is-open .location-autocomplete-item:nth-child(2) { animation-delay: 0.06s; }
+.location-autocomplete-suggestions.is-open .location-autocomplete-item:nth-child(3) { animation-delay: 0.1s; }
 .location-autocomplete-item:hover { background: var(--bg-subtle); }
+@keyframes locSuggestItem {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .location-autocomplete-suggestions { transition: none; }
+  .location-autocomplete-suggestions.is-open { opacity: 1; transform: none; }
+  .location-autocomplete-item { animation: none; opacity: 1; }
+}
 
 .onboard-skip {
   font-size: 14px; color: var(--text-muted); padding: 12px 0;
@@ -528,10 +551,74 @@ html[data-theme="dark"] .site-logo img {
 .supplier-brief-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .project-card-reqs { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
 .project-files-block { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-light); }
-.project-files-heading { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
 .project-files-list { list-style: none; margin: 0; padding: 0; }
 .project-files-list li { margin-bottom: 6px; font-size: 14px; }
 .project-file-meta { color: var(--text-muted); font-size: 12px; }
+
+/* Project detail (full view) */
+.project-detail { max-width: 720px; }
+.project-detail-back { margin-bottom: 16px; }
+.project-detail-title {
+  font-size: 22px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.project-detail-date { font-size: 13px; color: var(--text-muted); margin: 0 0 12px; }
+.project-detail-description {
+  font-size: 15px; line-height: 1.55; color: var(--text);
+  margin: 0 0 12px; white-space: pre-wrap;
+}
+.project-detail-status-row { margin: 0; }
+.project-detail-section {
+  margin-top: 24px; padding-top: 20px;
+  border-top: 1px solid var(--border-light);
+}
+.project-detail-section.project-detail-overview {
+  margin-top: 0; padding-top: 0; border-top: none;
+}
+.project-detail-h {
+  font-size: 15px; font-weight: 600; margin: 0 0 12px;
+}
+.project-detail-p { font-size: 14px; line-height: 1.55; margin: 0 0 8px; }
+.project-detail-p:last-child { margin-bottom: 0; }
+.project-detail-muted { font-size: 14px; color: var(--text-muted); margin: 0; }
+.project-detail-dl { margin: 0; }
+.project-detail-dl-row {
+  display: grid; grid-template-columns: minmax(100px, 140px) 1fr;
+  gap: 8px 16px; font-size: 14px; line-height: 1.5; margin-bottom: 8px;
+}
+@media (max-width: 520px) {
+  .project-detail-dl-row { grid-template-columns: 1fr; }
+}
+.project-detail-dl-row dt { color: var(--text-muted); margin: 0; }
+.project-detail-dl-row dd { margin: 0; }
+.project-detail-ul { margin: 0 0 8px; padding-left: 1.2em; font-size: 14px; line-height: 1.5; }
+.project-detail-matches .project-card-badge { margin-left: 8px; vertical-align: middle; }
+.project-match-factory { font-weight: 500; }
+.project-brief-block .project-brief-details { margin-top: 10px; }
+.project-brief-details summary { cursor: pointer; font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+.project-brief-raw {
+  max-height: 320px; overflow: auto; font-size: 12px; line-height: 1.45;
+  padding: 12px; border-radius: var(--radius); background: var(--bg-subtle);
+  border: 1px solid var(--border); white-space: pre-wrap; word-break: break-word;
+  margin: 0;
+}
+.project-airsup-chat-log {
+  max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
+  padding: 4px 4px 8px 0;
+}
+.project-chat-msg { border-radius: var(--radius); padding: 10px 12px; font-size: 14px; line-height: 1.5; }
+.project-chat-msg--user {
+  background: var(--bg-subtle); border: 1px solid var(--border); align-self: flex-start; max-width: 95%;
+}
+.project-chat-msg--assistant {
+  background: var(--primary-light); border: 1px solid var(--border); align-self: stretch;
+}
+.project-chat-role { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 4px; }
+.project-chat-body p { margin: 0 0 0.5em; }
+.project-chat-body p:last-child { margin-bottom: 0; }
+.project-files-block.project-detail-section { margin-top: 24px; }
+.project-files-block .project-files-list { margin-top: 4px; }
+
 .projects-empty {
   text-align: center; padding: 80px 24px;
   color: var(--text-muted); font-size: 15px;
@@ -600,19 +687,6 @@ html[data-theme="dark"] .site-logo img {
 .theme-toggle svg { display: block; }
 /* Push the header toggle to the right edge */
 .header-inner .theme-toggle { margin-left: auto; }
-
-/* Theme choice pills (used inside Settings) */
-.theme-pills { display: inline-flex; gap: 8px; flex-wrap: wrap; }
-.theme-pill {
-  padding: 8px 18px; border-radius: 999px;
-  border: 1px solid var(--border); background: var(--bg); color: var(--text);
-  font-size: 14px; font-weight: 500; cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-}
-.theme-pill:hover { border-color: var(--text-soft); }
-.theme-pill--active {
-  background: var(--primary); color: var(--on-primary); border-color: var(--primary);
-}
 
 /* Dark-mode specific badge tweaks so legacy colored pill badges stay readable */
 html[data-theme="dark"] .badge--intake { background: #2b2b30; color: #c9c9cf; }

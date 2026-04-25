@@ -83,13 +83,16 @@
     /* Hero: same max-width + horizontal padding as .supi-content so image matches text line length */
     .supi-hero {
       max-width: 680px; width: 100%; margin: 0 auto;
-      display: flex; flex-direction: column; align-items: stretch;
+      display: flex; flex-direction: column; align-items: center;
       padding: 0 24px 0;
+      box-sizing: border-box;
     }
     /* Fixed aspect box reserves height before the image loads (no layout jump). */
     .supi-hero-frame {
       position: relative;
       width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
       /* Matches assets/supi.png (1024x578) so reserved space = final crop */
       aspect-ratio: 1024 / 578;
       border-radius: 14px;
@@ -102,12 +105,14 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: center 30%;
+      object-position: center center;
       filter: grayscale(20%);
     }
     .supi-hero-caption {
       font-size: 13px; font-style: italic; color: var(--text-soft);
-      margin-top: 12px; text-align: left;
+      margin-top: 12px; text-align: center;
+      width: 100%;
+      padding: 0 4px;
     }
 
     /* Content */
@@ -120,6 +125,7 @@
       font-size: clamp(32px, 5vw, 52px); font-weight: 600;
       letter-spacing: -0.03em; line-height: 1.05; margin-bottom: 0;
       color: var(--text);
+      text-wrap: balance;
     }
     .supi-content--title-only .supi-title { margin-bottom: 12px; }
     .supi-title span { color: var(--text-soft); }
@@ -174,6 +180,7 @@
     @media (max-width: 480px) {
       .sp-footer { font-size: 10px; padding: 14px 8px; }
       .sp-footer a { margin: 0 4px; }
+      .supi-title { font-size: clamp(26px, 7.2vw, 40px); line-height: 1.12; }
     }
 
   </style>
@@ -190,7 +197,7 @@
 
   <main class="supi-content supi-content--title-only">
 
-    <h1 class="supi-title">Meet Supi. <span>He just wanted <br>to build something magical.</span></h1>
+    <h1 class="supi-title">Meet Supi. <span>He&nbsp;just&nbsp;wanted <br>to build something magical.</span></h1>
     <p class="supi-subhead">The story of how Air Supply came into existence.</p>
 
   </main>

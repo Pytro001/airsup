@@ -54,10 +54,13 @@
   let onboardStep = 0;
   let onboardData = {};
   let pendingFiles = [];
+  /** File[] selected on onboarding brief step (any type; uploaded after project is created). */
+  let onboardingProjectFiles = [];
   let latestProjectId = null;
   let activeConnectionMatchId = null;
 
   function resetOnboardData() {
+    onboardingProjectFiles = [];
     onboardData = {
       role: "", fullName: "", phone: "", companyName: "", location: "",
       briefUrl: "", briefText: "", briefSource: "", briefFileName: "",
@@ -78,6 +81,106 @@
     });
   }
 
+  function isTextLikeFile(file) {
+    var n = (file.name || "").toLowerCase();
+    var m = (file.type || "").toLowerCase();
+    if (m.indexOf("text/") === 0) return true;
+    if (m === "application/json" || m === "application/xml") return true;
+    return /\.(txt|md|markdown|csv|json|log|html?|xml|yaml|yml|rtf)$/i.test(n);
+  }
+
+  /** Text from .txt / .md / etc. for intake import (cap matches server). */
+  async function buildTextForImportFromFiles(files) {
+    var max = 64000;
+    var parts = [];
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (!isTextLikeFile(f)) continue;
+      try {
+        var t = await readFileAsText(f);
+        if (t && String(t).trim()) parts.push("--- " + (f.name || "file") + " ---\n" + t);
+      } catch (_) { /* binary or unreadable, skip for import */ }
+    }
+    var s = parts.join("\n\n");
+    return s.length > max ? s.slice(0, max) : s;
+  }
+
+  /** Onboarding file uploads: no 3D/CAD; cap count and per-file size (matches sensible Supabase use). */
+  var ONBOARDING_MAX_FILES = 8;
+  var ONBOARDING_MAX_FILE_BYTES = 20 * 1024 * 1024;
+
+  var ONBOARDING_3D_OR_CAD = new Set(
+    "3dm,3ds,3mf,abc,asm,b3d,blend,blend1,bvh,catpart,dae,dxf,dwf,dwg,f3d,fbx,gltf,glb,iam,ifc,iges,igs,ipt,jt,max,md2,md3,ms3d,nif,obj,ogex,par,ply,prt,rvm,sldasm,sldprt,skp,step,stl,stp,u3d,usdz,vrml,wrl,x3d,x_t,x_b,xgl,3dxml".split(
+      ","
+    )
+  );
+
+  function fileExtensionFromName(name) {
+    var n = String(name || "").toLowerCase();
+    var i = n.lastIndexOf(".");
+    if (i < 0) return "";
+    return n.slice(i + 1) || "";
+  }
+
+  function isAllowedOnboardingUpload(file) {
+    var ext = fileExtensionFromName(file.name);
+    if (ext && ONBOARDING_3D_OR_CAD.has(ext)) return false;
+    var t = (file.type || "").toLowerCase();
+    if (t.indexOf("image/") === 0) return true;
+    if (t === "application/pdf" || t === "application/x-pdf") return true;
+    if (t.indexOf("text/") === 0) return true;
+    if (t === "application/json" || t === "application/xml" || t === "text/xml") return true;
+    if (
+      t.indexOf("application/vnd.openxmlformats") === 0 ||
+      t.indexOf("application/vnd.ms-") === 0 ||
+      t.indexOf("application/vnd.oasis.opendocument") === 0
+    )
+      return true;
+    if (t === "application/rtf" || t === "text/rtf") return true;
+    if (!ext) return false;
+    return (
+      "pdf,txt,md,markdown,mdown,csv,tsv,json,rtf,log,html,htm,xml,doc,docx,xls,xlsx,ppt,pptx,odt,ods,odp,jpg,jpeg,png,gif,webp,bmp,svg,ico,tif,tiff,heic,heif"
+        .split(",")
+        .indexOf(ext) >= 0
+    );
+  }
+
+  function validateOnboardingProjectFiles(fileArray) {
+    var arr = fileArray && fileArray.length ? fileArray : [];
+    if (arr.length > ONBOARDING_MAX_FILES) {
+      return {
+        ok: false,
+        error: "Choose at most " + ONBOARDING_MAX_FILES + " files (20 MB each; images, PDF, and documents only).",
+        files: [],
+      };
+    }
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].size > ONBOARDING_MAX_FILE_BYTES) {
+        return {
+          ok: false,
+          error:
+            "File is too large: \u201c" +
+            (arr[i].name || "file") +
+            "\u201d. Max 20 MB per file.",
+          files: [],
+        };
+      }
+    }
+    for (var j = 0; j < arr.length; j++) {
+      if (!isAllowedOnboardingUpload(arr[j])) {
+        return {
+          ok: false,
+          error:
+            "Not allowed: \u201c" +
+            (arr[j].name || "file") +
+            "\u201d. 3D and CAD files are not supported. Use images, PDF, or text/office documents.",
+          files: [],
+        };
+      }
+    }
+    return { ok: true, error: null, files: arr };
+  }
+
   /** OpenStreetMap-backed suggestions; you can still type any value. */
   function wireLocationAutocomplete(input) {
     if (!input || input.getAttribute("data-airsup-place") === "1") return;
@@ -87,15 +190,41 @@
     var list = document.createElement("ul");
     list.className = "location-autocomplete-suggestions";
     list.setAttribute("role", "listbox");
-    list.hidden = true;
+    list.setAttribute("aria-hidden", "true");
     (field || input.parentNode).appendChild(list);
     var deb = 0;
     var seq = 0;
-    function hide() { list.hidden = true; list.innerHTML = ""; }
+    var hideAfterT = 0;
+    function showPanel() {
+      list.removeAttribute("hidden");
+      list.setAttribute("aria-hidden", "false");
+      requestAnimationFrame(function () {
+        list.classList.add("is-open");
+      });
+    }
+    function hide() {
+      clearTimeout(hideAfterT);
+      if (!list.classList.contains("is-open") && !list.children.length) {
+        list.setAttribute("hidden", "");
+        list.setAttribute("aria-hidden", "true");
+        return;
+      }
+      list.classList.remove("is-open");
+      hideAfterT = setTimeout(function () {
+        list.innerHTML = "";
+        list.setAttribute("hidden", "");
+        list.setAttribute("aria-hidden", "true");
+        hideAfterT = 0;
+      }, 200);
+    }
+    list.setAttribute("hidden", "");
     input.addEventListener("input", function () {
       clearTimeout(deb);
       var q = (input.value || "").trim();
-      if (q.length < 2) { hide(); return; }
+      if (q.length < 2) {
+        hide();
+        return;
+      }
       deb = setTimeout(function () {
         var n = ++seq;
         (async function () {
@@ -105,9 +234,10 @@
             if (!res.ok) { hide(); return; }
             var data = await res.json();
             if (n !== seq) return;
-            var r = (data && data.results) || [];
+            var r = ((data && data.results) || []).slice(0, 3);
+            list.classList.remove("is-open");
             list.innerHTML = "";
-            if (!r.length) { list.hidden = true; return; }
+            if (!r.length) { hide(); return; }
             r.forEach(function (item) {
               if (!item || !item.label) return;
               var li = document.createElement("li");
@@ -117,11 +247,15 @@
               li.addEventListener("mousedown", function (e) {
                 e.preventDefault();
                 input.value = item.label;
-                hide();
+                clearTimeout(hideAfterT);
+                list.classList.remove("is-open");
+                list.innerHTML = "";
+                list.setAttribute("hidden", "");
+                list.setAttribute("aria-hidden", "true");
               });
               list.appendChild(li);
             });
-            list.hidden = false;
+            showPanel();
           } catch (e) {
             if (n === seq) hide();
           }
@@ -270,6 +404,62 @@
     return { filenames: names, err: null };
   }
 
+  /** Upload to Storage and register on a known project (onboarding; allowed types only). */
+  async function uploadFilesToProject(projectId, fileList) {
+    if (!fileList?.length) return { filenames: [], err: null };
+    if (!projectId) return { filenames: [], err: "No project" };
+    var v0 = validateOnboardingProjectFiles(fileList);
+    if (!v0.ok) return { filenames: [], err: v0.error };
+    fileList = v0.files;
+    if (!supabaseClient) return { filenames: [], err: "Supabase not configured" };
+    const session = (await supabaseClient.auth.getSession()).data.session;
+    if (!session?.user) return { filenames: [], err: "Not signed in" };
+    const uid = session.user.id;
+    const names = [];
+    for (var i = 0; i < fileList.length; i++) {
+      var f = fileList[i];
+      var rid =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : String(Date.now()) + "-" + i;
+      var safe = String(f.name || "file")
+        .replace(/[^a-zA-Z0-9._-]/g, "_")
+        .slice(0, 180);
+      var path = uid + "/" + projectId + "/" + rid + "_" + safe;
+      var up = await supabaseClient.storage.from("project-files").upload(path, f, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: f.type || "application/octet-stream",
+      });
+      if (up.error) {
+        var msg = up.error.message || "Storage upload failed";
+        if (/bucket not found|No such bucket/i.test(msg)) {
+          msg +=
+            " Create the \u201cproject-files\u201d bucket (run Supabase migration 009) and Storage policies (010/011).";
+        } else if (/row-level security|RLS|permission denied|not authorized/i.test(msg)) {
+          msg +=
+            " [Storage] First path segment must be your user id; apply migrations 010 and 011.";
+        }
+        return { filenames: [], err: msg };
+      }
+      try {
+        await apiCall("/api/projects/" + encodeURIComponent(projectId) + "/register-file", {
+          method: "POST",
+          body: JSON.stringify({
+            storage_path: path,
+            filename: f.name || safe,
+            bytes: f.size,
+            mime_type: f.type || "",
+          }),
+        });
+      } catch (regErr) {
+        return { filenames: [], err: regErr.message || "Could not save file metadata" };
+      }
+      names.push(f.name || safe);
+    }
+    return { filenames: names, err: null };
+  }
+
   function showAuthBanner(msg) { const el = $("auth-banner"); if (el) { el.textContent = msg; el.hidden = false; } }
   function hideAuthBanner() { const el = $("auth-banner"); if (el) { el.hidden = true; el.textContent = ""; } }
 
@@ -390,7 +580,7 @@
         { key: "companyName", label: "Company name", required: true },
         { key: "location", label: "Location" },
       ] },
-    { id: "brief", type: "brief", title: "Bring your brief from ChatGPT, Claude, or Grok", sub: "We turn that into your manufacturing project and start factory matching." },
+    { id: "brief", type: "brief", title: "Bring your brief from ChatGPT, Claude, or Grok", sub: "We turn it into your manufacturing project and find the best suppliers for you. You can add images, PDFs, and documents (up to 8 files, 20 MB each). 3D and CAD files are not supported here \u2014 use your chat link or a written brief, then share models later with your supplier in chat if needed." },
     { id: "contact", type: "form", title: "How can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { key: "fullName", label: "Full name", required: true },
@@ -496,7 +686,13 @@
 
     const step = steps[stepIdx];
     if (step.type === "brief") {
-      const fileBtnLabel = onboardData.briefFileName ? escapeHtml(onboardData.briefFileName) : "Project files";
+      var nf = onboardingProjectFiles.length;
+      var fileBtnLabel =
+        nf === 0
+          ? "Choose files"
+          : nf === 1
+            ? escapeHtml(onboardingProjectFiles[0].name || "1 file")
+            : escapeHtml(String(nf) + " files selected");
       const htmlB =
         '<div class="onboard-question"><h1 class="onboard-title">' + step.title + "</h1>" +
         (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
@@ -505,7 +701,8 @@
         escapeAttr(onboardData.briefUrl || "") +
         '" placeholder="Chat link" autocomplete="url" /></div>' +
         '<div class="onboard-field onboard-brief-upload-field">' +
-        '<input class="onboard-brief-file-input" type="file" id="onboard-brief-file" accept=".txt,.md,text/plain" hidden />' +
+        '<input class="onboard-brief-file-input" type="file" id="onboard-brief-file" multiple ' +
+        'accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.mdown,.csv,.tsv,.xlsx,.xls,.ppt,.pptx,.odt,.ods,.odp,.rtf,.html,.htm,.json,.xml,.heic" hidden />' +
         '<button type="button" class="onboard-brief-file-btn" id="onboard-brief-file-btn">' + fileBtnLabel + "</button></div></div>" +
         '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
         '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
@@ -519,8 +716,25 @@
         });
       fileInput &&
         fileInput.addEventListener("change", function () {
-          var f = fileInput.files && fileInput.files[0];
-          if (f && fileBtn) fileBtn.textContent = f.name;
+          var raw = fileInput.files && fileInput.files.length
+            ? Array.prototype.slice.call(fileInput.files, 0)
+            : [];
+          var v = validateOnboardingProjectFiles(raw);
+          if (!v.ok) {
+            alert(v.error);
+            fileInput.value = "";
+            return;
+          }
+          onboardingProjectFiles = v.files;
+          if (fileBtn) {
+            var n = onboardingProjectFiles.length;
+            fileBtn.textContent =
+              n === 0
+                ? "Choose files"
+                : n === 1
+                  ? onboardingProjectFiles[0].name || "1 file"
+                  : n + " files selected";
+          }
         });
       $("onboard-back")?.addEventListener("click", function () {
         var u = $("onboard-brief-url");
@@ -529,36 +743,26 @@
         renderOnboardStep();
       });
       $("onboard-next")?.addEventListener("click", function () {
-        (async function () {
-          const urlEl = $("onboard-brief-url");
-          const fileEl = $("onboard-brief-file");
-          const u = (urlEl && urlEl.value ? urlEl.value : "").trim();
-          var file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
-          onboardData.briefUrl = u;
-          if (file) {
-            try {
-              onboardData.briefText = await readFileAsText(file);
-            } catch (e) {
-              alert("Could not read the file. Try a .txt or .md file.");
-              return;
-            }
-            onboardData.briefSource = "file";
-            onboardData.briefFileName = file.name;
-          } else if (onboardData.briefSource === "file" && (onboardData.briefText || "").trim()) {
-            /* file kept from earlier step; file input may be empty after back */
-          } else {
-            onboardData.briefText = "";
-            onboardData.briefFileName = "";
-            onboardData.briefSource = "text";
-          }
-          var hasBody = (onboardData.briefText || "").trim();
-          if (!u && !hasBody) {
-            alert("Add a chat link or choose project files.");
-            return;
-          }
-          onboardStep++;
-          renderOnboardStep();
-        })();
+        const urlEl = $("onboard-brief-url");
+        const fileEl = $("onboard-brief-file");
+        const u = (urlEl && urlEl.value ? urlEl.value : "").trim();
+        var raw =
+          fileEl && fileEl.files && fileEl.files.length
+            ? Array.prototype.slice.call(fileEl.files, 0)
+            : onboardingProjectFiles;
+        var v = validateOnboardingProjectFiles(raw);
+        if (!v.ok) {
+          alert(v.error);
+          return;
+        }
+        onboardingProjectFiles = v.files;
+        onboardData.briefUrl = u;
+        if (!u && !onboardingProjectFiles.length) {
+          alert("Add a chat link or choose at least one file.");
+          return;
+        }
+        onboardStep++;
+        renderOnboardStep();
       });
       const fu = stage.querySelector("#onboard-brief-url");
       if (fu) setTimeout(function () { fu.focus(); }, 100);
@@ -649,47 +853,44 @@
     else await supabaseClient.from("companies").insert(coPayload);
 
     const hasUrl = d.briefUrl && String(d.briefUrl).trim();
-    const hasText = d.briefText && String(d.briefText).trim();
-    if (!hasUrl && !hasText) {
+    const files = onboardingProjectFiles || [];
+    const hasFiles = files.length > 0;
+    if (hasFiles) {
+      var vFiles = validateOnboardingProjectFiles(files);
+      if (!vFiles.ok) {
+        currentUser.displayName = displayName;
+        updateAuthUI();
+        throw new Error(vFiles.error);
+      }
+    }
+    var textForImport = hasFiles ? String((await buildTextForImportFromFiles(files)) || "").trim() : "";
+    const hasTextImport = textForImport.length > 0;
+    if (!hasUrl && !hasTextImport && !hasFiles) {
       currentUser.displayName = displayName;
       updateAuthUI();
       return {};
     }
 
-    const importBody = hasUrl
-      ? { sourceType: "url", url: String(d.briefUrl).trim(), text: hasText ? String(d.briefText) : "" }
-      : { sourceType: d.briefSource === "file" ? "file" : "text", text: String(d.briefText) };
-    const data = await apiCall("/api/intake/import", { method: "POST", body: JSON.stringify(importBody) });
+    var projectId = null;
+    if (hasUrl || hasTextImport) {
+      const importBody = hasUrl
+        ? { sourceType: "url", url: String(d.briefUrl).trim(), text: hasTextImport ? textForImport : "" }
+        : { sourceType: "file", text: textForImport };
+      const data = await apiCall("/api/intake/import", { method: "POST", body: JSON.stringify(importBody) });
+      projectId = data.projectId || null;
+    } else {
+      const data = await apiCall("/api/projects/bootstrap", { method: "POST", body: JSON.stringify({}) });
+      projectId = data.projectId || null;
+    }
+    if (hasFiles && projectId) {
+      const up = await uploadFilesToProject(projectId, files);
+      if (up.err) throw new Error(up.err);
+    }
+    if (projectId) latestProjectId = projectId;
+    onboardingProjectFiles = [];
     currentUser.displayName = displayName;
     updateAuthUI();
-    return { importedProjectId: data.projectId || null };
-  }
-
-  /* ── Theme helpers (used in Settings + Supplier profile) ── */
-  function renderThemePills() {
-    const current = (window.AirsupTheme && window.AirsupTheme.get()) || document.documentElement.dataset.theme || "dark";
-    const pill = (value, label) =>
-      `<button type="button" class="theme-pill${current === value ? " theme-pill--active" : ""}" data-theme-value="${value}">${label}</button>`;
-    return `<div class="theme-pills">${pill("light", "Light")}${pill("dark", "Dark")}</div>`;
-  }
-  function wireThemePills(scopeEl) {
-    const root = scopeEl || document;
-    const syncActive = (v) => {
-      root.querySelectorAll("[data-theme-value]").forEach((b) => {
-        b.classList.toggle("theme-pill--active", b.getAttribute("data-theme-value") === v);
-      });
-    };
-    root.querySelectorAll("[data-theme-value]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const v = btn.getAttribute("data-theme-value");
-        if (window.AirsupTheme) window.AirsupTheme.set(v);
-        syncActive(v);
-      });
-    });
-    window.addEventListener("airsup:themechange", (e) => {
-      if (!root.isConnected || !root.querySelector("[data-theme-value]")) return;
-      syncActive(e.detail?.theme || (window.AirsupTheme && window.AirsupTheme.get()) || "light");
-    });
+    return { importedProjectId: projectId };
   }
 
   /* ── Settings ── */
@@ -710,17 +911,12 @@
       ${[["Display name","displayName","text"],["Company","company","text"],["Phone / WhatsApp","phone","tel"],["Location","location","text"],["Timezone","timezone","text"]].map(([l,k,t]) =>
         `<div class="settings-field"><label class="settings-label">${l}</label><input type="${t}" id="settings-${k}" class="settings-input" value="${escapeAttr(v[k])}" /></div>`).join("")}
       <div class="settings-field"><label class="settings-label">Bio</label><textarea id="settings-bio" class="settings-input" rows="3">${escapeHtml(v.bio)}</textarea></div>
-      <div class="settings-field">
-        <label class="settings-label">Theme</label>
-        ${renderThemePills()}
-      </div>
       <p class="settings-saved" id="settings-saved" hidden></p>
       <button type="button" class="btn-primary" id="settings-save">Save changes</button>
       <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
         <p style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">Danger zone</p>
         <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
       </div></div>`;
-    wireThemePills(root);
     var settingsLoc = $("settings-location");
     if (settingsLoc) wireLocationAutocomplete(settingsLoc);
     $("settings-save")?.addEventListener("click", saveSettings);
@@ -942,9 +1138,20 @@
       const { projects } = await apiCall("/api/projects");
       if (!projects?.length) { container.innerHTML = '<div class="projects-empty">No projects yet. Complete onboarding with a share link or pasted chat, or use Chat to add one later.</div>'; return; }
       container.innerHTML = projects.map((p) => {
-        const s = p.ai_summary || {};
-        const reqs = [s.quantity, s.budget, s.timeline].filter(Boolean);
-        return `<div class="project-card" data-id="${p.id}"><div class="project-card-title">${escapeHtml(p.title)}</div><div class="project-card-desc">${escapeHtml(p.description || "")}</div>${reqs.length ? `<div class="project-card-reqs">${reqs.map(r=>escapeHtml(r)).join(" \u00b7 ")}</div>` : ""}<div class="project-card-meta"><span class="project-card-badge badge--${p.status}">${p.status.replace(/_/g," ")}</span></div></div>`;
+        const line = teaserOneLine(p.description || "");
+        return (
+          '<div class="project-card" data-id="' +
+          escapeAttr(p.id) +
+          '"><div class="project-card-title">' +
+          escapeHtml(p.title) +
+          '</div><div class="project-card-desc">' +
+          escapeHtml(line || "\u2014") +
+          '</div><div class="project-card-meta"><span class="project-card-badge badge--' +
+          p.status +
+          '">' +
+          String(p.status).replace(/_/g, " ") +
+          "</span></div></div>"
+        );
       }).join("");
       container.querySelectorAll(".project-card").forEach((c) => c.addEventListener("click", () => { if (c.dataset.id) loadProjectDetail(c.dataset.id); }));
     } catch (_) { container.innerHTML = '<div class="projects-empty">Could not load projects.</div>'; }
@@ -953,34 +1160,89 @@
   async function loadProjectDetail(id) {
     const container = $("projects-list");
     const lead = $("projects-lead");
-    if (lead) lead.textContent = "Sourcing requests created from your conversations.";
+    if (lead) lead.textContent = "Project details";
     try {
       const { project } = await apiCall(`/api/projects/${id}`);
-      const s = project.ai_summary || {};
-      let filesHtml = "";
+      var chatData = { messages: [] };
+      var files = [];
       try {
-        const { files } = await apiCall(`/api/projects/${id}/files`);
-        if (files?.length) {
-          filesHtml =
-            '<div class="project-files-block"><h3 class="project-files-heading">Files</h3><ul class="project-files-list">' +
-            files
-              .map(function (f) {
-                const link =
-                  f.signed_url &&
-                  '<a href="' +
-                    escapeAttr(f.signed_url) +
-                    '" target="_blank" rel="noopener">' +
-                    escapeHtml(f.filename) +
-                    "</a>";
-                const label = link || escapeHtml(f.filename);
-                return "<li>" + label + (f.bytes ? ' <span class="project-file-meta">' + formatBytes(f.bytes) + "</span>" : "") + "</li>";
-              })
-              .join("") +
-            "</ul></div>";
-        }
-      } catch (_) { /* no files yet */ }
-      container.innerHTML = `<div class="project-detail"><h2 style="font-size:22px;font-weight:600;margin-bottom:4px;">${escapeHtml(project.title)}</h2><p style="color:var(--text-muted);margin-bottom:16px;">${escapeHtml(project.description||"")}</p><span class="project-card-badge badge--${project.status}">${project.status.replace(/_/g," ")}</span>${s.product?`<div style="margin:16px 0;"><strong>Product:</strong> ${escapeHtml(s.product)}</div>`:""}${filesHtml}</div>`;
-    } catch (_) {}
+        const ch = await apiCall("/api/chat/history?project_id=" + encodeURIComponent(id));
+        if (ch && ch.messages) chatData = ch;
+      } catch (_) { /* no chat */ }
+      try {
+        const fr = await apiCall(`/api/projects/${id}/files`);
+        if (fr && fr.files) files = fr.files;
+      } catch (_) { /* no files */ }
+
+      var filesHtml = "";
+      if (files.length) {
+        filesHtml =
+          '<section class="project-detail-section project-files-block"><h3 class="project-detail-h">Files</h3><ul class="project-files-list">' +
+          files
+            .map(function (f) {
+              var link =
+                f.signed_url &&
+                '<a href="' +
+                  escapeAttr(f.signed_url) +
+                  '" target="_blank" rel="noopener">' +
+                  escapeHtml(f.filename) +
+                  "</a>";
+              var label = link || escapeHtml(f.filename);
+              return (
+                "<li>" +
+                label +
+                (f.bytes ? ' <span class="project-file-meta">' + formatBytes(f.bytes) + "</span>" : "") +
+                "</li>"
+              );
+            })
+            .join("") +
+          "</ul></section>";
+      }
+
+      var dateLine = formatProjectDate(project.created_at);
+      var overview =
+        '<section class="project-detail-section project-detail-overview"><h2 class="project-detail-title">' +
+        escapeHtml(project.title) +
+        "</h2>" +
+        (dateLine
+          ? '<p class="project-detail-date">' + escapeHtml(dateLine) + "</p>"
+          : "") +
+        '<p class="project-detail-description">' +
+        escapeHtml(project.description || "") +
+        "</p>" +
+        '<p class="project-detail-status-row"><span class="project-card-badge badge--' +
+        project.status +
+        '">' +
+        String(project.status).replace(/_/g, " ") +
+        "</span></p></section>";
+
+      var inner =
+        '<div class="project-detail" data-project-id="' +
+        escapeAttr(id) +
+        '">' +
+        '<button type="button" class="btn-outline project-detail-back" id="project-detail-back">\u2190 Back to projects</button>' +
+        overview +
+        buildRequirementsSection(project.requirements) +
+        buildAiSummarySection(project.ai_summary, project.requirements) +
+        buildMatchesSection(project.matches) +
+        buildBriefSection(project) +
+        filesHtml +
+        buildAirsupChatSection(chatData.messages) +
+        "</div>";
+
+      container.innerHTML = inner;
+      $("project-detail-back")?.addEventListener("click", function (e) {
+        e.stopPropagation();
+        loadProjects();
+      });
+    } catch (err) {
+      if (container) {
+        container.innerHTML =
+          '<div class="projects-empty">Could not load this project' +
+          (err && err.message ? ": " + escapeHtml(err.message) : "") +
+          ".</div>";
+      }
+    }
   }
 
   function formatBytes(n) {
@@ -988,6 +1250,201 @@
     if (n < 1024) return n + " B";
     if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
     return (n / 1048576).toFixed(1) + " MB";
+  }
+
+  /** One line for project cards: first sentence or ~160 chars. */
+  function teaserOneLine(text) {
+    var t = String(text || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!t) return "";
+    var m = t.match(/^[\s\S]{1,500}?[.!?](?=\s|$)/);
+    if (m && m[0].length >= 2) return m[0].trim();
+    if (t.length <= 160) return t;
+    return t.slice(0, 157) + "\u2026";
+  }
+
+  function formatProjectDate(iso) {
+    if (!iso) return "";
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    } catch (_) {
+      return "";
+    }
+  }
+
+  var PROJECT_REQ_LABELS = {
+    quantity: "Quantity",
+    timeline: "Timeline",
+    budget: "Budget",
+    materials: "Materials",
+    quality_requirements: "Quality",
+    product_type: "Product type",
+    additional_notes: "Notes",
+  };
+
+  function humanizeKey(k) {
+    if (PROJECT_REQ_LABELS[k]) return PROJECT_REQ_LABELS[k];
+    return String(k || "")
+      .replace(/_/g, " ")
+      .replace(/^\w/, function (c) { return c.toUpperCase(); });
+  }
+
+  function buildRequirementsSection(req) {
+    if (!req || typeof req !== "object") return "";
+    var keys = Object.keys(req).filter(function (k) {
+      var v = req[k];
+      return v != null && String(v).trim() !== "";
+    });
+    if (!keys.length) return "";
+    var rows = keys
+      .map(function (k) {
+        return (
+          "<div class=\"project-detail-dl-row\"><dt>" +
+          escapeHtml(humanizeKey(k)) +
+          "</dt><dd>" +
+          escapeHtml(String(req[k])) +
+          "</dd></div>"
+        );
+      })
+      .join("");
+    return (
+      '<section class="project-detail-section"><h3 class="project-detail-h">Requirements</h3><dl class="project-detail-dl">' +
+      rows +
+      "</dl></section>"
+    );
+  }
+
+  function buildAiSummarySection(sum, requirements) {
+    if (!sum || typeof sum !== "object") return "";
+    var req = requirements && typeof requirements === "object" ? requirements : {};
+    var parts = [];
+    var kreq = sum.key_requirements;
+    if (Array.isArray(kreq) && kreq.length) {
+      parts.push(
+        "<p class=\"project-detail-p\"><strong>Key requirements</strong></p><ul class=\"project-detail-ul\">" +
+          kreq
+            .map(function (x) {
+              return "<li>" + escapeHtml(String(x)) + "</li>";
+            })
+            .join("") +
+          "</ul>"
+      );
+    }
+    if (sum.ideal_factory_profile && String(sum.ideal_factory_profile).trim()) {
+      parts.push(
+        "<p class=\"project-detail-p\"><strong>Ideal factory profile</strong> " +
+          escapeHtml(String(sum.ideal_factory_profile)) +
+          "</p>"
+      );
+    }
+    if (sum.readiness && String(sum.readiness).trim()) {
+      parts.push(
+        "<p class=\"project-detail-p\"><strong>Readiness</strong> " + escapeHtml(String(sum.readiness)) + "</p>"
+      );
+    }
+    function addIfExtra(key, label) {
+      var v = sum[key];
+      if (v == null || !String(v).trim()) return;
+      if (req[key] != null && String(req[key]) === String(v)) return;
+      parts.push(
+        "<p class=\"project-detail-p\"><strong>" + escapeHtml(label) + "</strong> " + escapeHtml(String(v)) + "</p>"
+      );
+    }
+    addIfExtra("product", "Product");
+    addIfExtra("quantity", "Quantity");
+    addIfExtra("timeline", "Timeline");
+    addIfExtra("budget", "Budget");
+    if (!parts.length) return "";
+    return (
+      '<section class="project-detail-section"><h3 class="project-detail-h">AI summary</h3><div class="project-detail-ai">' +
+        parts.join("") +
+        "</div></section>"
+    );
+  }
+
+  function buildMatchesSection(matches) {
+    if (!Array.isArray(matches) || !matches.length) return "";
+    var rows = matches
+      .map(function (m) {
+        var f = m.factories;
+        var fn = f && f.name ? f.name : "Factory";
+        var st = m.status ? String(m.status).replace(/_/g, " ") : "";
+        return (
+          "<li><span class=\"project-match-factory\">" +
+          escapeHtml(fn) +
+          "</span> <span class=\"project-card-badge badge--" +
+          (m.status || "pending") +
+          "\">" +
+          escapeHtml(st) +
+          "</span></li>"
+        );
+      })
+      .join("");
+    return (
+      '<section class="project-detail-section"><h3 class="project-detail-h">Matches</h3><ul class="project-detail-ul project-detail-matches">' +
+        rows +
+        "</ul></section>"
+    );
+  }
+
+  function buildBriefSection(project) {
+    var src = project.brief_source_type;
+    var url = project.brief_source_url;
+    var raw = project.brief_raw;
+    if (!src && !url && !raw) return "";
+    var bits = [];
+    if (src) bits.push("<p class=\"project-detail-p\"><strong>Source</strong> " + escapeHtml(String(src)) + "</p>");
+    if (url)
+      bits.push(
+        "<p class=\"project-detail-p\"><a href=\"" +
+          escapeAttr(url) +
+          "\" target=\"_blank\" rel=\"noopener\">" +
+          escapeHtml(url) +
+          "</a></p>"
+      );
+    if (raw && String(raw).trim()) {
+      bits.push(
+        "<details class=\"project-brief-details\"><summary>Imported conversation text</summary><pre class=\"project-brief-raw\">" +
+          escapeHtml(String(raw)) +
+          "</pre></details>"
+      );
+    }
+    return (
+      '<section class="project-detail-section"><h3 class="project-detail-h">Brief import</h3><div class="project-brief-block">' +
+        bits.join("") +
+        "</div></section>"
+    );
+  }
+
+  function buildAirsupChatSection(messages) {
+    if (!Array.isArray(messages) || !messages.length) {
+      return (
+        '<section class="project-detail-section"><h3 class="project-detail-h">Chat with Airsup</h3><p class="project-detail-muted">No messages in this project\u2019s chat yet.</p></section>'
+      );
+    }
+    var blocks = messages.map(function (m) {
+      var isUser = m.role === "user";
+      var inner = isUser
+        ? escapeHtml(m.content || "")
+        : simpleMarkdown(m.content || "");
+      return (
+        '<div class="project-chat-msg project-chat-msg--' +
+        (isUser ? "user" : "assistant") +
+        '"><div class="project-chat-role">' +
+        (isUser ? "You" : "Airsup") +
+        "</div><div class=\"project-chat-body\">" +
+        inner +
+        "</div></div>"
+      );
+    });
+    return (
+      '<section class="project-detail-section"><h3 class="project-detail-h">Chat with Airsup</h3><div class="project-airsup-chat-log">' +
+        blocks.join("") +
+        "</div></section>"
+    );
   }
 
   /* ══════════════════════════════════════
@@ -1002,7 +1459,10 @@
 
     try {
       const { matches } = await apiCall("/api/matches");
-      if (!matches?.length) { container.innerHTML = '<div class="connections-empty">No connections yet. Once AI matches you with a factory, you\u2019ll get a direct line to their engineer here.</div>'; return; }
+      if (!matches?.length) {
+        container.innerHTML = "";
+        return;
+      }
       container.innerHTML = matches.map((m) => {
         const f = m.factories, p = m.projects, ctx = m.context_summary || {};
         const contact = ctx.direct_contact || {};
@@ -1479,17 +1939,12 @@
       <div class="settings-field"><label class="settings-label">Typical MOQ</label><input type="text" id="fp-moq" class="settings-input" value="${escapeAttr(c.moq || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Contact name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(ci.name || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Contact phone</label><input type="tel" id="fp-contact-phone" class="settings-input" value="${escapeAttr(ci.phone || "")}" /></div>
-      <div class="settings-field">
-        <label class="settings-label">Theme</label>
-        ${renderThemePills()}
-      </div>
       <p class="settings-saved" id="fp-saved" hidden></p>
       <button type="button" class="btn-primary" id="fp-save">Save profile</button>
       <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
         <p style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">Danger zone</p>
         <button type="button" class="btn-danger" id="fp-delete-profile">Delete my profile</button>
       </div></div>`;
-    wireThemePills(root);
     var fpLoc = $("fp-location");
     if (fpLoc) wireLocationAutocomplete(fpLoc);
     $("fp-save")?.addEventListener("click", async () => {

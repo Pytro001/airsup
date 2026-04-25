@@ -3,6 +3,8 @@ import type { Response } from "express";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { listFilesForProjectWithUrls, registerProjectFileRecord } from "../lib/project-files.js";
+import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
+import { runJobPollOnce } from "../jobs/poll.js";
 
 export const projectsRouter = Router();
 
@@ -38,6 +40,85 @@ projectsRouter.get("/latest", requireAuth, async (req: AuthRequest, res: Respons
     return;
   }
   res.json({ project: data });
+});
+
+/**
+ * Create a project with no LLM import — for onboarding with only non-text files (e.g. 3D, images).
+ * Same factory search kickoff as intake import.
+ */
+projectsRouter.post("/bootstrap", requireAuth, async (req: AuthRequest, res: Response) => {
+  const userId = req.userId!;
+  const { data: company } = await supabaseAdmin.from("companies").select("id").eq("user_id", userId).maybeSingle();
+  if (!company?.id) {
+    res.status(400).json({ error: "Complete company step first, then try again." });
+    return;
+  }
+  const companyId = company.id;
+
+  const { data: companyRow } = await supabaseAdmin
+    .from("companies")
+    .select("name, description, industry, location, ai_knowledge")
+    .eq("id", companyId)
+    .maybeSingle();
+
+  const coName = (companyRow?.name && String(companyRow.name).trim()) || "";
+  const title = coName ? `Project — ${coName.slice(0, 80)}` : "New project";
+  const description =
+    "Your reference files are attached. Open chat to add details and refine the factory search.";
+
+  const { data: projectRow, error: pe } = await supabaseAdmin
+    .from("projects")
+    .insert({
+      user_id: userId,
+      company_id: companyId,
+      title,
+      description,
+      requirements: {},
+      ai_summary: { readiness: "low" as const },
+      status: "intake",
+      brief_source_type: "file",
+      brief_source_url: null,
+      brief_raw: null,
+    })
+    .select("id, title, description, requirements, ai_summary")
+    .single();
+
+  if (pe || !projectRow) {
+    console.error("[projects] bootstrap insert:", pe);
+    res.status(500).json({ error: pe?.message || "Could not create project" });
+    return;
+  }
+
+  const project = projectRow as {
+    id: string;
+    title: string;
+    description: string;
+    requirements: Record<string, unknown> | null;
+    ai_summary: Record<string, unknown> | null;
+  };
+
+  const merged = mergeSearchCriteriaFromSources(undefined, project, companyRow);
+
+  const { data: search, error: se } = await supabaseAdmin
+    .from("factory_searches")
+    .insert({ project_id: project.id, search_criteria: merged, status: "pending" })
+    .select("id")
+    .single();
+
+  if (se || !search) {
+    console.error("[projects] bootstrap factory_searches insert:", se);
+    res.status(500).json({ error: se?.message || "Project created but search could not start" });
+    return;
+  }
+
+  await supabaseAdmin.from("projects").update({ status: "searching" }).eq("id", project.id);
+
+  const kick = process.env.RUN_JOB_POLL_AFTER_SEARCH === "1" || (process.env.NODE_ENV !== "production" && !process.env.VERCEL);
+  if (kick) {
+    void runJobPollOnce().catch((err) => console.error("[Airsup] post-bootstrap job poll:", err));
+  }
+
+  res.json({ projectId: project.id, title: project.title, requirements: project.requirements });
 });
 
 projectsRouter.get("/:id/files", requireAuth, async (req: AuthRequest, res: Response) => {
@@ -113,6 +194,7 @@ projectsRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) 
     .from("projects")
     .select(`
       id, title, description, status, requirements, ai_summary, created_at,
+      brief_source_type, brief_source_url, brief_raw,
       companies(name),
       matches(id, status, quote, context_summary, factories(name, location, category)),
       factory_searches(id, status, search_criteria, created_at)
