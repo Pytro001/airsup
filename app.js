@@ -72,6 +72,65 @@
   /* ── Helpers ── */
   function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
   function escapeAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  /** Centered overlay; returns true if user confirms. Replaces native confirm() for consistent UI. */
+  function showConfirmDialog(message, options) {
+    options = options || {};
+    var confirmLabel = options.confirmLabel || "OK";
+    var cancelLabel = options.cancelLabel || "Cancel";
+    var danger = options.danger === true;
+    return new Promise(function (resolve) {
+      var prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      var wrap = document.createElement("div");
+      wrap.id = "airsup-confirm-modal";
+      wrap.className = "modal-overlay";
+      wrap.setAttribute("role", "dialog");
+      wrap.setAttribute("aria-modal", "true");
+      wrap.setAttribute("aria-labelledby", "airsup-confirm-title");
+      wrap.innerHTML =
+        '<div class="modal-box">' +
+        '<h2 class="modal-title" id="airsup-confirm-title">Confirm</h2>' +
+        '<p class="modal-message">' +
+        escapeHtml(message) +
+        "</p>" +
+        '<div class="modal-actions">' +
+        '<button type="button" class="btn-outline" id="airsup-confirm-cancel">' +
+        escapeHtml(cancelLabel) +
+        "</button>" +
+        '<button type="button" class="' +
+        (danger ? "btn-danger" : "btn-primary") +
+        '" id="airsup-confirm-ok">' +
+        escapeHtml(confirmLabel) +
+        "</button></div></div>";
+      function finish(result) {
+        document.body.style.overflow = prevOverflow;
+        wrap.remove();
+        document.removeEventListener("keydown", onKey);
+        resolve(result);
+      }
+      function onKey(e) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          finish(false);
+        }
+      }
+      document.addEventListener("keydown", onKey);
+      wrap.addEventListener("click", function (e) {
+        if (e.target === wrap) finish(false);
+      });
+      document.body.appendChild(wrap);
+      $("airsup-confirm-cancel")?.addEventListener("click", function () {
+        finish(false);
+      });
+      $("airsup-confirm-ok")?.addEventListener("click", function () {
+        finish(true);
+      });
+      setTimeout(function () {
+        $("airsup-confirm-cancel")?.focus();
+      }, 0);
+    });
+  }
   function readFileAsText(file) {
     return new Promise(function (resolve, reject) {
       var r = new FileReader();
@@ -959,7 +1018,11 @@
     if (settingsLoc) wireLocationAutocomplete(settingsLoc);
     $("settings-save")?.addEventListener("click", saveSettings);
     $("settings-delete-profile")?.addEventListener("click", async () => {
-      if (!confirm("Delete your profile? It will be moved to the admin bin. You can ask support to restore it.")) return;
+      const ok = await showConfirmDialog(
+        "Delete your profile? It will be moved to the admin bin. You can ask support to restore it.",
+        { confirmLabel: "Delete", cancelLabel: "Cancel", danger: true }
+      );
+      if (!ok) return;
       try {
         const token = (await supabaseClient.auth.getSession()).data.session?.access_token;
         await fetch(`${API_BASE}/api/profile/me`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
@@ -2000,7 +2063,11 @@
       }
     });
     $("fp-delete-profile")?.addEventListener("click", async () => {
-      if (!confirm("Delete your factory profile? It will be moved to the admin bin. You can ask support to restore it.")) return;
+      const ok = await showConfirmDialog(
+        "Delete your factory profile? It will be moved to the admin bin. You can ask support to restore it.",
+        { confirmLabel: "Delete", cancelLabel: "Cancel", danger: true }
+      );
+      if (!ok) return;
       try {
         await apiCall("/api/factories/me", { method: "DELETE" });
         await supabaseClient.auth.signOut();
