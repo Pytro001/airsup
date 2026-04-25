@@ -286,6 +286,12 @@ html[data-theme="dark"] .site-logo img {
 .onboard-input::placeholder, .onboard-textarea::placeholder { color: var(--text-soft); }
 .onboard-textarea { resize: vertical; min-height: 80px; line-height: 1.5; font-family: inherit; }
 .onboard-actions { display: flex; gap: 12px; margin-top: 12px; }
+.onboard-brief { gap: 16px; }
+.onboard-brief .onboard-textarea { min-height: 120px; }
+.onboard-brief-hint, .onboard-brief-fine { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0; }
+.onboard-brief-fine { font-size: 12px; margin-top: 4px; }
+.onboard-brief-file { font-size: 14px; color: var(--text-muted); }
+
 .onboard-skip {
   font-size: 14px; color: var(--text-muted); padding: 12px 0;
   transition: color 0.15s;

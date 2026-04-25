@@ -13,10 +13,11 @@ import { outreachRouter } from "../server/dist/routes/outreach.js";
 import { adminRouter } from "../server/dist/routes/admin.js";
 import { factoriesRouter } from "../server/dist/routes/factories.js";
 import { profileRouter } from "../server/dist/routes/profile.js";
+import { intakeImportRouter } from "../server/dist/routes/intake-import.js";
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -31,6 +32,7 @@ app.use("/api/outreach", outreachRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/factories", factoriesRouter);
 app.use("/api/profile", profileRouter);
+app.use("/api/intake", intakeImportRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 

@@ -58,13 +58,25 @@
   let activeConnectionMatchId = null;
 
   function resetOnboardData() {
-    onboardData = { role: "", fullName: "", phone: "", companyName: "", companyDescription: "", location: "", productType: "", quantity: "", timeline: "", capabilities: "", certifications: "", moq: "", specialization: "" };
+    onboardData = {
+      role: "", fullName: "", phone: "", companyName: "", location: "",
+      briefUrl: "", briefText: "", briefSource: "", briefFileName: "",
+      capabilities: "", certifications: "", moq: "", specialization: "",
+    };
   }
   resetOnboardData();
 
   /* ── Helpers ── */
   function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
   function escapeAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function readFileAsText(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onload = function () { resolve(String(r.result || "")); };
+      r.onerror = function () { reject(new Error("Could not read file")); };
+      r.readAsText(file);
+    });
+  }
   function formatOutreachStage(stage) {
     if (stage === "await_supplier") return "Awaiting your response";
     return String(stage || "").replace(/_/g, " ") || "";
@@ -319,20 +331,12 @@
      ONBOARDING
      ══════════════════════════════════════ */
   const STARTUP_STEPS = [
-    { id: "company", type: "form", title: "Tell us about your company.", sub: "Our AI remembers everything, so the factory\u2019s engineer gets full context from day one.",
+    { id: "company", type: "form", title: "Tell us about your company.", sub: "Use ChatGPT, Claude, or Grok for the deep brainstorm, then hand the brief to us here. We run factory search and contact for you.",
       fields: [
         { key: "companyName", label: "Company name", required: true },
-        { key: "companyDescription", label: "Short company description", type: "textarea" },
         { key: "location", label: "Location" },
       ] },
-    { id: "needs", type: "form", title: "What do you need manufactured?", sub: "Be as specific or vague as you want. The goal is to get you a first drawing or sample as fast as possible.",
-      fields: [
-        { key: "productType", label: "Product type", required: true },
-        { row: [
-          { key: "quantity", label: "Estimated quantity" },
-          { key: "timeline", label: "Timeline" },
-        ]},
-      ] },
+    { id: "brief", type: "brief", title: "Bring your brief", sub: "Paste a public share link to your chat, or paste the conversation, or upload a .txt or .md export. We will turn it into a manufacturing project on the platform. Nothing is sent to a factory until you are ready to connect." },
     { id: "contact", type: "form", title: "How can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { key: "fullName", label: "Full name", required: true },
@@ -402,23 +406,110 @@
           <h1 class="onboard-title">${isSupplier ? "Your factory is live." : "You\u2019re all set."}</h1>
           <p class="onboard-sub">${isSupplier
             ? "Our AI will start sending you project briefs that match your capabilities. You\u2019ll work directly with buyers, no sales needed."
-            : "Our AI now knows your business. We\u2019ll find the right factory and connect you directly with the engineer who\u2019ll build your product."}</p>
+            : "We will read your chat export and start searching for matching factories. You can review your project, files, and connections in the app."}</p>
           <div class="onboard-actions">
-            <button type="button" class="btn-primary btn-lg" id="onboard-go">${isSupplier ? "Go to dashboard" : "Start chatting"}</button>
+            <button type="button" class="btn-primary btn-lg" id="onboard-go">${isSupplier ? "Go to dashboard" : "See your project"}</button>
           </div>
         </div>`;
       $("onboard-go")?.addEventListener("click", async () => {
-        if (await ensureSession()) {
-          await saveOnboardingToSupabase();
+        if (!(await ensureSession())) return;
+        const goBtn = $("onboard-go");
+        var prev = goBtn && goBtn.textContent;
+        try {
+          if (goBtn) { goBtn.disabled = true; goBtn.textContent = isSupplier ? "Loading\u2026" : "Preparing your project\u2026"; }
+          const result = await saveOnboardingToSupabase() || {};
           userRole = isSupplier ? "supplier" : "startup";
           buildNav();
-          setView(isSupplier ? "supplier-dashboard" : "chat");
+          if (isSupplier) {
+            setView("supplier-dashboard");
+            return;
+          }
+          if (result.importedProjectId) {
+            latestProjectId = result.importedProjectId;
+            setView("projects");
+            await loadProjectDetail(result.importedProjectId);
+            return;
+          }
+          setView("chat");
+        } catch (err) {
+          alert(err && err.message ? err.message : String(err));
+        } finally {
+          if (goBtn) { goBtn.disabled = false; if (prev) goBtn.textContent = prev; }
         }
       });
       return;
     }
 
     const step = steps[stepIdx];
+    if (step.type === "brief") {
+      const htmlB =
+        '<div class="onboard-question"><h1 class="onboard-title">' + step.title + "</h1>" +
+        (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
+        '<div class="onboard-form onboard-brief">' +
+        '<p class="onboard-brief-hint">We pull product, materials, quantity, and timing from the chat if they are there. Prototype and speed are fine as defaults. Your chat stays in Airsup until you choose to connect with a factory.</p>' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-url">Share link (optional)</label>' +
+        '<input class="onboard-input" type="url" id="onboard-brief-url" name="onboard-brief-url" value="' +
+        escapeAttr(onboardData.briefUrl || "") +
+        '" autocomplete="url" />' +
+        '<p class="onboard-brief-fine">Public share links from ChatGPT, Claude, or Grok only. If a link does not work, use paste or a file below.</p></div>' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-text">Paste the conversation (optional)</label>' +
+        '<textarea class="onboard-textarea" id="onboard-brief-text" rows="6" placeholder="">' +
+        escapeHtml(onboardData.briefText || "") +
+        "</textarea></div>" +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-file">Or upload a file</label>' +
+        '<input class="onboard-brief-file" type="file" id="onboard-brief-file" accept=".txt,.md,text/plain" />' +
+        (onboardData.briefFileName ? '<p class="onboard-brief-fine">Last selected: ' + escapeHtml(onboardData.briefFileName) + "</p>" : "") +
+        "</div></div>" +
+        '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
+        '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
+      stage.innerHTML = htmlB;
+      $("onboard-back")?.addEventListener("click", () => {
+        var u = $("onboard-brief-url");
+        var tx = $("onboard-brief-text");
+        if (u) onboardData.briefUrl = (u.value || "").trim();
+        if (tx) onboardData.briefText = (tx.value || "").trim();
+        onboardStep--;
+        renderOnboardStep();
+      });
+      $("onboard-next")?.addEventListener("click", function () {
+        (async function () {
+          const urlEl = $("onboard-brief-url");
+          const textEl = $("onboard-brief-text");
+          const fileEl = $("onboard-brief-file");
+          const u = (urlEl && urlEl.value ? urlEl.value : "").trim();
+          const pasted = (textEl && textEl.value ? textEl.value : "").trim();
+          var file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+          var fromFile = "";
+          if (file) {
+            try {
+              fromFile = await readFileAsText(file);
+            } catch (e) {
+              alert("Could not read the file. Try a .txt or .md file.");
+              return;
+            }
+          }
+          onboardData.briefUrl = u;
+          if (file) {
+            onboardData.briefText = fromFile;
+            onboardData.briefSource = "file";
+            onboardData.briefFileName = file.name;
+          } else {
+            onboardData.briefText = pasted;
+            onboardData.briefSource = "text";
+            onboardData.briefFileName = "";
+          }
+          if (!u && !pasted && !fromFile) {
+            alert("Add a share link, paste your chat, or upload a .txt or .md file.");
+            return;
+          }
+          onboardStep++;
+          renderOnboardStep();
+        })();
+      });
+      const fu = stage.querySelector("#onboard-brief-url");
+      if (fu) setTimeout(function () { fu.focus(); }, 100);
+      return;
+    }
     let html = `<div class="onboard-question"><h1 class="onboard-title">${step.title}</h1>`;
     if (step.sub) html += `<p class="onboard-sub">${step.sub}</p>`;
     html += '<div class="onboard-form">';
@@ -457,7 +548,7 @@
   }
 
   async function saveOnboardingToSupabase() {
-    if (!supabaseClient || !currentUser) return;
+    if (!supabaseClient || !currentUser) return {};
     const d = onboardData;
     const displayName = d.fullName || currentUser.displayName;
     const letter = (displayName || "?").charAt(0).toUpperCase();
@@ -484,21 +575,38 @@
         active: true,
       };
       await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify(facPayload) });
-    } else {
-      const coPayload = {
-        user_id: currentUser.id,
-        name: d.companyName || "",
-        industry: "",
-        location: d.location || "",
-        description: d.companyDescription || "",
-        ai_knowledge: { role: d.role, product_type: d.productType, quantity: d.quantity, timeline: d.timeline, onboarded_at: new Date().toISOString() },
-      };
-      const { data: coRow } = await supabaseClient.from("companies").select("id").eq("user_id", currentUser.id).maybeSingle();
-      if (coRow?.id) await supabaseClient.from("companies").update(coPayload).eq("id", coRow.id);
-      else await supabaseClient.from("companies").insert(coPayload);
+      currentUser.displayName = displayName;
+      updateAuthUI();
+      return {};
     }
+
+    const coPayload = {
+      user_id: currentUser.id,
+      name: d.companyName || "",
+      industry: "",
+      location: d.location || "",
+      description: "",
+      ai_knowledge: { role: d.role, onboarded_at: new Date().toISOString() },
+    };
+    const { data: coRow } = await supabaseClient.from("companies").select("id").eq("user_id", currentUser.id).maybeSingle();
+    if (coRow?.id) await supabaseClient.from("companies").update(coPayload).eq("id", coRow.id);
+    else await supabaseClient.from("companies").insert(coPayload);
+
+    const hasUrl = d.briefUrl && String(d.briefUrl).trim();
+    const hasText = d.briefText && String(d.briefText).trim();
+    if (!hasUrl && !hasText) {
+      currentUser.displayName = displayName;
+      updateAuthUI();
+      return {};
+    }
+
+    const importBody = hasUrl
+      ? { sourceType: "url", url: String(d.briefUrl).trim(), text: hasText ? String(d.briefText) : "" }
+      : { sourceType: d.briefSource === "file" ? "file" : "text", text: String(d.briefText) };
+    const data = await apiCall("/api/intake/import", { method: "POST", body: JSON.stringify(importBody) });
     currentUser.displayName = displayName;
     updateAuthUI();
+    return { importedProjectId: data.projectId || null };
   }
 
   /* ── Theme helpers (used in Settings + Supplier profile) ── */
@@ -774,7 +882,7 @@
     if (lead) lead.textContent = "Sourcing requests created from your conversations.";
     try {
       const { projects } = await apiCall("/api/projects");
-      if (!projects?.length) { container.innerHTML = '<div class="projects-empty">No projects yet. Start a conversation to create one.</div>'; return; }
+      if (!projects?.length) { container.innerHTML = '<div class="projects-empty">No projects yet. Complete onboarding with a share link or pasted chat, or use Chat to add one later.</div>'; return; }
       container.innerHTML = projects.map((p) => {
         const s = p.ai_summary || {};
         const reqs = [s.quantity, s.budget, s.timeline].filter(Boolean);

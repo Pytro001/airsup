@@ -14,13 +14,14 @@ import { outreachRouter } from "./routes/outreach.js";
 import { adminRouter } from "./routes/admin.js";
 import { factoriesRouter } from "./routes/factories.js";
 import { profileRouter } from "./routes/profile.js";
+import { intakeImportRouter } from "./routes/intake-import.js";
 import { startWorker } from "./jobs/worker.js";
 
 const app = express();
 const port = parseInt(process.env.PORT || "3001", 10);
 
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -35,6 +36,7 @@ app.use("/api/outreach", outreachRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/factories", factoriesRouter);
 app.use("/api/profile", profileRouter);
+app.use("/api/intake", intakeImportRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 
