@@ -14,12 +14,14 @@ import { adminRouter } from "../server/dist/routes/admin.js";
 import { factoriesRouter } from "../server/dist/routes/factories.js";
 import { profileRouter } from "../server/dist/routes/profile.js";
 import { intakeImportRouter } from "../server/dist/routes/intake-import.js";
+import { placesRouter } from "../server/dist/routes/places.js";
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+app.use("/api/places", placesRouter);
 
 app.use("/api/chat", chatRouter);
 app.use("/api/projects", projectsRouter);

@@ -15,6 +15,7 @@ import { adminRouter } from "./routes/admin.js";
 import { factoriesRouter } from "./routes/factories.js";
 import { profileRouter } from "./routes/profile.js";
 import { intakeImportRouter } from "./routes/intake-import.js";
+import { placesRouter } from "./routes/places.js";
 import { startWorker } from "./jobs/worker.js";
 
 const app = express();
@@ -24,6 +25,7 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "2mb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+app.use("/api/places", placesRouter);
 
 app.use("/api/chat", chatRouter);
 app.use("/api/projects", projectsRouter);

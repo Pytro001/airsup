@@ -77,6 +77,60 @@
       r.readAsText(file);
     });
   }
+
+  /** OpenStreetMap-backed suggestions; you can still type any value. */
+  function wireLocationAutocomplete(input) {
+    if (!input || input.getAttribute("data-airsup-place") === "1") return;
+    input.setAttribute("data-airsup-place", "1");
+    var field = input.closest(".onboard-field, .settings-field");
+    if (field) field.classList.add("location-autocomplete-field");
+    var list = document.createElement("ul");
+    list.className = "location-autocomplete-suggestions";
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+    (field || input.parentNode).appendChild(list);
+    var deb = 0;
+    var seq = 0;
+    function hide() { list.hidden = true; list.innerHTML = ""; }
+    input.addEventListener("input", function () {
+      clearTimeout(deb);
+      var q = (input.value || "").trim();
+      if (q.length < 2) { hide(); return; }
+      deb = setTimeout(function () {
+        var n = ++seq;
+        (async function () {
+          try {
+            var res = await fetch((API_BASE || "") + "/api/places/autocomplete?q=" + encodeURIComponent(q));
+            if (n !== seq) return;
+            if (!res.ok) { hide(); return; }
+            var data = await res.json();
+            if (n !== seq) return;
+            var r = (data && data.results) || [];
+            list.innerHTML = "";
+            if (!r.length) { list.hidden = true; return; }
+            r.forEach(function (item) {
+              if (!item || !item.label) return;
+              var li = document.createElement("li");
+              li.setAttribute("role", "option");
+              li.className = "location-autocomplete-item";
+              li.textContent = item.label;
+              li.addEventListener("mousedown", function (e) {
+                e.preventDefault();
+                input.value = item.label;
+                hide();
+              });
+              list.appendChild(li);
+            });
+            list.hidden = false;
+          } catch (e) {
+            if (n === seq) hide();
+          }
+        })();
+      }, 450);
+    });
+    input.addEventListener("blur", function () { setTimeout(hide, 200); });
+    input.addEventListener("keydown", function (e) { if (e.key === "Escape") hide(); });
+  }
   function formatOutreachStage(stage) {
     if (stage === "await_supplier") return "Awaiting your response";
     return String(stage || "").replace(/_/g, " ") || "";
@@ -442,17 +496,14 @@
 
     const step = steps[stepIdx];
     if (step.type === "brief") {
-      const fileBtnLabel = onboardData.briefFileName ? escapeHtml(onboardData.briefFileName) : "Upload .txt or .md";
+      const fileBtnLabel = onboardData.briefFileName ? escapeHtml(onboardData.briefFileName) : "Project files";
       const htmlB =
         '<div class="onboard-question"><h1 class="onboard-title">' + step.title + "</h1>" +
         (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
         '<div class="onboard-form onboard-brief">' +
         '<div class="onboard-field"><input class="onboard-input" type="url" id="onboard-brief-url" name="onboard-brief-url" value="' +
         escapeAttr(onboardData.briefUrl || "") +
-        '" autocomplete="url" /></div>' +
-        '<div class="onboard-field"><textarea class="onboard-textarea onboard-brief-paste" id="onboard-brief-text" rows="3">' +
-        escapeHtml(onboardData.briefText && onboardData.briefSource !== "file" ? onboardData.briefText : "") +
-        "</textarea></div>" +
+        '" placeholder="Chat link" autocomplete="url" /></div>' +
         '<div class="onboard-field onboard-brief-upload-field">' +
         '<input class="onboard-brief-file-input" type="file" id="onboard-brief-file" accept=".txt,.md,text/plain" hidden />' +
         '<button type="button" class="onboard-brief-file-btn" id="onboard-brief-file-btn">' + fileBtnLabel + "</button></div></div>" +
@@ -473,19 +524,15 @@
         });
       $("onboard-back")?.addEventListener("click", function () {
         var u = $("onboard-brief-url");
-        var tx = $("onboard-brief-text");
         if (u) onboardData.briefUrl = (u.value || "").trim();
-        if (tx) onboardData.briefText = (tx.value || "").trim();
         onboardStep--;
         renderOnboardStep();
       });
       $("onboard-next")?.addEventListener("click", function () {
         (async function () {
           const urlEl = $("onboard-brief-url");
-          const textEl = $("onboard-brief-text");
           const fileEl = $("onboard-brief-file");
           const u = (urlEl && urlEl.value ? urlEl.value : "").trim();
-          const pasted = (textEl && textEl.value ? textEl.value : "").trim();
           var file = fileEl && fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
           onboardData.briefUrl = u;
           if (file) {
@@ -497,12 +544,8 @@
             }
             onboardData.briefSource = "file";
             onboardData.briefFileName = file.name;
-          } else if (pasted) {
-            onboardData.briefText = pasted;
-            onboardData.briefSource = "text";
-            onboardData.briefFileName = "";
           } else if (onboardData.briefSource === "file" && (onboardData.briefText || "").trim()) {
-            /* file chosen earlier this session; input may clear after back nav */
+            /* file kept from earlier step; file input may be empty after back */
           } else {
             onboardData.briefText = "";
             onboardData.briefFileName = "";
@@ -510,7 +553,7 @@
           }
           var hasBody = (onboardData.briefText || "").trim();
           if (!u && !hasBody) {
-            alert("Add a link, paste your chat, or choose a file.");
+            alert("Add a chat link or choose project files.");
             return;
           }
           onboardStep++;
@@ -554,6 +597,8 @@
       onboardStep--;
       renderOnboardStep();
     });
+    const locIn = stage.querySelector('input.onboard-input[data-key="location"]');
+    if (locIn) wireLocationAutocomplete(locIn);
     const firstInput = stage.querySelector(".onboard-input");
     if (firstInput) setTimeout(() => firstInput.focus(), 100);
   }
@@ -676,6 +721,8 @@
         <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
       </div></div>`;
     wireThemePills(root);
+    var settingsLoc = $("settings-location");
+    if (settingsLoc) wireLocationAutocomplete(settingsLoc);
     $("settings-save")?.addEventListener("click", saveSettings);
     $("settings-delete-profile")?.addEventListener("click", async () => {
       if (!confirm("Delete your profile? It will be moved to the admin bin. You can ask support to restore it.")) return;
@@ -1443,6 +1490,8 @@
         <button type="button" class="btn-danger" id="fp-delete-profile">Delete my profile</button>
       </div></div>`;
     wireThemePills(root);
+    var fpLoc = $("fp-location");
+    if (fpLoc) wireLocationAutocomplete(fpLoc);
     $("fp-save")?.addEventListener("click", async () => {
       const g = (k) => ($(`fp-${k}`)?.value || "").trim();
       const saved = $("fp-saved");

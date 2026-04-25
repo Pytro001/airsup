@@ -287,7 +287,6 @@ html[data-theme="dark"] .site-logo img {
 .onboard-textarea { resize: vertical; min-height: 80px; line-height: 1.5; font-family: inherit; }
 .onboard-actions { display: flex; gap: 12px; margin-top: 12px; }
 .onboard-brief { gap: 14px; }
-.onboard-brief .onboard-brief-paste { min-height: 72px; max-height: 120px; resize: vertical; }
 .onboard-brief-file-btn {
   display: block; width: 100%; box-sizing: border-box;
   padding: 12px 14px; font-size: 15px; line-height: 1.4; font-family: inherit; text-align: left;
@@ -299,6 +298,29 @@ html[data-theme="dark"] .site-logo img {
 .onboard-brief-file-btn:hover { border-color: var(--text-soft); }
 .onboard-brief-file-btn:focus { outline: none; border-color: var(--primary); }
 .onboard-brief-upload-field { margin: 0; }
+
+/* Location autocomplete (Nominatim / optional pick, free text allowed) */
+.location-autocomplete-field { position: relative; }
+.location-autocomplete-suggestions {
+  position: absolute;
+  left: 0; right: 0; top: 100%;
+  z-index: 30;
+  list-style: none;
+  margin: 4px 0 0 0; padding: 0;
+  max-height: 220px; overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+}
+.location-autocomplete-item {
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--text);
+  cursor: pointer;
+}
+.location-autocomplete-item:hover { background: var(--bg-subtle); }
 
 .onboard-skip {
   font-size: 14px; color: var(--text-muted); padding: 12px 0;
