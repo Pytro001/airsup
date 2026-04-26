@@ -266,7 +266,7 @@
         <input type="tel" class="lp-email-input" id="lp-phone" placeholder="+1 555 000 0000" autocomplete="tel" />
       </div>
       <div class="lp-login-row" style="margin-top:8px;">
-        <input type="password" class="lp-email-input" id="lp-pin" placeholder="PIN" maxlength="30" autocomplete="current-password" style="max-width:130px;" />
+        <input type="password" class="lp-email-input" id="lp-pin" placeholder="PIN (6+)" minlength="6" maxlength="64" autocomplete="current-password" style="max-width:130px;" />
         <button type="button" class="lp-email-btn" id="lp-send-btn">Login</button>
       </div>
       <p class="lp-login-msg" id="lp-login-msg"></p>
@@ -381,7 +381,7 @@
       const phone = phoneInput.value.trim();
       const pin   = pinInput.value;
       if (!phone || phone.replace(/[^0-9]/g, "").length < 7) { showMsg("Enter a valid phone number with country code.", true); return; }
-      if (!pin || pin.length < 4) { showMsg("PIN must be at least 4 characters.", true); return; }
+      if (!pin || pin.length < 6) { showMsg("PIN must be at least 6 characters.", true); return; }
       if (!sb) { showMsg("Not configured.", true); return; }
       sendBtn.disabled = true;
       sendBtn.textContent = "Signing in…";

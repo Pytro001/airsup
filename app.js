@@ -571,7 +571,7 @@
     const phone = (phoneRaw || "").trim();
     const digits = phoneDigits(phone);
     if (digits.length < 7) { return { error: "Use a full phone number with country code (at least 7 digits)." }; }
-    if (!pin || String(pin).length < 4) { return { error: "PIN must be at least 4 characters." }; }
+    if (!pin || String(pin).length < 6) { return { error: "PIN must be at least 6 characters." }; }
     if (String(pin) !== String(pinConfirm)) { return { error: "PINs do not match." }; }
 
     const email = phoneToFakeEmail(phone);
@@ -852,16 +852,15 @@
         "</h1>" +
         (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
         '<div class="onboard-form">' +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin-phone">Phone (same as previous step, with country code)</label>' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin-phone">Phone</label>' +
         '<input class="onboard-input" type="tel" id="onboard-pin-phone" autocomplete="tel" value="' +
         escapeAttr(pphone) +
         '" required /></div>' +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin">PIN (min. 4 characters)</label>' +
-        '<input class="onboard-input" type="password" id="onboard-pin" minlength="4" maxlength="64" autocomplete="new-password" required /></div>' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin">PIN (min. 6 characters)</label>' +
+        '<input class="onboard-input" type="password" id="onboard-pin" minlength="6" maxlength="64" autocomplete="new-password" required /></div>' +
         '<div class="onboard-field"><label class="onboard-label" for="onboard-pin2">Confirm PIN</label>' +
-        '<input class="onboard-input" type="password" id="onboard-pin2" minlength="4" maxlength="64" autocomplete="new-password" required /></div>' +
+        '<input class="onboard-input" type="password" id="onboard-pin2" minlength="6" maxlength="64" autocomplete="new-password" required /></div>' +
         "</div>" +
-        '<p class="onboard-hint" style="font-size:14px;margin-top:4px;opacity:0.85">This becomes your password for Login on airsup.com &mdash; no SMS or email code.</p>' +
         '<p class="onboard-field-error" id="onboard-pin-error" role="status" hidden></p>' +
         '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
         '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
@@ -1159,8 +1158,8 @@
       <div class="settings-signin-block">
         <h3 class="settings-subh">Sign in from the home page</h3>
         ${signinIntro}
-        <div class="settings-field"><label class="settings-label" for="settings-signin-pin">New PIN (min. 4 characters)</label><input type="password" id="settings-signin-pin" class="settings-input" autocomplete="new-password" minlength="4" maxlength="64" /></div>
-        <div class="settings-field"><label class="settings-label" for="settings-signin-pin2">Confirm PIN</label><input type="password" id="settings-signin-pin2" class="settings-input" autocomplete="new-password" minlength="4" maxlength="64" /></div>
+        <div class="settings-field"><label class="settings-label" for="settings-signin-pin">New PIN (min. 6 characters)</label><input type="password" id="settings-signin-pin" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
+        <div class="settings-field"><label class="settings-label" for="settings-signin-pin2">Confirm PIN</label><input type="password" id="settings-signin-pin2" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
         <button type="button" class="btn-outline" id="settings-save-signin">Save sign-in (phone + PIN)</button>
       </div>
       <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
