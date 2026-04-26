@@ -410,9 +410,9 @@
   async function uploadChatFiles(fileList) {
     if (!fileList?.length) return { filenames: [], err: null };
     if (!supabaseClient) return { filenames: [], err: "Supabase not configured" };
-    const session = (await supabaseClient.auth.getSession()).data.session;
-    if (!session?.user) return { filenames: [], err: "Not signed in" };
-    const uid = session.user.id;
+    const { data: auth } = await supabaseClient.auth.getUser();
+    if (!auth?.user) return { filenames: [], err: "Not signed in" };
+    const uid = auth.user.id;
 
     var projectId = latestProjectId;
     if (!projectId) {
@@ -450,7 +450,7 @@
             " Create the \u201cproject-files\u201d bucket (run Supabase migration 009) and Storage policies (010/011).";
         } else if (/row-level security|RLS|permission denied|not authorized/i.test(msg)) {
           msg +=
-            " [Storage upload, Network tab: storage/v1/object/...] First path segment must be your user id; apply migrations 010 and 011.";
+            " [Storage] First path folder must be your user id. Apply Supabase migrations (010/011 and 018_storage_rls_jwt_sub).";
         }
         return { filenames: [], err: msg };
       }
@@ -487,9 +487,9 @@
     if (!v0.ok) return { filenames: [], err: v0.error };
     fileList = v0.files;
     if (!supabaseClient) return { filenames: [], err: "Supabase not configured" };
-    const session = (await supabaseClient.auth.getSession()).data.session;
-    if (!session?.user) return { filenames: [], err: "Not signed in" };
-    const uid = session.user.id;
+    const { data: auth } = await supabaseClient.auth.getUser();
+    if (!auth?.user) return { filenames: [], err: "Not signed in" };
+    const uid = auth.user.id;
     const names = [];
     for (var i = 0; i < fileList.length; i++) {
       var f = fileList[i];
@@ -513,7 +513,7 @@
             " Create the \u201cproject-files\u201d bucket (run Supabase migration 009) and Storage policies (010/011).";
         } else if (/row-level security|RLS|permission denied|not authorized/i.test(msg)) {
           msg +=
-            " [Storage] First path segment must be your user id; apply migrations 010 and 011.";
+            " [Storage] First path folder must be your user id. Apply Supabase migrations (010/011 and 018_storage_rls_jwt_sub).";
         }
         return { filenames: [], err: msg };
       }
@@ -1136,8 +1136,6 @@
     if (!root) return;
     if (!(await ensureSession())) { root.innerHTML = '<p class="settings-hint">Could not load session.</p>'; return; }
     root.innerHTML = '<p class="settings-hint">Loading\u2026</p>';
-    const { data: authNow } = await supabaseClient.auth.getUser();
-    const isAnon = authNow?.user?.is_anonymous === true;
     const { data: profile } = await supabaseClient.from("profiles").select("display_name, company, location, headline, bio, phone").eq("id", currentUser.id).maybeSingle();
     const { data: settings } = await supabaseClient.from("user_settings").select("phone, company, timezone").eq("user_id", currentUser.id).maybeSingle();
     const v = {
@@ -1146,9 +1144,6 @@
       location: profile?.location || "", headline: profile?.headline || "", bio: profile?.bio || "",
       timezone: settings?.timezone || "Europe/Berlin",
     };
-    const signinIntro = isAnon
-      ? "<p class=\"settings-hint\" id=\"settings-signin-hint\">Set a PIN below to use <strong>Login</strong> on the home page with the phone number in your profile. Without this, you can only use the browser you are in now.</p>"
-      : "<p class=\"settings-hint\" id=\"settings-signin-hint\">Set or change the PIN for <strong>Login</strong> on the home page. It must match the <strong>Phone / WhatsApp</strong> number above (same format as the home page: country code + number).</p>";
     root.innerHTML = `<div class="settings-section">
       ${[["Display name","displayName","text"],["Company","company","text"],["Phone / WhatsApp","phone","tel"],["Location","location","text"],["Timezone","timezone","text"]].map(([l,k,t]) =>
         `<div class="settings-field"><label class="settings-label">${l}</label><input type="${t}" id="settings-${k}" class="settings-input" value="${escapeAttr(v[k])}" /></div>`).join("")}
@@ -1156,8 +1151,6 @@
       <p class="settings-saved" id="settings-saved" hidden></p>
       <button type="button" class="btn-primary" id="settings-save">Save changes</button>
       <div class="settings-signin-block">
-        <h3 class="settings-subh">Sign in from the home page</h3>
-        ${signinIntro}
         <div class="settings-field"><label class="settings-label" for="settings-signin-pin">New PIN (min. 6 characters)</label><input type="password" id="settings-signin-pin" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
         <div class="settings-field"><label class="settings-label" for="settings-signin-pin2">Confirm PIN</label><input type="password" id="settings-signin-pin2" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
         <button type="button" class="btn-outline" id="settings-save-signin">Save sign-in (phone + PIN)</button>
@@ -1216,8 +1209,6 @@
     if (sp0) sp0.value = "";
     if (sp1) sp1.value = "";
     if (saved) { saved.hidden = false; saved.textContent = "Sign-in saved. You can use Login on the home page with this number and PIN."; saved.style.color = ""; setTimeout(function () { if (saved) saved.hidden = true; }, 5000); }
-    var h = $("settings-signin-hint");
-    if (h) { h.textContent = "You can use Login on the home page with the phone in your profile and the PIN you set. Change the PIN here anytime."; }
   }
 
   /* ══════════════════════════════════════
@@ -1452,12 +1443,7 @@
     const container = $("projects-list");
     try {
       const { project } = await apiCall(`/api/projects/${id}`);
-      var chatData = { messages: [] };
       var files = [];
-      try {
-        const ch = await apiCall("/api/chat/history?project_id=" + encodeURIComponent(id));
-        if (ch && ch.messages) chatData = ch;
-      } catch (_) { /* no chat */ }
       try {
         const fr = await apiCall(`/api/projects/${id}/files`);
         if (fr && fr.files) files = fr.files;
@@ -1508,14 +1494,12 @@
         '<div class="project-detail" data-project-id="' +
         escapeAttr(id) +
         '">' +
-        '<button type="button" class="btn-outline project-detail-back" id="project-detail-back">\u2190 Back to projects</button>' +
         overview +
         buildRequirementsSection(project.requirements) +
         buildAiSummarySection(project.ai_summary, project.requirements) +
         buildMatchesSection(project.matches) +
         buildBriefSection(project) +
         filesHtml +
-        buildAirsupChatSection(chatData.messages) +
         "</div>";
 
       container.innerHTML = inner;
@@ -1541,10 +1525,6 @@
           }
         });
       }
-      $("project-detail-back")?.addEventListener("click", function (e) {
-        e.stopPropagation();
-        loadProjects();
-      });
     } catch (err) {
       if (container) {
         container.innerHTML =
@@ -1729,34 +1709,6 @@
     );
   }
 
-  function buildAirsupChatSection(messages) {
-    if (!Array.isArray(messages) || !messages.length) {
-      return (
-        '<section class="project-detail-section"><h3 class="project-detail-h">Chat with Airsup</h3><p class="project-detail-muted">No messages in this project\u2019s chat yet.</p></section>'
-      );
-    }
-    var blocks = messages.map(function (m) {
-      var isUser = m.role === "user";
-      var inner = isUser
-        ? escapeHtml(m.content || "")
-        : simpleMarkdown(m.content || "");
-      return (
-        '<div class="project-chat-msg project-chat-msg--' +
-        (isUser ? "user" : "assistant") +
-        '"><div class="project-chat-role">' +
-        (isUser ? "You" : "Airsup") +
-        "</div><div class=\"project-chat-body\">" +
-        inner +
-        "</div></div>"
-      );
-    });
-    return (
-      '<section class="project-detail-section"><h3 class="project-detail-h">Chat with Airsup</h3><div class="project-airsup-chat-log">' +
-        blocks.join("") +
-        "</div></section>"
-    );
-  }
-
   /* ══════════════════════════════════════
      CONNECTIONS
      ══════════════════════════════════════ */
@@ -1931,7 +1883,7 @@
     const rows = (visitsMatchesCache || []).filter((m) => m.status !== "cancelled" && m.status !== "disputed");
     if (!rows.length) {
       form.innerHTML =
-        '<p class="projects-empty">No connections yet. Create a project and match with suppliers to plan visits.</p>';
+        '<p class="projects-empty">We connect you right now with suppliers. As soon as you are connected you will see a visit plan in here.</p>';
       return;
     }
     form.innerHTML =
@@ -2121,8 +2073,9 @@
           }
         });
       });
-    } catch (_) {
-      cal.innerHTML = '<p class="projects-empty">Could not load visit plans.</p>';
+    } catch (e) {
+      console.error("loadVisitPlans failed", e);
+      cal.innerHTML = "";
     }
   }
 

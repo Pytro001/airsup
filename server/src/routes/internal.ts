@@ -16,7 +16,7 @@ export const internalRouter = Router();
  * - CRON_SECRET: Vercel project env; cron requests include Authorization: Bearer <CRON_SECRET>
  * - SUPABASE_SERVICE_ROLE_KEY: service_role key (not anon); required for admin DB + Storage signing
  * - ANTHROPIC_API_KEY: intake, search scoring, negotiation, match intros
- * - Apply Supabase migrations through 012 (supplier outreach RLS, storage 011, etc.)
+ * - Apply Supabase migrations through 018+ (Storage RLS 018_storage_rls_jwt_sub, etc.)
  * - Local / non-Vercel: server/src/index.ts runs startWorker(); or set RUN_JOB_POLL_AFTER_SEARCH=1 so intake can trigger runJobPollOnce after search_factories
  */
 function authorizeCron(req: { headers: { authorization?: string } }): boolean {
