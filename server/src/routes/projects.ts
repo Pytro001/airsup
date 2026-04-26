@@ -5,6 +5,8 @@ import { supabaseAdmin } from "../services/supabase.js";
 import { listFilesForProjectWithUrls, registerProjectFileRecord } from "../lib/project-files.js";
 import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
 import { runJobPollOnce } from "../jobs/poll.js";
+import { ingestRegisteredProjectFile, ingestRawTextIntoProject, reingestPendingProjectFiles } from "../lib/project-brief-ingest.js";
+import { fetchChatShare, UnsupportedShareError, detectProvider } from "../lib/chat-share.js";
 
 export const projectsRouter = Router();
 
@@ -182,11 +184,105 @@ projectsRouter.post("/:id/register-file", requireAuth, async (req: AuthRequest, 
     return;
   }
 
+  let ingestNote: string | undefined;
+  const ingestRes = await ingestRegisteredProjectFile(
+    userId,
+    projectId,
+    result.id,
+    body.storage_path.trim(),
+    body.filename.trim(),
+    typeof body.mime_type === "string" ? body.mime_type : ""
+  );
+  if (!ingestRes.ok) ingestNote = ingestRes.error;
+
   res.json({
     id: result.id,
     filename: body.filename.trim(),
     signed_url: result.signed_url,
+    ingest: ingestRes.ok ? "ok" : "skipped",
+    ingest_note: ingestNote,
   });
+});
+
+/** Re-run text extraction for project_files rows not yet merged into the project brief (e.g. DOCX after bootstrap). */
+projectsRouter.post("/:id/reingest-files", requireAuth, async (req: AuthRequest, res: Response) => {
+  const projectId = req.params.id;
+  const userId = req.userId!;
+  const { data: p } = await supabaseAdmin.from("projects").select("id").eq("id", projectId).eq("user_id", userId).maybeSingle();
+  if (!p) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  const { processed } = await reingestPendingProjectFiles(userId, projectId);
+  res.json({ ok: true, processed });
+});
+
+/** Merge a public GPT/Claude/Grok share into this project (same account); does not create a new project. */
+projectsRouter.post("/:id/import-chat-link", requireAuth, async (req: AuthRequest, res: Response) => {
+  const projectId = req.params.id;
+  const userId = req.userId!;
+  const body = (req.body || {}) as { url?: string; label?: string };
+  const url = typeof body.url === "string" ? body.url.trim() : "";
+  if (!url) {
+    res.status(400).json({ error: "url is required" });
+    return;
+  }
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    res.status(400).json({ error: "Invalid URL" });
+    return;
+  }
+  if (detectProvider(u) === "unknown") {
+    res.status(400).json({ error: "Use a public share link from ChatGPT, Claude, or Grok." });
+    return;
+  }
+
+  const { data: p } = await supabaseAdmin.from("projects").select("id").eq("id", projectId).eq("user_id", userId).maybeSingle();
+  if (!p) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+
+  let raw = "";
+  try {
+    const { text } = await fetchChatShare(url);
+    raw = text;
+  } catch (e) {
+    if (e instanceof UnsupportedShareError) {
+      res.status(422).json({ error: e.message });
+      return;
+    }
+    console.error("[projects] import-chat-link fetchChatShare:", e);
+    res.status(500).json({ error: e instanceof Error ? e.message : "Could not load share link" });
+    return;
+  }
+  if (!raw.trim()) {
+    res.status(400).json({ error: "No text could be loaded from that link." });
+    return;
+  }
+
+  const label = (body.label && String(body.label).trim().slice(0, 120)) || "Chat link";
+  const out = await ingestRawTextIntoProject(userId, projectId, raw, `${label} · ${url}`);
+  if (!out.ok) {
+    res.status(500).json({ error: out.error });
+    return;
+  }
+
+  const { error: srcErr } = await supabaseAdmin
+    .from("projects")
+    .update({
+      brief_source_type: "url",
+      brief_source_url: url,
+    })
+    .eq("id", projectId)
+    .eq("user_id", userId);
+  if (srcErr) {
+    console.error("[projects] import-chat-link brief_source update:", srcErr);
+  }
+
+  res.json({ ok: true });
 });
 
 projectsRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) => {

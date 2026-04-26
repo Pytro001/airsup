@@ -634,6 +634,13 @@ html[data-theme="dark"] .project-status-text--connected { color: #4ade80; }
 .project-chat-body p:last-child { margin-bottom: 0; }
 .project-files-block.project-detail-section { margin-top: 24px; }
 .project-files-block .project-files-list { margin-top: 4px; }
+.project-chatlink-block.project-detail-section { margin-top: 24px; }
+.project-chatlink-row {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 10px;
+}
+.project-chatlink-label { flex: 0 1 140px; min-width: 100px; }
+.project-chatlink-url { flex: 1 1 220px; min-width: 160px; }
+.project-chatlink-block #project-chatlink-msg { margin-top: 8px; }
 
 .projects-empty {
   text-align: center; padding: 80px 24px;

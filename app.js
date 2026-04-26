@@ -89,6 +89,34 @@
     }
   }
 
+  const formFlashTimers = {};
+  /** Inline status text; replaces browser alert/confirm feedback. */
+  function setFormFlash(elementId, text, isError, autoHideMs) {
+    const el = $(elementId);
+    if (!el) return;
+    if (formFlashTimers[elementId]) {
+      clearTimeout(formFlashTimers[elementId]);
+      formFlashTimers[elementId] = 0;
+    }
+    if (text == null || text === "") {
+      el.hidden = true;
+      el.textContent = "";
+      el.style.color = "";
+      return;
+    }
+    el.hidden = false;
+    el.textContent = text;
+    el.style.color = isError ? "#d93025" : "";
+    if (autoHideMs && !isError) {
+      formFlashTimers[elementId] = setTimeout(function () {
+        el.hidden = true;
+        el.textContent = "";
+        el.style.color = "";
+        formFlashTimers[elementId] = 0;
+      }, autoHideMs);
+    }
+  }
+
   /** Centered overlay; returns true if user confirms. Replaces native confirm() for consistent UI. */
   function showConfirmDialog(message, options) {
     options = options || {};
@@ -1122,6 +1150,9 @@
     if (hasFiles && projectId) {
       const up = await uploadFilesToProject(projectId, files);
       if (up.err) throw new Error(up.err);
+      try {
+        await apiCall("/api/projects/" + encodeURIComponent(projectId) + "/reingest-files", { method: "POST", body: "{}" });
+      } catch (_) { /* each register-file may have already ingested */ }
     }
     if (projectId) latestProjectId = projectId;
     onboardingProjectFiles = [];
@@ -1175,7 +1206,7 @@
         await supabaseClient.auth.signOut();
         window.location.href = "/";
       } catch (err) {
-        alert("Could not delete profile: " + (err.message || String(err)));
+        if ($("settings-saved")) { $("settings-saved").hidden = false; $("settings-saved").textContent = "Could not delete: " + (err.message || String(err)); $("settings-saved").style.color = "#d93025"; }
       }
     });
   }
@@ -1197,10 +1228,13 @@
     const phone = ($("settings-phone")?.value || "").trim();
     const p1 = ($("settings-signin-pin")?.value) || "";
     const p2 = ($("settings-signin-pin2")?.value) || "";
-    if (!phone) { window.alert("Enter your phone number in the \u201cPhone / WhatsApp\u201d field first."); return; }
+    if (!phone) {
+      if ($("settings-saved")) { $("settings-saved").hidden = false; $("settings-saved").textContent = "Add your phone in Phone / WhatsApp first."; $("settings-saved").style.color = "#d93025"; }
+      return;
+    }
     const saved = $("settings-saved");
     const r = await applyPhonePinSignIn(phone, p1, p2);
-    if (r.error) { window.alert(r.error); return; }
+    if (r.error) { if (saved) { saved.hidden = false; saved.textContent = r.error; saved.style.color = "#d93025"; } return; }
     const { error: e1 } = await supabaseClient.from("profiles").update({ phone }).eq("id", currentUser.id);
     const { error: e2 } = await supabaseClient.from("user_settings").update({ phone }).eq("user_id", currentUser.id);
     if (e1 || e2) { if (saved) { saved.hidden = false; saved.textContent = "Sign-in updated but profile phone save failed. " + (e1?.message || e2?.message || ""); saved.style.color = "#d93025"; } return; }
@@ -1417,6 +1451,7 @@
 
   /* ── Projects ── */
   async function loadProjects() {
+    setFormFlash("project-list-flash", "", false);
     const container = $("projects-list");
     try {
       const { projects } = await apiCall("/api/projects");
@@ -1440,14 +1475,19 @@
   }
 
   async function loadProjectDetail(id) {
+    setFormFlash("project-list-flash", "", false);
     const container = $("projects-list");
     try {
       const { project } = await apiCall(`/api/projects/${id}`);
       var files = [];
+      var filesLoadError = null;
       try {
         const fr = await apiCall(`/api/projects/${id}/files`);
         if (fr && fr.files) files = fr.files;
-      } catch (_) { /* no files */ }
+      } catch (fe) {
+        filesLoadError = (fe && fe.message) || "Could not load files.";
+      }
+      if (filesLoadError) setFormFlash("project-list-flash", filesLoadError, true);
 
       var fileItems = files.length
         ? files
@@ -1499,6 +1539,12 @@
         buildAiSummarySection(project.ai_summary, project.requirements) +
         buildMatchesSection(project.matches) +
         buildBriefSection(project) +
+        '<section class="project-detail-section project-chatlink-block"><h3 class="project-detail-h">Add chat link</h3>' +
+        '<p class="project-detail-muted">Grok, ChatGPT, or Claude share URL.</p>' +
+        '<div class="project-chatlink-row"><input type="text" id="project-chatlink-label" class="settings-input project-chatlink-label" placeholder="Label" maxlength="120" />' +
+        '<input type="url" id="project-chatlink-url" class="settings-input project-chatlink-url" placeholder="https://..." />' +
+        '<button type="button" class="btn-primary" id="project-chatlink-save">Add link</button></div>' +
+        '<p id="project-chatlink-msg" class="form-message" role="status" hidden></p></section>' +
         filesHtml +
         "</div>";
 
@@ -1517,14 +1563,42 @@
           if (!(await ensureSession())) return;
           const up = await uploadFilesToProject(id, raw);
           if (up.err) {
-            window.alert(up.err);
+            setFormFlash("project-list-flash", up.err, true);
             return;
           }
           if (up.filenames && up.filenames.length) {
+            try {
+              await apiCall("/api/projects/" + encodeURIComponent(id) + "/reingest-files", { method: "POST", body: "{}" });
+            } catch (_) { /* register-file may have already ingested */ }
             loadProjectDetail(id);
           }
         });
       }
+      $("project-chatlink-save")?.addEventListener("click", async function () {
+        var urlIn = $("project-chatlink-url");
+        var labIn = $("project-chatlink-label");
+        var msgEl = $("project-chatlink-msg");
+        var u = urlIn && (urlIn.value || "").trim();
+        if (!u) {
+          if (msgEl) { msgEl.hidden = false; msgEl.textContent = "Paste a share URL."; msgEl.style.color = "#d93025"; }
+          return;
+        }
+        if (!(await ensureSession())) return;
+        var lab = (labIn && (labIn.value || "").trim()) || "";
+        if (msgEl) { msgEl.hidden = false; msgEl.textContent = "Importing\u2026"; msgEl.style.color = ""; }
+        try {
+          await apiCall("/api/projects/" + encodeURIComponent(id) + "/import-chat-link", {
+            method: "POST",
+            body: JSON.stringify({ url: u, label: lab || undefined }),
+          });
+          if (urlIn) urlIn.value = "";
+          if (labIn) labIn.value = "";
+          if (msgEl) { msgEl.textContent = "Saved."; msgEl.style.color = ""; setTimeout(function () { if (msgEl) msgEl.hidden = true; }, 3000); }
+          loadProjectDetail(id);
+        } catch (e) {
+          if (msgEl) { msgEl.hidden = false; msgEl.textContent = (e && e.message) || "Import failed."; msgEl.style.color = "#d93025"; }
+        }
+      });
     } catch (err) {
       if (container) {
         container.innerHTML =
@@ -2013,12 +2087,12 @@
         btn.addEventListener("click", async function () {
           var id = btn.getAttribute("data-visit-delete");
           if (!id || !(await ensureSession())) return;
-          if (!window.confirm("Delete this visit day?")) return;
           try {
             await apiCall("/api/visits/" + encodeURIComponent(id), { method: "DELETE" });
+            setFormFlash("visit-plan-message", "Visit day removed.", false, 4000);
             await loadVisitPlans();
           } catch (e) {
-            window.alert(e && e.message ? e.message : "Delete failed.");
+            setFormFlash("visit-plan-message", e && e.message ? e.message : "Delete failed.", true);
           }
         });
       });
@@ -2040,7 +2114,7 @@
             if (mark) { mark.hidden = false; mark.classList.remove("is-saving"); }
           } catch (e) {
             if (mark) { mark.classList.remove("is-saving"); }
-            window.alert(e && e.message ? e.message : "Save failed.");
+            setFormFlash("visit-plan-message", e && e.message ? e.message : "Save failed.", true);
           }
         });
       });
@@ -2055,7 +2129,7 @@
             await apiCall("/api/visits/" + encodeURIComponent(id) + "/submit-confirmation", { method: "POST", body: "{}" });
             await loadVisitPlans();
           } catch (e) {
-            window.alert(e && e.message ? e.message : "Could not send.");
+            setFormFlash("visit-plan-message", e && e.message ? e.message : "Could not send.", true);
             (btn).textContent = prev;
             (btn).disabled = false;
           }
@@ -2069,7 +2143,7 @@
             await apiCall("/api/visits/stops/" + encodeURIComponent(sid) + "/buyer-confirm-counter", { method: "POST", body: "{}" });
             await loadVisitPlans();
           } catch (e) {
-            window.alert(e && e.message ? e.message : "Could not confirm.");
+            setFormFlash("visit-plan-message", e && e.message ? e.message : "Could not confirm.", true);
           }
         });
       });
@@ -2235,6 +2309,7 @@
   /* ── Supplier Dashboard ── */
   async function loadSupplierDashboard() {
     if (!supabaseClient || !currentUser) return;
+    setFormFlash("supplier-dash-flash", "", false);
     const stats = $("supplier-stats");
     const briefs = $("supplier-briefs");
     const active = $("supplier-active");
@@ -2290,7 +2365,7 @@
               await apiCall(`/api/outreach/${id}/accept`, { method: "POST", body: "{}" });
               await loadSupplierDashboard();
             } catch (e) {
-              alert(e.message || "Could not accept brief");
+              setFormFlash("supplier-dash-flash", e.message || "Could not accept brief.", true);
             }
           });
         });
@@ -2302,7 +2377,7 @@
               await apiCall(`/api/outreach/${id}/decline`, { method: "POST", body: "{}" });
               await loadSupplierDashboard();
             } catch (e) {
-              alert(e.message || "Could not decline brief");
+              setFormFlash("supplier-dash-flash", e.message || "Could not decline brief.", true);
             }
           });
         });
@@ -2377,7 +2452,7 @@
                 await apiCall("/api/visits/stops/" + encodeURIComponent(id) + "/supplier-accept", { method: "POST", body: "{}" });
                 await loadSupplierDashboard();
               } catch (e) {
-                window.alert((e && e.message) || "Failed");
+                setFormFlash("supplier-dash-flash", (e && e.message) || "Failed.", true);
               }
             });
           });
@@ -2391,7 +2466,7 @@
               var proposed = (pt && pt.value) || "";
               var msg = (pmsg && pmsg.value) || "";
               if (!proposed.trim()) {
-                window.alert("Enter a suggested time or time window.");
+                setFormFlash("supplier-dash-flash", "Enter a suggested time or time window.", true);
                 return;
               }
               try {
@@ -2401,7 +2476,7 @@
                 });
                 await loadSupplierDashboard();
               } catch (e) {
-                window.alert((e && e.message) || "Failed");
+                setFormFlash("supplier-dash-flash", (e && e.message) || "Failed.", true);
               }
             });
           });
@@ -2464,6 +2539,7 @@
   }
 
   async function loadAdminOverview() {
+    setFormFlash("admin-flash", "", false);
     const stats = $("admin-stats");
     const custEl = $("admin-customers");
     const facEl = $("admin-factories");
@@ -2555,19 +2631,25 @@
       }).join("");
     }
 
-    // Wire up delete buttons (soft-delete -> move to bin)
+    // Wire up delete buttons (soft-delete -> bin; no confirm — restore from Bin below)
     document.querySelectorAll(".admin-delete-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const type = btn.getAttribute("data-type");
         const id = btn.getAttribute("data-id");
-        const label = type === "customer" ? "customer" : "factory";
-        if (!confirm(`Move this ${label} to the bin? You can restore or permanently delete it from the bin.`)) return;
+        const pathKind = type === "customer" ? "customers" : "factories";
+        if (!id) return;
         try {
-          await fetch(`${API_BASE}/api/admin/${label === "customer" ? "customers" : "factories"}/${id}`, { method: "DELETE" });
-          btn.closest(".project-card")?.remove();
+          const res = await fetch(`${API_BASE}/api/admin/${pathKind}/${encodeURIComponent(id)}`, { method: "DELETE" });
+          const j = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setFormFlash("admin-flash", (j && j.error) || "Could not move to bin.", true);
+            return;
+          }
+          await loadAdminOverview();
+          setFormFlash("admin-flash", "Moved to bin.", false, 4000);
         } catch (err) {
-          alert("Could not delete: " + (err.message || String(err)));
+          setFormFlash("admin-flash", err instanceof Error ? err.message : "Could not move to bin.", true);
         }
       });
     });
@@ -2614,9 +2696,19 @@
           const type = btn.getAttribute("data-type");
           const id = btn.getAttribute("data-id");
           const path = type === "customer" ? "customers" : "factories";
-          await fetch(`${API_BASE}/api/admin/bin/${path}/${id}/restore`, { method: "POST" });
-          await loadAdminBin();
-          await loadAdminOverview();
+          if (!id) return;
+          try {
+            const res = await fetch(`${API_BASE}/api/admin/bin/${path}/${encodeURIComponent(id)}/restore`, { method: "POST" });
+            const j = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              setFormFlash("admin-flash", (j && j.error) || "Could not restore.", true);
+              return;
+            }
+            await loadAdminOverview();
+            setFormFlash("admin-flash", "Restored.", false, 4000);
+          } catch (err) {
+            setFormFlash("admin-flash", err instanceof Error ? err.message : "Could not restore.", true);
+          }
         });
       });
 
@@ -2624,10 +2716,20 @@
         btn.addEventListener("click", async () => {
           const type = btn.getAttribute("data-type");
           const id = btn.getAttribute("data-id");
-          if (!confirm("Permanently delete? This cannot be undone.")) return;
           const path = type === "customer" ? "customers" : "factories";
-          await fetch(`${API_BASE}/api/admin/bin/${path}/${id}`, { method: "DELETE" });
-          await loadAdminBin();
+          if (!id) return;
+          try {
+            const res = await fetch(`${API_BASE}/api/admin/bin/${path}/${encodeURIComponent(id)}`, { method: "DELETE" });
+            const j = await res.json().catch(() => ({}));
+            if (!res.ok) {
+              setFormFlash("admin-flash", (j && j.error) || "Could not delete.", true);
+              return;
+            }
+            await loadAdminOverview();
+            setFormFlash("admin-flash", "Deleted permanently.", false, 4000);
+          } catch (err) {
+            setFormFlash("admin-flash", err instanceof Error ? err.message : "Could not delete.", true);
+          }
         });
       });
     } catch (err) {
@@ -2692,7 +2794,8 @@
         await supabaseClient.auth.signOut();
         window.location.href = "/";
       } catch (err) {
-        alert("Could not delete profile: " + (err.message || String(err)));
+        const saved = $("fp-saved");
+        if (saved) { saved.hidden = false; saved.textContent = "Could not delete: " + (err.message || String(err)); saved.style.color = "#d93025"; }
       }
     });
   }
