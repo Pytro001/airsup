@@ -52,6 +52,9 @@ export type PlanResult = {
         location_zh: string;
         amap_url?: string;
         project_title: string;
+        /** GCJ-02 when from Amap / geocode; use for 高德 static map. */
+        lat: number | null;
+        lng: number | null;
       }>;
     };
     stops: Array<{
@@ -63,6 +66,8 @@ export type PlanResult = {
       amapUrl?: string;
       projectTitle: string;
       notes?: string;
+      lat?: number;
+      lng?: number;
     }>;
   }>;
   warnings: string[];
@@ -196,7 +201,7 @@ export async function loadExistingVisitBusyIntervals(
 ): Promise<ExistingStop[]> {
   const { data, error } = await supabaseAdmin
     .from("visit_plans")
-    .select("travel_date, visit_stops(scheduled_time)")
+    .select("travel_date, visit_stops(scheduled_time, confirmation_status)")
     .eq("user_id", userId)
     .gte("travel_date", fromDate)
     .lte("travel_date", toDate);
@@ -206,9 +211,13 @@ export async function loadExistingVisitBusyIntervals(
     return [];
   }
   const out: ExistingStop[] = [];
-  for (const p of data as Array<{ travel_date: string; visit_stops: Array<{ scheduled_time: string | null }> | null }>) {
+  for (const p of data as Array<{
+    travel_date: string;
+    visit_stops: Array<{ scheduled_time: string | null; confirmation_status?: string }> | null;
+  }>) {
     const day = p.travel_date;
     for (const s of p.visit_stops || []) {
+      if (s.confirmation_status && s.confirmation_status !== "confirmed") continue;
       const t = s.scheduled_time;
       if (!t || typeof t !== "string") continue;
       const m = t.match(/^(\d{1,2}):(\d{2})/);
@@ -603,6 +612,8 @@ export async function planVisits(
         amapUrl,
         projectTitle: f.projectTitle,
         notes: noteFromAi || undefined,
+        lat: f.lat,
+        lng: f.lng,
       });
     }
 
@@ -629,13 +640,18 @@ export async function planVisits(
           project_titles: projectTitles,
           factory_ids: fids,
           amap: routeOrdered.some((r) => r.useAmapRouting) && hasAmapConfigured(),
-          stop_details: stopsOut.map((s) => ({
-            factory_id: s.factoryId,
-            match_id: s.matchId,
-            location_zh: s.locationZh,
-            amap_url: s.amapUrl,
-            project_title: s.projectTitle,
-          })),
+          stop_details: stopsOut.map((s) => {
+            const has = s.lat != null && s.lng != null;
+            return {
+              factory_id: s.factoryId,
+              match_id: s.matchId,
+              location_zh: s.locationZh,
+              amap_url: s.amapUrl,
+              project_title: s.projectTitle,
+              lat: has ? s.lat! : null,
+              lng: has ? s.lng! : null,
+            };
+          }),
         },
       })
       .select("id")
@@ -653,6 +669,7 @@ export async function planVisits(
         scheduled_time: stop.time,
         status: "planned",
         notes: stop.notes || "",
+        confirmation_status: "draft",
       });
       if (serr) {
         await supabaseAdmin.from("visit_plans").delete().eq("id", plan.id);
@@ -674,13 +691,18 @@ export async function planVisits(
         factory_ids: fids,
         amap: routeOrdered.some((r) => r.useAmapRouting) && hasAmapConfigured(),
         warnings: routeWarnings,
-        stop_details: stopsOut.map((s) => ({
-          factory_id: s.factoryId,
-          match_id: s.matchId,
-          location_zh: s.locationZh,
-          amap_url: s.amapUrl,
-          project_title: s.projectTitle,
-        })),
+        stop_details: stopsOut.map((s) => {
+          const has = s.lat != null && s.lng != null;
+          return {
+            factory_id: s.factoryId,
+            match_id: s.matchId,
+            location_zh: s.locationZh,
+            amap_url: s.amapUrl,
+            project_title: s.projectTitle,
+            lat: has ? s.lat! : null,
+            lng: has ? s.lng! : null,
+          };
+        }),
       },
       stops: stopsOut,
     });

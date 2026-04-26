@@ -3,8 +3,10 @@
  *
  * Set supabaseAnonKey here OR use config.local.js (see config.local.example.js).
  *
- * No login UI. The app uses Supabase Anonymous sign-ins for a silent session:
+ * The app starts with Supabase Anonymous sign-in, then users set phone + PIN (onboarding
+ * or Settings) so the home page can sign them in. Configure:
  * - Authentication → Providers → Anonymous sign-ins → ON → Save.
+ * - (Recommended) Auth → signups: disable "Confirm email" for @login.airsup accounts.
  * - Run SQL migrations (003_platform_pivot.sql, 004_profile_trigger_names.sql) so new users get profiles rows.
  *
  * Dev-only: localStorage.setItem("airsup_supabase_anon_key", "<anon key>") then reload.

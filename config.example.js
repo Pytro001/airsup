@@ -12,4 +12,5 @@ window.AIRSUP_CONFIG = {
   supabaseUrl: "https://YOUR_PROJECT_REF.supabase.co",
   supabaseAnonKey: "YOUR_SUPABASE_ANON_KEY",
   apiUrl: "",  // leave empty for same-origin, or set to "http://localhost:3001" for local dev
+  // Visit page map images are built on the API with AMAP_WEB_KEY (server env), not here.
 };

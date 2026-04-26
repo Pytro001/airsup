@@ -3,6 +3,8 @@
 
   const API_BASE = window.AIRSUP_CONFIG?.apiUrl || "";
   const $ = (id) => document.getElementById(id);
+  /** Set true to show Chat in nav and /workspace#chat. Code paths stay; UI hidden when false. */
+  const CHAT_ENABLED = false;
 
   /* ── Supabase init ── */
   let supabaseClient = null;
@@ -41,7 +43,7 @@
     const letter = displayName.charAt(0).toUpperCase();
     await supabaseClient.from("profiles").upsert({ id: user.id, display_name: displayName, avatar_letter: letter }, { onConflict: "id" });
     await supabaseClient.from("user_settings").upsert({ user_id: user.id, preferred_name: displayName }, { onConflict: "user_id" });
-    currentUser = { id: user.id, email: user.email || "", displayName };
+    currentUser = { id: user.id, email: user.email || "", displayName, isAnonymous: anonymous };
     updateAuthUI();
   }
 
@@ -73,6 +75,19 @@
   /* ── Helpers ── */
   function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
   function escapeAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  /** One-line inline validation (onboarding), no browser alert. */
+  function setOnboardLineError(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    if (message) {
+      el.textContent = message;
+      el.hidden = false;
+    } else {
+      el.textContent = "";
+      el.hidden = true;
+    }
+  }
 
   /** Centered overlay; returns true if user confirms. Replaces native confirm() for consistent UI. */
   function showConfirmDialog(message, options) {
@@ -539,6 +554,54 @@
     } finally { sessionBootstrapLock = false; }
   }
 
+  /** Must match the home page (landingpage) login: fake email = digits + &quot;@login.airsup&quot; */
+  function phoneDigits(phone) {
+    return (phone == null ? "" : String(phone)).replace(/[^0-9]/g, "");
+  }
+  function phoneToFakeEmail(phone) {
+    return phoneDigits(phone) + "@login.airsup";
+  }
+
+  /**
+   * Binds the current session to phone + PIN (Supabase email + password) so the user can
+   * sign in from the landing page. Safe to call on anonymous or existing email users.
+   */
+  async function applyPhonePinSignIn(phoneRaw, pin, pinConfirm) {
+    if (!supabaseClient) return { error: "Not configured." };
+    const phone = (phoneRaw || "").trim();
+    const digits = phoneDigits(phone);
+    if (digits.length < 7) { return { error: "Use a full phone number with country code (at least 7 digits)." }; }
+    if (!pin || String(pin).length < 4) { return { error: "PIN must be at least 4 characters." }; }
+    if (String(pin) !== String(pinConfirm)) { return { error: "PINs do not match." }; }
+
+    const email = phoneToFakeEmail(phone);
+    const { data: ures, error: guErr } = await supabaseClient.auth.getUser();
+    if (guErr || !ures?.user) { return { error: "No active session. Reload and try again." }; }
+    const u = ures.user;
+    const meta = { ...(u.user_metadata || {}), phone };
+
+    var attrs;
+    if (u.is_anonymous) {
+      attrs = { email, password: String(pin), data: meta };
+    } else if (u.email && u.email.toLowerCase() === email.toLowerCase()) {
+      attrs = { password: String(pin), data: meta };
+    } else {
+      attrs = { email, password: String(pin), data: meta };
+    }
+
+    const { data, error } = await supabaseClient.auth.updateUser(attrs);
+    if (error) {
+      var m = String(error.message || "Could not save sign-in.");
+      if (/same\s+as\s+the\s+old\s+password/i.test(m)) { return { error: "Choose a new PIN, different from the old one." }; }
+      if (/already|registered|exists|user already/i.test(m)) {
+        return { error: "This phone is already used by another account. On the home page use Login with that number, or use a different phone in your profile." };
+      }
+      return { error: m };
+    }
+    if (data?.user) { await syncUserProfileFromAuth(data.user); }
+    return { ok: true };
+  }
+
   async function handleSignOut() {
     if (supabaseClient) await supabaseClient.auth.signOut();
     currentUser = null; userRole = null; onboardStep = 0; resetOnboardData();
@@ -565,7 +628,9 @@
     if (userRole === "supplier") {
       nav.innerHTML = '<button type="button" class="nav-link active" data-view="supplier-dashboard">Dashboard</button><button type="button" class="nav-link" data-view="supplier-profile">Factory profile</button>';
     } else {
-      nav.innerHTML = '<button type="button" class="nav-link active" data-view="chat">Chat</button><button type="button" class="nav-link" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections</button><button type="button" class="nav-link" data-view="visits">Visits</button>';
+      nav.innerHTML =
+        '<button type="button" class="nav-link active" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections</button><button type="button" class="nav-link" data-view="visit">Visit</button>' +
+        (CHAT_ENABLED ? '<button type="button" class="nav-link" data-view="chat">Chat</button>' : "");
     }
     nav.querySelectorAll(".nav-link").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -597,7 +662,7 @@
       if (profile?.headline === "supplier") {
         userRole = "supplier"; buildNav(); setView("supplier-dashboard");
       } else if (profile?.company || profile?.headline) {
-        userRole = "startup"; buildNav(); setView("chat");
+        userRole = "startup"; buildNav(); setView("projects");
       } else {
         // Logged in but onboarding not complete — stay in onboarding flow
         setView("onboarding");
@@ -613,6 +678,9 @@
 
   /* ── View switching ── */
   function setView(name) {
+    if (name === "chat" && !CHAT_ENABLED) {
+      name = "projects";
+    }
     currentView = name;
     document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
     const page = $(`page-${name}`);
@@ -621,10 +689,10 @@
     if (nav) nav.querySelectorAll(".nav-link").forEach((n) => n.classList.toggle("active", n.dataset.view === name));
     updateAuthUI();
 
-    if (name === "chat") loadChatHistory();
+    if (name === "chat" && CHAT_ENABLED) loadChatHistory();
     if (name === "projects") loadProjects();
     if (name === "connections") loadConnections();
-    if (name === "visits") loadVisits();
+    if (name === "visit") loadVisit();
     if (name === "settings") void loadSettings();
     if (name === "onboarding") renderOnboardStep();
     if (name === "supplier-dashboard") loadSupplierDashboard();
@@ -647,6 +715,7 @@
         { key: "fullName", label: "Full name", required: true },
         { key: "phone", label: "Phone / WhatsApp", type: "tel", required: true },
       ] },
+    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and PIN on the home page to log in on another device. You can change them later in Settings." },
   ];
 
   const SUPPLIER_STEPS = [
@@ -669,6 +738,7 @@
         { key: "fullName", label: "Contact name", required: true },
         { key: "phone", label: "Phone / WeChat / WhatsApp", type: "tel", required: true },
       ] },
+    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and PIN on the home page to log in on another device. You can change them later in Settings." },
   ];
 
   function getSteps() { return onboardData.role === "supplier" ? SUPPLIER_STEPS : STARTUP_STEPS; }
@@ -711,24 +781,11 @@
           <h1 class="onboard-title">${isSupplier ? "Your factory is live." : "You\u2019re all set."}</h1>
           <p class="onboard-sub">${isSupplier
             ? "Our AI will start sending you project briefs that match your capabilities. You\u2019ll work directly with buyers, no sales needed."
-            : "We will read your chat export and start searching for matching factories. You can review your project, files, and connections in the app."}</p>
+            : "We start now contacting the best factories based on your project requirements."}</p>
           <div class="onboard-actions">
             <button type="button" class="btn-primary btn-lg" id="onboard-go">${isSupplier ? "Go to dashboard" : "See your project"}</button>
-            ${isSupplier ? "" : '<button type="button" class="btn-outline onboard-skip" id="onboard-final-back">Back to edit brief</button>'}
           </div>
         </div>`;
-      $("onboard-final-back")?.addEventListener("click", function () {
-        const steps = getSteps();
-        var bi = -1;
-        for (var si = 0; si < steps.length; si++) {
-          if (steps[si].id === "brief") {
-            bi = si;
-            break;
-          }
-        }
-        onboardStep = bi >= 0 ? bi + 1 : 1;
-        renderOnboardStep();
-      });
       $("onboard-go")?.addEventListener("click", async () => {
         if (!(await ensureSession())) return;
         const goBtn = $("onboard-go");
@@ -748,23 +805,37 @@
             await loadProjectDetail(result.importedProjectId);
             return;
           }
-          alert(
-            "We could not create your project. Add a working share link, paste the chat on the brief step, or upload files, then try again."
-          );
-          const steps = getSteps();
-          var bi = -1;
-          for (var si = 0; si < steps.length; si++) {
-            if (steps[si].id === "brief") {
-              bi = si;
-              break;
+          {
+            const steps = getSteps();
+            var bi2 = -1;
+            for (var sj = 0; sj < steps.length; sj++) {
+              if (steps[sj].id === "brief") {
+                bi2 = sj;
+                break;
+              }
+            }
+            if (bi2 >= 0) {
+              onboardData._briefReturnHint = "Context needed. Add a link, paste, or a file.";
+              onboardStep = bi2 + 1;
+              renderOnboardStep();
             }
           }
-          if (bi >= 0) {
-            onboardStep = bi + 1;
-            renderOnboardStep();
-          }
         } catch (err) {
-          alert(err && err.message ? err.message : String(err));
+          {
+            const steps = getSteps();
+            var bi3 = -1;
+            for (var sk = 0; sk < steps.length; sk++) {
+              if (steps[sk].id === "brief") {
+                bi3 = sk;
+                break;
+              }
+            }
+            if (bi3 >= 0) {
+              onboardData._briefReturnHint = (err && err.message) ? String(err.message).slice(0, 120) : "Could not create project. Try again.";
+              onboardStep = bi3 + 1;
+              renderOnboardStep();
+            }
+          }
         } finally {
           if (goBtn) { goBtn.disabled = false; if (prev) goBtn.textContent = prev; }
         }
@@ -773,6 +844,64 @@
     }
 
     const step = steps[stepIdx];
+    if (step.type === "pin") {
+      var pphone = (onboardData.phone || "").trim();
+      var pinH =
+        '<div class="onboard-question"><h1 class="onboard-title">' +
+        step.title +
+        "</h1>" +
+        (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
+        '<div class="onboard-form">' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin-phone">Phone (same as previous step, with country code)</label>' +
+        '<input class="onboard-input" type="tel" id="onboard-pin-phone" autocomplete="tel" value="' +
+        escapeAttr(pphone) +
+        '" required /></div>' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin">PIN (min. 4 characters)</label>' +
+        '<input class="onboard-input" type="password" id="onboard-pin" minlength="4" maxlength="64" autocomplete="new-password" required /></div>' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin2">Confirm PIN</label>' +
+        '<input class="onboard-input" type="password" id="onboard-pin2" minlength="4" maxlength="64" autocomplete="new-password" required /></div>' +
+        "</div>" +
+        '<p class="onboard-hint" style="font-size:14px;margin-top:4px;opacity:0.85">This becomes your password for Login on airsup.com &mdash; no SMS or email code.</p>' +
+        '<p class="onboard-field-error" id="onboard-pin-error" role="status" hidden></p>' +
+        '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
+        '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
+      stage.innerHTML = pinH;
+      var pinErrClear = function () { setOnboardLineError("onboard-pin-error", ""); };
+      ["onboard-pin-phone", "onboard-pin", "onboard-pin2"].forEach(function (iid) {
+        document.getElementById(iid)?.addEventListener("input", pinErrClear);
+      });
+      $("onboard-next")?.addEventListener("click", async function () {
+        if (!(await ensureSession())) return;
+        setOnboardLineError("onboard-pin-error", "");
+        const phEl = $("onboard-pin-phone");
+        const a = phEl && (phEl).value;
+        const b = ($("onboard-pin") && ($("onboard-pin").value)) || "";
+        const c = ($("onboard-pin2") && ($("onboard-pin2").value)) || "";
+        const nextBtn = $("onboard-next");
+        var prevT = nextBtn && nextBtn.textContent;
+        try {
+          if (nextBtn) { nextBtn.disabled = true; if (nextBtn) nextBtn.textContent = "Saving\u2026"; }
+          const r = await applyPhonePinSignIn(a, b, c);
+          if (r.error) {
+            setOnboardLineError("onboard-pin-error", r.error);
+            return;
+          }
+          onboardData.phone = (a || "").trim();
+          onboardStep++;
+          renderOnboardStep();
+        } finally {
+          if (nextBtn) { nextBtn.disabled = false; if (prevT) nextBtn.textContent = prevT; }
+        }
+      });
+      $("onboard-back")?.addEventListener("click", function () {
+        var ph = $("onboard-pin-phone");
+        if (ph) onboardData.phone = (ph.value || "").trim();
+        onboardStep--;
+        renderOnboardStep();
+      });
+      setTimeout(function () { $("onboard-pin-phone") && ($("onboard-pin-phone").focus()); }, 100);
+      return;
+    }
     if (step.type === "brief") {
       var nf = onboardingProjectFiles.length;
       var fileBtnLabel =
@@ -795,10 +924,17 @@
         '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-paste">Paste the conversation (optional)</label>' +
         '<textarea class="onboard-textarea onboard-input" id="onboard-brief-paste" rows="5" placeholder="If a share link fails to import, paste the chat here. You can also paste only, without a link.">' +
         escapeHtml(onboardData.briefPastedText || "") +
-        "</textarea></div></div>" +
+        "</textarea></div><p class=\"onboard-field-error\" id=\"onboard-brief-error\" role=\"status\" hidden></p></div>" +
         '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
         '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
       stage.innerHTML = htmlB;
+      if (onboardData._briefReturnHint) {
+        setOnboardLineError("onboard-brief-error", String(onboardData._briefReturnHint));
+        delete onboardData._briefReturnHint;
+      }
+      var clearBriefErr = function () { setOnboardLineError("onboard-brief-error", ""); };
+      stage.querySelector("#onboard-brief-url")?.addEventListener("input", clearBriefErr);
+      stage.querySelector("#onboard-brief-paste")?.addEventListener("input", clearBriefErr);
       const fileInput = stage.querySelector("#onboard-brief-file");
       const fileBtn = stage.querySelector("#onboard-brief-file-btn");
       fileBtn &&
@@ -813,10 +949,11 @@
             : [];
           var v = validateOnboardingProjectFiles(raw);
           if (!v.ok) {
-            alert(v.error);
+            setOnboardLineError("onboard-brief-error", v.error);
             fileInput.value = "";
             return;
           }
+          clearBriefErr();
           onboardingProjectFiles = v.files;
           if (fileBtn) {
             var n = onboardingProjectFiles.length;
@@ -848,16 +985,17 @@
             : onboardingProjectFiles;
         var v = validateOnboardingProjectFiles(raw);
         if (!v.ok) {
-          alert(v.error);
+          setOnboardLineError("onboard-brief-error", v.error);
           return;
         }
         onboardingProjectFiles = v.files;
         onboardData.briefUrl = u;
         const pasted = (onboardData.briefPastedText && String(onboardData.briefPastedText).trim()) || "";
         if (!u && !onboardingProjectFiles.length && !pasted) {
-          alert("Add a chat link, paste the chat, or choose at least one file.");
+          setOnboardLineError("onboard-brief-error", "Context is required. Add a link, paste, or a file.");
           return;
         }
+        clearBriefErr();
         onboardStep++;
         renderOnboardStep();
       });
@@ -914,6 +1052,7 @@
       id: currentUser.id, display_name: displayName, avatar_letter: letter,
       company: d.companyName, location: d.location,
       headline: d.role === "supplier" ? "supplier" : d.role,
+      role: d.role === "supplier" ? "supplier" : "customer",
       phone: d.phone,
     }, { onConflict: "id" });
 
@@ -998,6 +1137,8 @@
     if (!root) return;
     if (!(await ensureSession())) { root.innerHTML = '<p class="settings-hint">Could not load session.</p>'; return; }
     root.innerHTML = '<p class="settings-hint">Loading\u2026</p>';
+    const { data: authNow } = await supabaseClient.auth.getUser();
+    const isAnon = authNow?.user?.is_anonymous === true;
     const { data: profile } = await supabaseClient.from("profiles").select("display_name, company, location, headline, bio, phone").eq("id", currentUser.id).maybeSingle();
     const { data: settings } = await supabaseClient.from("user_settings").select("phone, company, timezone").eq("user_id", currentUser.id).maybeSingle();
     const v = {
@@ -1006,12 +1147,22 @@
       location: profile?.location || "", headline: profile?.headline || "", bio: profile?.bio || "",
       timezone: settings?.timezone || "Europe/Berlin",
     };
+    const signinIntro = isAnon
+      ? "<p class=\"settings-hint\" id=\"settings-signin-hint\">Set a PIN below to use <strong>Login</strong> on the home page with the phone number in your profile. Without this, you can only use the browser you are in now.</p>"
+      : "<p class=\"settings-hint\" id=\"settings-signin-hint\">Set or change the PIN for <strong>Login</strong> on the home page. It must match the <strong>Phone / WhatsApp</strong> number above (same format as the home page: country code + number).</p>";
     root.innerHTML = `<div class="settings-section">
       ${[["Display name","displayName","text"],["Company","company","text"],["Phone / WhatsApp","phone","tel"],["Location","location","text"],["Timezone","timezone","text"]].map(([l,k,t]) =>
         `<div class="settings-field"><label class="settings-label">${l}</label><input type="${t}" id="settings-${k}" class="settings-input" value="${escapeAttr(v[k])}" /></div>`).join("")}
       <div class="settings-field"><label class="settings-label">Bio</label><textarea id="settings-bio" class="settings-input" rows="3">${escapeHtml(v.bio)}</textarea></div>
       <p class="settings-saved" id="settings-saved" hidden></p>
       <button type="button" class="btn-primary" id="settings-save">Save changes</button>
+      <div class="settings-signin-block">
+        <h3 class="settings-subh">Sign in from the home page</h3>
+        ${signinIntro}
+        <div class="settings-field"><label class="settings-label" for="settings-signin-pin">New PIN (min. 4 characters)</label><input type="password" id="settings-signin-pin" class="settings-input" autocomplete="new-password" minlength="4" maxlength="64" /></div>
+        <div class="settings-field"><label class="settings-label" for="settings-signin-pin2">Confirm PIN</label><input type="password" id="settings-signin-pin2" class="settings-input" autocomplete="new-password" minlength="4" maxlength="64" /></div>
+        <button type="button" class="btn-outline" id="settings-save-signin">Save sign-in (phone + PIN)</button>
+      </div>
       <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
         <p style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">Danger zone</p>
         <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
@@ -1019,6 +1170,7 @@
     var settingsLoc = $("settings-location");
     if (settingsLoc) wireLocationAutocomplete(settingsLoc);
     $("settings-save")?.addEventListener("click", saveSettings);
+    $("settings-save-signin")?.addEventListener("click", saveSettingsSignIn);
     $("settings-delete-profile")?.addEventListener("click", async () => {
       const ok = await showConfirmDialog(
         "Delete your profile? It will be moved to the admin bin. You can ask support to restore it.",
@@ -1046,6 +1198,27 @@
     if (pe || se) { if (saved) { saved.hidden = false; saved.textContent = "Error: " + (pe?.message||se?.message||""); saved.style.color = "#d93025"; } return; }
     currentUser.displayName = dn; updateAuthUI();
     if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
+  }
+
+  async function saveSettingsSignIn() {
+    if (!currentUser || !supabaseClient) return;
+    const phone = ($("settings-phone")?.value || "").trim();
+    const p1 = ($("settings-signin-pin")?.value) || "";
+    const p2 = ($("settings-signin-pin2")?.value) || "";
+    if (!phone) { window.alert("Enter your phone number in the \u201cPhone / WhatsApp\u201d field first."); return; }
+    const saved = $("settings-saved");
+    const r = await applyPhonePinSignIn(phone, p1, p2);
+    if (r.error) { window.alert(r.error); return; }
+    const { error: e1 } = await supabaseClient.from("profiles").update({ phone }).eq("id", currentUser.id);
+    const { error: e2 } = await supabaseClient.from("user_settings").update({ phone }).eq("user_id", currentUser.id);
+    if (e1 || e2) { if (saved) { saved.hidden = false; saved.textContent = "Sign-in updated but profile phone save failed. " + (e1?.message || e2?.message || ""); saved.style.color = "#d93025"; } return; }
+    var sp0 = $("settings-signin-pin");
+    var sp1 = $("settings-signin-pin2");
+    if (sp0) sp0.value = "";
+    if (sp1) sp1.value = "";
+    if (saved) { saved.hidden = false; saved.textContent = "Sign-in saved. You can use Login on the home page with this number and PIN."; saved.style.color = ""; setTimeout(function () { if (saved) saved.hidden = true; }, 5000); }
+    var h = $("settings-signin-hint");
+    if (h) { h.textContent = "You can use Login on the home page with the phone in your profile and the PIN you set. Change the PIN here anytime."; }
   }
 
   /* ══════════════════════════════════════
@@ -1232,14 +1405,32 @@
     });
   }
 
+  /** Plain text status for project list/detail: yellow "Searching" until a real connection exists, then "Connected". */
+  function projectStatusTextHtml(projectLike) {
+    const status = projectLike.status || "";
+    const matches = projectLike.matches || [];
+    var connected = matches.some(function (m) {
+      return m && m.status && m.status !== "cancelled" && m.status !== "disputed";
+    });
+    if (!connected && (status === "matched" || status === "in_progress" || status === "completed")) {
+      connected = true;
+    }
+    if (connected) {
+      return '<span class="project-status-text project-status-text--connected">Connected</span>';
+    }
+    if (status === "searching") {
+      return '<span class="project-status-text project-status-text--searching">Searching</span>';
+    }
+    const label = String(status).replace(/_/g, " ");
+    return '<span class="project-status-text project-status-text--neutral">' + escapeHtml(label) + "</span>";
+  }
+
   /* ── Projects ── */
   async function loadProjects() {
     const container = $("projects-list");
-    const lead = $("projects-lead");
-    if (lead) lead.textContent = "Sourcing requests created from your conversations.";
     try {
       const { projects } = await apiCall("/api/projects");
-      if (!projects?.length) { container.innerHTML = '<div class="projects-empty">No projects yet. Complete onboarding with a share link or pasted chat, or use Chat to add one later.</div>'; return; }
+      if (!projects?.length) { container.innerHTML = '<div class="projects-empty">No projects yet. Complete onboarding with a share link, pasted chat, or uploaded files.</div>'; return; }
       container.innerHTML = projects.map((p) => {
         const line = teaserOneLine(p.description || "");
         return (
@@ -1249,11 +1440,9 @@
           escapeHtml(p.title) +
           '</div><div class="project-card-desc">' +
           escapeHtml(line || "\u2014") +
-          '</div><div class="project-card-meta"><span class="project-card-badge badge--' +
-          p.status +
-          '">' +
-          String(p.status).replace(/_/g, " ") +
-          "</span></div></div>"
+          '</div><div class="project-card-meta">' +
+          projectStatusTextHtml(p) +
+          "</div></div>"
         );
       }).join("");
       container.querySelectorAll(".project-card").forEach((c) => c.addEventListener("click", () => { if (c.dataset.id) loadProjectDetail(c.dataset.id); }));
@@ -1262,8 +1451,6 @@
 
   async function loadProjectDetail(id) {
     const container = $("projects-list");
-    const lead = $("projects-lead");
-    if (lead) lead.textContent = "Project details";
     try {
       const { project } = await apiCall(`/api/projects/${id}`);
       var chatData = { messages: [] };
@@ -1277,11 +1464,8 @@
         if (fr && fr.files) files = fr.files;
       } catch (_) { /* no files */ }
 
-      var filesHtml = "";
-      if (files.length) {
-        filesHtml =
-          '<section class="project-detail-section project-files-block"><h3 class="project-detail-h">Files</h3><ul class="project-files-list">' +
-          files
+      var fileItems = files.length
+        ? files
             .map(function (f) {
               var link =
                 f.signed_url &&
@@ -1298,9 +1482,15 @@
                 "</li>"
               );
             })
-            .join("") +
-          "</ul></section>";
-      }
+            .join("")
+        : '<li class="project-files-empty">No files yet.</li>';
+      var filesHtml =
+        '<section class="project-detail-section project-files-block"><h3 class="project-detail-h">Files</h3><ul class="project-files-list">' +
+        fileItems +
+        '</ul><p class="project-files-upload-hint">Images, PDF, and documents (max 20 MB each).</p><div class="project-files-upload-row">' +
+        '<input type="file" id="project-detail-file-input" multiple ' +
+        'accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.mdown,.csv,.tsv,.xlsx,.xls,.ppt,.pptx,.odt,.ods,.odp,.rtf,.html,.htm,.json,.xml,.heic" hidden />' +
+        '<button type="button" class="btn-outline project-files-pick-btn" id="project-detail-file-btn">Add files</button></div></section>';
 
       var dateLine = formatProjectDate(project.created_at);
       var overview =
@@ -1313,11 +1503,7 @@
         '<p class="project-detail-description">' +
         escapeHtml(project.description || "") +
         "</p>" +
-        '<p class="project-detail-status-row"><span class="project-card-badge badge--' +
-        project.status +
-        '">' +
-        String(project.status).replace(/_/g, " ") +
-        "</span></p></section>";
+        '<p class="project-detail-status-row">' + projectStatusTextHtml(project) + "</p></section>";
 
       var inner =
         '<div class="project-detail" data-project-id="' +
@@ -1334,6 +1520,28 @@
         "</div>";
 
       container.innerHTML = inner;
+      const fileIn = $("project-detail-file-input");
+      const fileBtn = $("project-detail-file-btn");
+      if (fileBtn && fileIn) {
+        fileBtn.addEventListener("click", function () {
+          fileIn.click();
+        });
+        fileIn.addEventListener("change", async function (ev) {
+          var t = ev.target;
+          var raw = t && t.files && t.files.length ? Array.prototype.slice.call(t.files, 0) : [];
+          t.value = "";
+          if (!raw.length) return;
+          if (!(await ensureSession())) return;
+          const up = await uploadFilesToProject(id, raw);
+          if (up.err) {
+            window.alert(up.err);
+            return;
+          }
+          if (up.filenames && up.filenames.length) {
+            loadProjectDetail(id);
+          }
+        });
+      }
       $("project-detail-back")?.addEventListener("click", function (e) {
         e.stopPropagation();
         loadProjects();
@@ -1698,11 +1906,11 @@
   }
 
   /* ══════════════════════════════════════
-     VISITS
+     VISIT (factory day plans)
      ══════════════════════════════════════ */
-  async function loadVisits() {
-    const form = $("visits-plan-form");
-    const msg = $("visits-plan-message");
+  async function loadVisit() {
+    const form = $("visit-plan-form");
+    const msg = $("visit-plan-message");
     if (msg) {
       msg.hidden = true;
       msg.textContent = "";
@@ -1715,11 +1923,11 @@
     } catch (_) {
       if (form) form.innerHTML = '<p class="projects-empty">Could not load connections.</p>';
     }
-    await loadVisitsPlans();
+    await loadVisitPlans();
   }
 
   function renderVisitsForm() {
-    const form = $("visits-plan-form");
+    const form = $("visit-plan-form");
     if (!form) return;
     const rows = (visitsMatchesCache || []).filter((m) => m.status !== "cancelled" && m.status !== "disputed");
     if (!rows.length) {
@@ -1729,15 +1937,15 @@
     }
     form.innerHTML =
       '<h2 class="section-title">Plan a trip</h2><p class="section-sub">Choose which connections to visit, then pick the first travel day.</p>' +
-      '<div class="visits-match-grid">' +
+      '<div class="visit-match-grid">' +
       rows
         .map((m) => {
           const f = m.factories;
           const p = m.projects;
           return (
-            '<label class="visits-match-row"><input type="checkbox" name="visits-m" value="' +
+            '<label class="visit-match-row"><input type="checkbox" name="visit-m" value="' +
             escapeAttr(m.id) +
-            '" /> <span class="visits-match-label"><strong>' +
+            '" /> <span class="visit-match-label"><strong>' +
             escapeHtml(f && f.name ? f.name : "Factory") +
             "</strong> · " +
             escapeHtml(p && p.title ? p.title : "") +
@@ -1745,22 +1953,22 @@
           );
         })
         .join("") +
-      '</div><div class="visits-date-row">' +
-      '<label class="visits-date-label">Start date <input type="date" id="visits-start-date" class="settings-input visits-date-input" /></label> ' +
-      '<button type="button" class="btn-primary" id="visits-plan-submit">Create plan</button></div>';
-    const start = $("visits-start-date");
+      '</div><div class="visit-date-row">' +
+      '<label class="visit-date-label">Start date <input type="date" id="visit-start-date" class="settings-input visit-date-input" /></label> ' +
+      '<button type="button" class="btn-primary" id="visit-plan-submit">Create plan</button></div>';
+    const start = $("visit-start-date");
     if (start) {
       const t = new Date();
       t.setDate(t.getDate() + 1);
       start.value = t.toISOString().split("T")[0];
     }
-    $("visits-plan-submit")?.addEventListener("click", submitVisitsPlan);
+    $("visit-plan-submit")?.addEventListener("click", submitVisitPlan);
   }
 
-  async function submitVisitsPlan() {
-    const msg = $("visits-plan-message");
-    const checked = Array.from(document.querySelectorAll('input[name="visits-m"]:checked')).map((el) => el.value);
-    const startEl = $("visits-start-date");
+  async function submitVisitPlan() {
+    const msg = $("visit-plan-message");
+    const checked = Array.from(document.querySelectorAll('input[name="visit-m"]:checked')).map((el) => el.value);
+    const startEl = $("visit-start-date");
     const start = startEl && startEl.value;
     if (!checked.length) {
       if (msg) {
@@ -1788,7 +1996,7 @@
       });
       const warn = (data.warnings && data.warnings.length ? data.warnings.join(" ") + " " : "") + "Plan saved.";
       if (msg) msg.textContent = warn.trim();
-      await loadVisitsPlans();
+      await loadVisitPlans();
     } catch (e) {
       if (msg) {
         msg.hidden = false;
@@ -1797,91 +2005,224 @@
     }
   }
 
-  async function loadVisitsPlans() {
-    const cal = $("visits-calendar");
+  function visitStopStatusClass(st) {
+    const k = (st && String(st)) || "draft";
+    if (k === "pending_supplier") return "status-await";
+    if (k === "counter_proposed") return "status-counter";
+    if (k === "confirmed") return "status-ok";
+    if (k === "declined") return "status-bad";
+    return "status-draft";
+  }
+  function visitStopStatusLabel(st) {
+    const k = (st && String(st)) || "draft";
+    var map = { draft: "Draft", pending_supplier: "Awaiting factory", counter_proposed: "Factory counter", confirmed: "Confirmed", declined: "Declined" };
+    return map[k] || k;
+  }
+
+  async function loadVisitPlans() {
+    const cal = $("visit-calendar");
     if (!cal) return;
     try {
-      const { plans } = await apiCall("/api/visits");
-      if (!plans || !plans.length) {
-        cal.innerHTML = '<p class="projects-empty visits-empty-hint">No visit plans yet. Use the form above to create one.</p>';
+      const data = await apiCall("/api/visits");
+      var confirmed = data.confirmed_plans || data.plans || [];
+      var pending = data.pending_plans || [];
+      if (data.plans && !data.confirmed_plans) {
+        confirmed = (data.plans || []).filter(function (p) {
+          var st = p.visit_stops || [];
+          if (!st.length) return false;
+          return st.every(function (s) { return s.confirmation_status === "confirmed"; });
+        });
+        pending = (data.plans || []).filter(function (p) {
+          var st = p.visit_stops || [];
+          if (!st.length) return true;
+          return st.some(function (s) { return s.confirmation_status !== "confirmed"; });
+        });
+      }
+      if ((!confirmed || !confirmed.length) && (!pending || !pending.length)) {
+        cal.innerHTML = '<p class="projects-empty visit-empty-hint">No visit days planned yet. Use the form above to create one.</p>';
         return;
       }
-      cal.innerHTML = plans.map((p) => renderVisitPlanCard(p)).join("");
-      cal.querySelectorAll("[data-visits-delete]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const id = btn.getAttribute("data-visits-delete");
+      const chunks = [];
+      if (pending && pending.length) {
+        chunks.push(
+          "<h2 class=\"visit-section-h\">Awaiting factory</h2><p class=\"visit-section-hint\">These visits are not on your main calendar until the factory confirms.</p><div class=\"visit-plan-stack\">" +
+            pending.map(function (p) { return renderVisitPlanCard(p, "pending"); }).join("") +
+            "</div>"
+        );
+      }
+      if (confirmed && confirmed.length) {
+        chunks.push(
+          "<h2 class=\"visit-section-h visit-section-h--confirmed\">Confirmed on your calendar</h2><div class=\"visit-plan-stack\">" +
+            confirmed.map(function (p) { return renderVisitPlanCard(p, "confirmed"); }).join("") +
+            "</div>"
+        );
+      }
+      cal.innerHTML = chunks.join("");
+      cal.querySelectorAll("[data-visit-delete]").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          var id = btn.getAttribute("data-visit-delete");
           if (!id || !(await ensureSession())) return;
           if (!window.confirm("Delete this visit day?")) return;
           try {
             await apiCall("/api/visits/" + encodeURIComponent(id), { method: "DELETE" });
-            await loadVisitsPlans();
+            await loadVisitPlans();
           } catch (e) {
             window.alert(e && e.message ? e.message : "Delete failed.");
           }
         });
       });
-      cal.querySelectorAll("[data-visits-propose]").forEach((btn) => {
-        btn.addEventListener("click", () => loadVisitProposalDrafts(btn.getAttribute("data-visits-propose")));
+      cal.querySelectorAll("[data-visit-propose]").forEach(function (btn) {
+        btn.addEventListener("click", function () { loadVisitProposalDrafts(btn.getAttribute("data-visit-propose")); });
+      });
+      cal.querySelectorAll("[data-visit-save-feedback]").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          var planId = btn.getAttribute("data-visit-save-feedback");
+          var ta = planId && document.getElementById("visit-rf-" + planId);
+          if (!ta || !planId || !(await ensureSession())) return;
+          var mark = cal.querySelector("[data-visit-feedback-saved=\"" + planId + "\"]");
+          if (mark) { mark.classList.add("is-saving"); }
+          try {
+            await apiCall("/api/visits/" + encodeURIComponent(planId) + "/route-feedback", {
+              method: "PATCH",
+              body: JSON.stringify({ feedback: (ta).value || "" }),
+            });
+            if (mark) { mark.hidden = false; mark.classList.remove("is-saving"); }
+          } catch (e) {
+            if (mark) { mark.classList.remove("is-saving"); }
+            window.alert(e && e.message ? e.message : "Save failed.");
+          }
+        });
+      });
+      cal.querySelectorAll("[data-visit-submit-confirm]").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          var id = btn.getAttribute("data-visit-submit-confirm");
+          if (!id || !(await ensureSession())) return;
+          var prev = (btn).textContent;
+          (btn).disabled = true;
+          (btn).textContent = "Sending…";
+          try {
+            await apiCall("/api/visits/" + encodeURIComponent(id) + "/submit-confirmation", { method: "POST", body: "{}" });
+            await loadVisitPlans();
+          } catch (e) {
+            window.alert(e && e.message ? e.message : "Could not send.");
+            (btn).textContent = prev;
+            (btn).disabled = false;
+          }
+        });
+      });
+      cal.querySelectorAll("[data-visit-buyer-confirm-stop]").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          var sid = btn.getAttribute("data-visit-buyer-confirm-stop");
+          if (!sid || !(await ensureSession())) return;
+          try {
+            await apiCall("/api/visits/stops/" + encodeURIComponent(sid) + "/buyer-confirm-counter", { method: "POST", body: "{}" });
+            await loadVisitPlans();
+          } catch (e) {
+            window.alert(e && e.message ? e.message : "Could not confirm.");
+          }
+        });
       });
     } catch (_) {
-      cal.innerHTML = '<p class="projects-empty">Could not load visits.</p>';
+      cal.innerHTML = '<p class="projects-empty">Could not load visit plans.</p>';
     }
   }
 
-  function renderVisitPlanCard(p) {
+  function renderVisitPlanCard(p, section) {
+    section = section || "pending";
     const route = p.route || {};
     const details = route.stop_details || [];
     const detailByFid = {};
-    details.forEach((d) => {
+    details.forEach(function (d) {
       if (d && typeof d.factory_id === "number") detailByFid[d.factory_id] = d;
     });
     const stops = p.visit_stops || [];
-    const stopRows = stops
-      .map((s) => {
+    const hasDraft = stops.some(function (s) { return (s.confirmation_status || "draft") === "draft"; });
+    const mapUrl = p.map_static_url && typeof p.map_static_url === "string" ? p.map_static_url : null;
+    const tableRows = stops
+      .map(function (s) {
         const fac = s.factories;
         const det = detailByFid[s.factory_id];
         const zh = det && det.location_zh ? det.location_zh : fac && fac.location ? fac.location : "";
         const reason = det && det.project_title ? det.project_title : "";
-        const amap = det && det.amap_url ? det.amap_url : null;
         const time = s.scheduled_time || "";
         const note = s.notes ? String(s.notes) : "";
-        const mapLine = amap
-          ? '<a class="visits-map-link" href="' +
-            escapeAttr(amap) +
-            '" target="_blank" rel="noopener">Open in 高德</a>'
-          : '<span class="visits-map-fallback">Confirm address in maps (GCJ-02 in China)</span>';
+        const cst = s.confirmation_status || "draft";
+        const bcls = visitStopStatusClass(cst);
+        const blab = visitStopStatusLabel(cst);
+        const counter = cst === "counter_proposed" && s.supplier_proposed_time
+          ? '<div class="visit-schedule-note">' + escapeHtml("Factory suggests: " + s.supplier_proposed_time) + (s.supplier_counter_message ? " · " + escapeHtml(String(s.supplier_counter_message)) : "") + "</div>"
+          : "";
+        const buyerAct =
+          section === "pending" && cst === "counter_proposed"
+            ? '<div class="visit-stop-confirm"><button type="button" class="btn-primary btn-sm" data-visit-buyer-confirm-stop="' + escapeAttr(s.id) + '">Add to calendar (use factory time)</button></div>'
+            : "";
         return (
-          '<li class="visits-stop"><div class="visits-stop-head"><span class="visits-stop-time">' +
+          "<tr><td class=\"visit-schedule-time\">" +
           escapeHtml(time) +
-          '</span><span class="visits-stop-factory">' +
+          '<span class="visit-stop-badge ' + bcls + '">' + escapeHtml(blab) + "</span></td><td class=\"visit-schedule-main\"><div class=\"visit-schedule-factory\">" +
           escapeHtml(fac && fac.name ? fac.name : "Factory") +
-          "</span></div>" +
-          (reason ? '<div class="visits-stop-reason">Project: ' + escapeHtml(reason) + "</div>" : "") +
-          (note ? '<div class="visits-stop-note">' + escapeHtml(note) + "</div>" : "") +
-          '<div class="visits-stop-addr" lang="zh">' +
+          "</div>" +
+          (reason ? '<div class="visit-schedule-project">' + escapeHtml(reason) + "</div>" : "") +
+          (note ? '<div class="visit-schedule-note">' + escapeHtml(note) + "</div>" : "") +
+          counter +
+          '<div class="visit-schedule-addr" lang="zh">' +
           escapeHtml(zh) +
           "</div>" +
-          '<div class="visits-stop-actions">' +
-          mapLine +
-          "</div></li>"
+          buyerAct +
+          "</td></tr>"
         );
       })
       .join("");
+    const linkList = stops
+      .map(function (s) {
+        const det = detailByFid[s.factory_id];
+        const fac = s.factories;
+        const amap = det && det.amap_url ? det.amap_url : null;
+        if (!amap) return "";
+        return (
+          '<li><a class="visit-map-link" href="' +
+          escapeAttr(amap) +
+          '" target="_blank" rel="noopener">' +
+          escapeHtml(fac && fac.name ? fac.name : "Open in 高德") +
+          "</a></li>"
+        );
+      })
+      .filter(Boolean)
+      .join("");
+    const mapBlock = mapUrl
+      ? '<div class="visit-day-map visit-day-map--image"><img class="visit-static-map" src="' +
+        escapeAttr(mapUrl) +
+        '" width="520" height="400" alt="Route map" loading="lazy" decoding="async" /></div>'
+      : '<div class="visit-day-map visit-day-map--fallback"><p class="visit-map-fallback-p">Map preview needs saved coordinates and Amap key on the server. Open each stop in 高德 below.</p>' +
+        (linkList ? "<ul class=\"visit-map-fallback-list\">" + linkList + "</ul>" : "") +
+        "</div>";
+    const rf = p.route_feedback != null ? String(p.route_feedback) : "";
+    const showSaved = !!p.route_feedback_at;
+    const sendBlock =
+      section === "pending" && hasDraft
+        ? '<div class="visit-submit-factory"><p class="visit-submit-factory-p">Sends a bilingual request to the factory in your connection chat and sets visits to “awaiting factory.”</p><button type="button" class="btn-primary btn-sm" data-visit-submit-confirm="' +
+          escapeAttr(p.id) +
+          '">Send to factory for confirmation</button></div>'
+        : "";
     return (
-      '<article class="visits-day-card" data-visit-plan-id="' +
+      '<article class="visit-day-card" data-visit-plan-id="' +
       escapeAttr(p.id) +
-      '"><div class="visits-day-head"><h2 class="visits-day-title">' +
+      '"><div class="visit-day-head"><h2 class="visit-day-title">' +
       escapeHtml(p.travel_date) +
-      ' — ' +
+      " &mdash; " +
       escapeHtml(p.region || "Region TBD") +
-      '</h2><div class="visits-day-actions"><button type="button" class="btn-outline btn-sm" data-visits-propose="' +
+      '</h2><div class="visit-day-actions"><button type="button" class="btn-outline btn-sm" data-visit-propose="' +
       escapeAttr(p.id) +
-      '">Draft chat messages</button> <button type="button" class="btn-outline btn-sm btn-danger-outline" data-visits-delete="' +
+      '">Draft chat messages</button> <button type="button" class="btn-outline btn-sm btn-danger-outline" data-visit-delete="' +
       escapeAttr(p.id) +
-      '">Delete</button></div></div><ol class="visits-stop-list">' +
-      stopRows +
-      "</ol>" +
-      '<div class="visits-drafts-host" id="visits-drafts-' +
+      '">Delete</button></div></div><div class="visit-day-split"><div class="visit-day-schedule"><table class="visit-schedule-table" aria-label="Visit schedule"><thead><tr><th scope="col">Time</th><th scope="col">Factory / details</th></tr></thead><tbody>' +
+      (tableRows || '<tr><td colspan="2" class="visit-schedule-empty">No stops</td></tr>') +
+      "</tbody></table></div>" +
+      mapBlock +
+      "</div>" +
+      '<div class="visit-route-feedback"><label for="visit-rf-' + escapeAttr(p.id) + '" class="visit-route-feedback-label">Route feedback (optional)</label><textarea id="visit-rf-' + escapeAttr(p.id) + '" class="visit-route-feedback-ta" rows="2" placeholder="Anything we should change about this route—saves to your team; no auto-replan.">' + escapeHtml(rf) + '</textarea><div class="visit-route-feedback-bar"><button type="button" class="btn-outline btn-sm" data-visit-save-feedback="' + escapeAttr(p.id) + '">Save note</button> <span class="visit-route-feedback-saved" data-visit-feedback-saved="' + escapeAttr(p.id) + '" ' + (showSaved ? "" : "hidden") + " aria-live=\"polite\">✓ Saved</span></div></div>" +
+      sendBlock +
+      '<div class="visit-drafts-host" id="visit-drafts-' +
       escapeAttr(p.id) +
       '" hidden></div></article>'
     );
@@ -1889,10 +2230,10 @@
 
   async function loadVisitProposalDrafts(planId) {
     if (!planId || !(await ensureSession())) return;
-    const host = document.getElementById("visits-drafts-" + planId);
+    const host = document.getElementById("visit-drafts-" + planId);
     if (!host) return;
     host.hidden = false;
-    host.innerHTML = '<p class="visits-drafts-loading">Drafting messages…</p>';
+    host.innerHTML = '<p class="visit-drafts-loading">Drafting messages…</p>';
     try {
       const data = await apiCall("/api/visits/" + encodeURIComponent(planId) + "/propose-messages", {
         method: "POST",
@@ -1900,25 +2241,25 @@
       });
       const drafts = data.drafts || [];
       if (!drafts.length) {
-        host.innerHTML = '<p class="visits-drafts-empty">No drafts.</p>';
+        host.innerHTML = '<p class="visit-drafts-empty">No drafts.</p>';
         return;
       }
       host.innerHTML =
-        '<h3 class="visits-drafts-h">Message drafts (review before sending in Connections)</h3><div class="visits-drafts-list">' +
+        '<h3 class="visit-drafts-h">Message drafts (review before sending in Connections)</h3><div class="visit-drafts-list">' +
         drafts
           .map((d) => {
             const combined = (d.en || "") + "\n\n" + (d.zh || "");
             const bid = "vdraft-" + planId + "-" + d.match_id;
             return (
-              '<div class="visits-draft"><div class="visits-draft-title">' +
+              '<div class="visit-draft"><div class="visit-draft-title">' +
               escapeHtml(d.factory_name) +
               " · " +
               escapeHtml(d.scheduled_time || "") +
-              '</div><textarea class="visits-draft-text" id="' +
+              '</div><textarea class="visit-draft-text" id="' +
               bid +
               '" rows="5" readonly>' +
               escapeHtml(combined) +
-              '</textarea><div class="visits-draft-actions"><button type="button" class="btn-outline btn-sm" data-copy-target="' +
+              '</textarea><div class="visit-draft-actions"><button type="button" class="btn-outline btn-sm" data-copy-target="' +
               bid +
               '">Copy</button></div></div>'
             );
@@ -1935,7 +2276,7 @@
         });
       });
     } catch (e) {
-      host.innerHTML = '<p class="visits-drafts-error">' + escapeHtml((e && e.message) || "Failed to draft messages.") + "</p>";
+      host.innerHTML = '<p class="visit-drafts-error">' + escapeHtml((e && e.message) || "Failed to draft messages.") + "</p>";
     }
   }
 
@@ -2033,6 +2374,88 @@
             }
           });
         });
+      }
+    }
+
+    const visitC = $("supplier-visit-confirm");
+    if (visitC) {
+      try {
+        const res = await apiCall("/api/visits/supplier/pending");
+        const items = (res && res.items) || [];
+        if (!items.length) {
+          visitC.innerHTML = '<div class="projects-empty">No visit times waiting for you.</div>';
+        } else {
+          visitC.innerHTML = items
+            .map((row) => {
+              const m = row.visit_plans;
+              const planDate = m?.travel_date || "—";
+              const region = m?.region || "";
+              const fac = row.factories;
+              const fName = (fac && (Array.isArray(fac) ? fac[0] : fac)?.name) || "Factory";
+              const mrow = row.matches;
+              const proj = mrow && (Array.isArray(mrow) ? mrow[0] : mrow)?.projects;
+              const pTitle = (proj && (Array.isArray(proj) ? proj[0] : proj)?.title) || "Project";
+              const t = row.scheduled_time || "—";
+              const st = row.confirmation_status || "";
+              const isCounter = st === "counter_proposed";
+              const altT = isCounter && row.supplier_proposed_time ? row.supplier_proposed_time : "";
+              return (
+                `<div class="supplier-visit-card" data-visit-stop-id="${escapeAttr(row.id)}">` +
+                '<div class="supplier-visit-card-h">' + escapeHtml(fName) + " · " + escapeHtml(pTitle) + "</div>" +
+                '<p class="supplier-visit-date">' + escapeHtml(planDate) + (region ? " — " + escapeHtml(region) : "") + " · " + (isCounter ? "Counter-proposed" : "Awaiting you") + "</p>" +
+                (isCounter && altT ? '<p class="supplier-visit-alt">' + escapeHtml("You suggested: " + altT) + "</p>" : "") +
+                (!isCounter
+                  ? '<p class="supplier-visit-ask">Proposed time: <strong>' + escapeHtml(t) + "</strong></p>" +
+                    '<div class="supplier-visit-row"><button type="button" class="btn-primary btn-sm" data-sv-accept>Accept this time</button></div>' +
+                    '<div class="supplier-visit-suggest"><label>Or suggest a different time</label>' +
+                    '<input type="text" class="settings-input" data-sv-ptime placeholder="e.g. 14:30 or Apr 28 afternoon" value="" />' +
+                    '<textarea class="settings-input" rows="2" data-sv-pmsg placeholder="Optional message to the buyer"></textarea>' +
+                    '<button type="button" class="btn-outline btn-sm" data-sv-counter>Send counter-proposal</button></div>'
+                  : '<p class="supplier-visit-pending">Waiting for the buyer to confirm your suggested time.</p>') +
+                "</div>"
+              );
+            })
+            .join("");
+          visitC.querySelectorAll("[data-sv-accept]").forEach((b) => {
+            b.addEventListener("click", async () => {
+              const card = b.closest(".supplier-visit-card");
+              const id = card && card.getAttribute("data-visit-stop-id");
+              if (!id) return;
+              try {
+                await apiCall("/api/visits/stops/" + encodeURIComponent(id) + "/supplier-accept", { method: "POST", body: "{}" });
+                await loadSupplierDashboard();
+              } catch (e) {
+                window.alert((e && e.message) || "Failed");
+              }
+            });
+          });
+          visitC.querySelectorAll("[data-sv-counter]").forEach((b) => {
+            b.addEventListener("click", async () => {
+              const card = b.closest(".supplier-visit-card");
+              const id = card && card.getAttribute("data-visit-stop-id");
+              if (!card || !id) return;
+              const pt = card.querySelector("[data-sv-ptime]");
+              const pmsg = card.querySelector("[data-sv-pmsg]");
+              var proposed = (pt && pt.value) || "";
+              var msg = (pmsg && pmsg.value) || "";
+              if (!proposed.trim()) {
+                window.alert("Enter a suggested time or time window.");
+                return;
+              }
+              try {
+                await apiCall("/api/visits/stops/" + encodeURIComponent(id) + "/supplier-counter", {
+                  method: "POST",
+                  body: JSON.stringify({ proposed_time: proposed, message: msg || undefined }),
+                });
+                await loadSupplierDashboard();
+              } catch (e) {
+                window.alert((e && e.message) || "Failed");
+              }
+            });
+          });
+        }
+      } catch (e) {
+        visitC.innerHTML = "<div class=\"projects-empty\">Could not load visit requests.</div>";
       }
     }
   }
@@ -2337,7 +2760,7 @@
       return;
     }
     // Fully onboarded → go to their dashboard
-    setView(userRole === "supplier" ? "supplier-dashboard" : "chat");
+    setView(userRole === "supplier" ? "supplier-dashboard" : "projects");
   });
   $("user-menu-trigger")?.addEventListener("click", () => { const dd = $("user-menu-dropdown"); if (dd) dd.hidden = !dd.hidden; });
   document.addEventListener("click", (e) => { const dd = $("user-menu-dropdown"); if (dd && !dd.hidden && !e.target.closest("#user-menu-trigger") && !e.target.closest("#user-menu-dropdown")) dd.hidden = true; });

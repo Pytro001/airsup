@@ -155,3 +155,27 @@ export function amapWebMarkerUrl(lng: number, lat: number, name: string): string
 export function hasAmapConfigured(): boolean {
   return !!getAmapKey();
 }
+
+/**
+ * 高德静态地图 — multiple GCJ-02 points + optional route polyline (visit day preview).
+ * @see https://lbs.amap.com/api/webservice/guide/api/staticmap
+ */
+export function buildAmapStaticMapUrl(
+  points: Array<{ lng: number; lat: number }>,
+  opts?: { size?: string }
+): string | null {
+  const key = getAmapKey();
+  if (!key) return null;
+  const valid = points.filter((p) => Number.isFinite(p.lng) && Number.isFinite(p.lat));
+  if (valid.length === 0) return null;
+  const slice = valid.slice(0, 10);
+  const r = (n: number) => Math.round(n * 1e6) / 1e6;
+  const locs = slice.map((p) => `${r(p.lng)},${r(p.lat)}`).join(";");
+  const markers = `mid,0x2563eb,1:${locs}`;
+  const size = opts?.size || "520*400";
+  const params = new URLSearchParams();
+  params.set("size", size);
+  params.set("markers", markers);
+  params.set("key", key);
+  return `https://restapi.amap.com/v3/staticmap?${params.toString()}`;
+}

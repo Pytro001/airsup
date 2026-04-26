@@ -4,6 +4,35 @@ import { supabaseAdmin } from "../services/supabase.js";
 
 export const adminRouter = Router();
 
+type ProfileForAdmin = {
+  id: string;
+  display_name: string | null;
+  company: string | null;
+  headline: string | null;
+  role: string | null;
+  location: string | null;
+  created_at: string;
+  deleted_at?: string | null;
+};
+
+type FactoryForAdmin = {
+  id: number;
+  user_id: string;
+  name: string;
+  location: string;
+  category: string;
+  capabilities: unknown;
+  active: boolean;
+  created_at: string;
+  deleted_at?: string | null;
+};
+
+/** Excludes soft-deleted rows; avoids .is("deleted_at", null) which can break if the column is missing. */
+function filterNotDeleted<T extends { deleted_at?: string | null }>(rows: T[] | null): T[] {
+  if (!rows) return [];
+  return rows.filter((r) => r.deleted_at == null);
+}
+
 /**
  * Public (no auth) admin overview: customers on the left, factories on the right,
  * and the matches that connect them. Served by the static /admin page.
@@ -11,13 +40,7 @@ export const adminRouter = Router();
  */
 adminRouter.get("/overview", async (_req, res: Response) => {
   try {
-    const [profilesRes, companiesRes, projectsRes, factoriesRes, matchesRes, outreachRes] = await Promise.all([
-      supabaseAdmin
-        .from("profiles")
-        .select("id, display_name, company, headline, location, created_at")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(500),
+    const [companiesRes, projectsRes, matchesRes, outreachRes] = await Promise.all([
       supabaseAdmin
         .from("companies")
         .select("id, user_id, name, description, industry, location, created_at")
@@ -27,12 +50,6 @@ adminRouter.get("/overview", async (_req, res: Response) => {
         .select("id, user_id, title, status, created_at")
         .order("created_at", { ascending: false })
         .limit(1000),
-      supabaseAdmin
-        .from("factories")
-        .select("id, user_id, name, location, category, capabilities, active, created_at")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(500),
       supabaseAdmin
         .from("matches")
         .select("id, status, quote, project_id, factory_id, created_at")
@@ -45,10 +62,72 @@ adminRouter.get("/overview", async (_req, res: Response) => {
         .limit(1000),
     ]);
 
-    const profiles = profilesRes.data || [];
+    if (companiesRes.error) {
+      console.error("[admin/overview] companies:", companiesRes.error);
+      return res.status(500).json({ error: "companies: " + companiesRes.error.message });
+    }
+    if (projectsRes.error) {
+      console.error("[admin/overview] projects:", projectsRes.error);
+      return res.status(500).json({ error: "projects: " + projectsRes.error.message });
+    }
+    if (matchesRes.error) {
+      console.error("[admin/overview] matches:", matchesRes.error);
+      return res.status(500).json({ error: "matches: " + matchesRes.error.message });
+    }
+    if (outreachRes.error) {
+      console.error("[admin/overview] outreach:", outreachRes.error);
+      return res.status(500).json({ error: "outreach: " + outreachRes.error.message });
+    }
+
+    let profileRows: ProfileForAdmin[] = [];
+    {
+      const r1 = await supabaseAdmin
+        .from("profiles")
+        .select("id, display_name, company, headline, role, location, created_at, deleted_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (r1.error) {
+        const r2 = await supabaseAdmin
+          .from("profiles")
+          .select("id, display_name, company, headline, role, location, created_at")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (r2.error) {
+          console.error("[admin/overview] profiles:", r1.error, r2.error);
+          return res.status(500).json({ error: "profiles: " + (r1.error.message || r2.error.message) });
+        }
+        profileRows = (r2.data as ProfileForAdmin[]) || [];
+      } else {
+        profileRows = filterNotDeleted((r1.data as ProfileForAdmin[]) || []);
+      }
+    }
+
+    let factories: FactoryForAdmin[] = [];
+    {
+      const f1 = await supabaseAdmin
+        .from("factories")
+        .select("id, user_id, name, location, category, capabilities, active, created_at, deleted_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (f1.error) {
+        const f2 = await supabaseAdmin
+          .from("factories")
+          .select("id, user_id, name, location, category, capabilities, active, created_at")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (f2.error) {
+          console.error("[admin/overview] factories:", f1.error, f2.error);
+          return res.status(500).json({ error: "factories: " + (f1.error.message || f2.error.message) });
+        }
+        factories = (f2.data as FactoryForAdmin[]) || [];
+      } else {
+        factories = filterNotDeleted((f1.data as FactoryForAdmin[]) || []);
+      }
+    }
+
+    const profiles = profileRows;
     const companies = companiesRes.data || [];
     const projects = projectsRes.data || [];
-    const factories = factoriesRes.data || [];
     const matches = matchesRes.data || [];
     const outreach = outreachRes.data || [];
 
@@ -80,8 +159,19 @@ adminRouter.get("/overview", async (_req, res: Response) => {
       briefsByFactory.set(o.factory_id, (briefsByFactory.get(o.factory_id) || 0) + 1);
     }
 
+    /**
+     * Suppliers: DB `role` = supplier and/or `headline` = supplier. Buyers use headline "startup" etc. with role "customer".
+     */
+    function isSupplierUserRecord(p: ProfileForAdmin) {
+      if (p.role === "supplier") return true;
+      if (String(p.headline || "").toLowerCase() === "supplier") return true;
+      return false;
+    }
+
+    const factoryOwnerIds = new Set(factories.map((f) => f.user_id).filter(Boolean) as string[]);
+
     const customers = profiles
-      .filter((p) => p.headline !== "supplier")
+      .filter((p) => !isSupplierUserRecord(p) && !factoryOwnerIds.has(p.id))
       .map((p) => {
         const myProjects = projectsByUser.get(p.id) || [];
         const myMatches = myProjects.flatMap((pr) => matchesByProject.get(pr.id) || []);
