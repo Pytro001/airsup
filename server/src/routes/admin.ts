@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { supabaseAdmin } from "../services/supabase.js";
+import { isMissingDeletedAtColumnError, SOFT_DELETE_MIGRATION_HINT } from "../lib/soft-delete-errors.js";
 
 export const adminRouter = Router();
 
@@ -252,7 +253,14 @@ adminRouter.delete("/customers/:id", async (req: Request, res: Response) => {
     .from("profiles")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", id);
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    if (isMissingDeletedAtColumnError(error)) {
+      res.status(503).json({ error: error.message, code: "MISSING_DELETED_AT_COLUMN", hint: SOFT_DELETE_MIGRATION_HINT });
+      return;
+    }
+    res.status(500).json({ error: error.message });
+    return;
+  }
   res.json({ ok: true });
 });
 
@@ -263,7 +271,14 @@ adminRouter.delete("/factories/:id", async (req: Request, res: Response) => {
     .from("factories")
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", String(id));
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    if (isMissingDeletedAtColumnError(error)) {
+      res.status(503).json({ error: error.message, code: "MISSING_DELETED_AT_COLUMN", hint: SOFT_DELETE_MIGRATION_HINT });
+      return;
+    }
+    res.status(500).json({ error: error.message });
+    return;
+  }
   res.json({ ok: true });
 });
 
@@ -281,6 +296,22 @@ adminRouter.get("/bin", async (_req, res: Response) => {
       .not("deleted_at", "is", null)
       .order("deleted_at", { ascending: false }),
   ]);
+  if (custRes.error && isMissingDeletedAtColumnError(custRes.error)) {
+    res.json({ customers: [], factories: [], hint: SOFT_DELETE_MIGRATION_HINT });
+    return;
+  }
+  if (facRes.error && isMissingDeletedAtColumnError(facRes.error)) {
+    res.json({ customers: [], factories: [], hint: SOFT_DELETE_MIGRATION_HINT });
+    return;
+  }
+  if (custRes.error) {
+    res.status(500).json({ error: custRes.error.message });
+    return;
+  }
+  if (facRes.error) {
+    res.status(500).json({ error: facRes.error.message });
+    return;
+  }
   res.json({
     customers: custRes.data || [],
     factories: facRes.data || [],
@@ -294,7 +325,14 @@ adminRouter.post("/bin/customers/:id/restore", async (req: Request, res: Respons
     .from("profiles")
     .update({ deleted_at: null })
     .eq("id", id);
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    if (isMissingDeletedAtColumnError(error)) {
+      res.status(503).json({ error: error.message, code: "MISSING_DELETED_AT_COLUMN", hint: SOFT_DELETE_MIGRATION_HINT });
+      return;
+    }
+    res.status(500).json({ error: error.message });
+    return;
+  }
   res.json({ ok: true });
 });
 
@@ -305,7 +343,14 @@ adminRouter.post("/bin/factories/:id/restore", async (req: Request, res: Respons
     .from("factories")
     .update({ deleted_at: null })
     .eq("id", String(id));
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    if (isMissingDeletedAtColumnError(error)) {
+      res.status(503).json({ error: error.message, code: "MISSING_DELETED_AT_COLUMN", hint: SOFT_DELETE_MIGRATION_HINT });
+      return;
+    }
+    res.status(500).json({ error: error.message });
+    return;
+  }
   res.json({ ok: true });
 });
 

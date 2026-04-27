@@ -2643,7 +2643,9 @@
           const res = await fetch(`${API_BASE}/api/admin/${pathKind}/${encodeURIComponent(id)}`, { method: "DELETE" });
           const j = await res.json().catch(() => ({}));
           if (!res.ok) {
-            setFormFlash("admin-flash", (j && j.error) || "Could not move to bin.", true);
+            var delMsg = (j && j.error) || "Could not move to bin.";
+            if (j && j.hint) delMsg += " " + j.hint;
+            setFormFlash("admin-flash", delMsg, true);
             return;
           }
           await loadAdminOverview();
@@ -2666,6 +2668,14 @@
       const data = await res.json();
       const customers = data.customers || [];
       const factories = data.factories || [];
+      if (data.hint && !customers.length && !factories.length) {
+        binEl.innerHTML =
+          '<div class="projects-empty">' +
+          escapeHtml("Bin needs database column deleted_at. " + String(data.hint).slice(0, 500)) +
+          "</div>";
+        setFormFlash("admin-flash", String(data.hint).slice(0, 400), true);
+        return;
+      }
       if (!customers.length && !factories.length) {
         binEl.innerHTML = '<div class="projects-empty">Bin is empty.</div>';
         return;

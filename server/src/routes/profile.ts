@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { supabaseAdmin } from "../services/supabase.js";
+import { isMissingDeletedAtColumnError, SOFT_DELETE_MIGRATION_HINT } from "../lib/soft-delete-errors.js";
 
 export const profileRouter = Router();
 
@@ -26,6 +27,13 @@ profileRouter.delete("/me", async (req: Request, res: Response) => {
     .update({ deleted_at: new Date().toISOString() })
     .eq("id", userId);
 
-  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (error) {
+    if (isMissingDeletedAtColumnError(error)) {
+      res.status(503).json({ error: error.message, code: "MISSING_DELETED_AT_COLUMN", hint: SOFT_DELETE_MIGRATION_HINT });
+      return;
+    }
+    res.status(500).json({ error: error.message });
+    return;
+  }
   res.json({ ok: true });
 });
