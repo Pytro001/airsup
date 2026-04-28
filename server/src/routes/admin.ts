@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import { supabaseAdmin } from "../services/supabase.js";
 import { isMissingDeletedAtColumnError, SOFT_DELETE_MIGRATION_HINT } from "../lib/soft-delete-errors.js";
+import { listFilesForProjectWithUrls } from "../lib/project-files.js";
 
 export const adminRouter = Router();
 
@@ -48,7 +49,7 @@ adminRouter.get("/overview", async (_req, res: Response) => {
         .limit(500),
       supabaseAdmin
         .from("projects")
-        .select("id, user_id, title, status, created_at")
+        .select("id, user_id, title, status, created_at, pipeline_step, coordination_mode")
         .order("created_at", { ascending: false })
         .limit(1000),
       supabaseAdmin
@@ -189,6 +190,12 @@ adminRouter.get("/overview", async (_req, res: Response) => {
           match_count: myMatches.length,
           connected_factory_ids: connectedFactoryIds,
           connected: myMatches.length > 0,
+          projects: myProjects.map((pr) => ({
+            id: pr.id,
+            title: pr.title,
+            status: pr.status,
+            pipeline_step: typeof pr.pipeline_step === "number" ? pr.pipeline_step : 1,
+          })),
         };
       });
 
@@ -244,6 +251,182 @@ adminRouter.get("/overview", async (_req, res: Response) => {
     console.error("[admin/overview]", err);
     res.status(500).json({ error: err instanceof Error ? err.message : "Admin overview failed" });
   }
+});
+
+/** Full project detail for admin workspace (public route). */
+adminRouter.get("/projects/:id", async (req: Request, res: Response) => {
+  const projectId = req.params.id;
+  try {
+    const { data: project, error: pe } = await supabaseAdmin
+      .from("projects")
+      .select(
+        `
+        *,
+        companies (*)
+      `
+      )
+      .eq("id", projectId)
+      .maybeSingle();
+
+    if (pe || !project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    const userId = project.user_id as string;
+
+    const [{ data: buyer_profile }, { data: matches }, { data: conversations }] = await Promise.all([
+      supabaseAdmin.from("profiles").select("*").eq("id", userId).maybeSingle(),
+      supabaseAdmin
+        .from("matches")
+        .select("id, status, quote, context_summary, created_at, factory_id, factories(*)")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
+      supabaseAdmin
+        .from("conversations")
+        .select("id, role, content, metadata, created_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: true }),
+    ]);
+
+    const files = await listFilesForProjectWithUrls(projectId);
+
+    res.json({
+      project,
+      company: project.companies,
+      buyer_profile: buyer_profile || null,
+      matches: matches || [],
+      conversations: conversations || [],
+      files,
+    });
+  } catch (err) {
+    console.error("[admin/projects/:id]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to load project" });
+  }
+});
+
+adminRouter.patch("/projects/:id/pipeline", async (req: Request, res: Response) => {
+  const projectId = req.params.id;
+  const step = (req.body as { pipeline_step?: unknown })?.pipeline_step;
+  const n = typeof step === "number" ? step : typeof step === "string" ? parseInt(step, 10) : NaN;
+  if (!Number.isFinite(n) || n < 1 || n > 3) {
+    res.status(400).json({ error: "pipeline_step must be 1, 2, or 3" });
+    return;
+  }
+  const { data, error } = await supabaseAdmin
+    .from("projects")
+    .update({ pipeline_step: n })
+    .eq("id", projectId)
+    .select("id, pipeline_step")
+    .maybeSingle();
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  if (!data) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  res.json(data);
+});
+
+adminRouter.patch("/projects/:id/coordination", async (req: Request, res: Response) => {
+  const projectId = req.params.id;
+  const mode = (req.body as { coordination_mode?: string })?.coordination_mode;
+  if (mode !== "ai" && mode !== "supi_manual") {
+    res.status(400).json({ error: "coordination_mode must be ai or supi_manual" });
+    return;
+  }
+  const { data, error } = await supabaseAdmin
+    .from("projects")
+    .update({ coordination_mode: mode })
+    .eq("id", projectId)
+    .select("id, coordination_mode")
+    .maybeSingle();
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  if (!data) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+  res.json(data);
+});
+
+adminRouter.post("/projects/:id/messages", async (req: Request, res: Response) => {
+  const projectId = req.params.id;
+  const bodyText = (req.body as { body?: string })?.body;
+  const text = typeof bodyText === "string" ? bodyText.trim() : "";
+  if (!text) {
+    res.status(400).json({ error: "body is required" });
+    return;
+  }
+
+  const { data: project, error: pe } = await supabaseAdmin.from("projects").select("id, user_id").eq("id", projectId).maybeSingle();
+  if (pe || !project) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+
+  const { data: row, error: insErr } = await supabaseAdmin
+    .from("conversations")
+    .insert({
+      user_id: project.user_id,
+      project_id: projectId,
+      role: "assistant",
+      content: text,
+      metadata: { supi: true, from_admin: true },
+    })
+    .select("id, role, content, metadata, created_at")
+    .single();
+
+  if (insErr) {
+    res.status(500).json({ error: insErr.message });
+    return;
+  }
+  res.json({ message: row });
+});
+
+adminRouter.post("/matches", async (req: Request, res: Response) => {
+  const project_id = (req.body as { project_id?: string })?.project_id;
+  const factoryRaw = (req.body as { factory_id?: unknown })?.factory_id;
+  const factory_id = typeof factoryRaw === "number" ? factoryRaw : typeof factoryRaw === "string" ? parseInt(factoryRaw, 10) : NaN;
+
+  if (!project_id?.trim() || !Number.isFinite(factory_id)) {
+    res.status(400).json({ error: "project_id and factory_id are required" });
+    return;
+  }
+
+  const { data: existing } = await supabaseAdmin
+    .from("matches")
+    .select("id, project_id, factory_id, status")
+    .eq("project_id", project_id)
+    .eq("factory_id", factory_id)
+    .maybeSingle();
+
+  if (existing) {
+    res.json({ match: existing, deduped: true });
+    return;
+  }
+
+  const { data: created, error } = await supabaseAdmin
+    .from("matches")
+    .insert({
+      project_id,
+      factory_id,
+      status: "pending",
+      quote: {},
+      context_summary: { source: "admin_manual" },
+    })
+    .select("id, project_id, factory_id, status")
+    .single();
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ match: created, deduped: false });
 });
 
 /** Soft-delete a customer profile (moves to bin). */

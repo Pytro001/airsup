@@ -5,6 +5,7 @@ import { supabaseAdmin } from "../services/supabase.js";
 import { formatFilesForPrompt } from "../lib/project-files.js";
 import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
 import { runJobPollOnce } from "../jobs/poll.js";
+import { seedSupiWelcome } from "../lib/supi-seed.js";
 
 const SYSTEM_PROMPT = `You are Airsup, an expert manufacturing sourcing agent.
 
@@ -48,14 +49,15 @@ Airsup eliminates the sales middleman. When we match a buyer with a factory, we 
 - When you already know something about the user from the context below, don't ask again. Reference it naturally
 - If you have projects from previous sessions, ask for updates rather than starting fresh
 - Ask about their design readiness (CAD files, sketches, reference images), because that helps the factory engineer start faster
-- IMPORTANT: Use suggest_options frequently to make the conversation interactive. Every question should ideally have clickable options.`;
+- IMPORTANT: Use suggest_options frequently to make the conversation interactive. Every question should ideally have clickable options.
+- Do not use suggest_options for quantity, MOQ, order minimums/maximums, or unit counts. Always ask the user to type quantities and numbers in free text, not as quick-reply chips.`;
 
 const INIT_PROMPT = `The user just completed onboarding and this is their first time in the chat. You already know some details about them from onboarding (see context below). 
 
 Send a warm, personalized greeting that:
 1. References their company name and what they told you during onboarding
 2. Asks a specific follow-up question to clarify their manufacturing needs
-3. Uses suggest_options to give them 2-3 clickable choices relevant to their situation
+3. Uses suggest_options to give them 2-3 clickable choices relevant to their situation — but never use suggest_options for quantity, MOQ, or numeric amounts; ask those in plain text only.
 
 Keep it concise (2-3 sentences max before the question). Don't repeat everything they told you, just acknowledge it naturally.`;
 
@@ -170,7 +172,7 @@ const TOOLS: Tool[] = [
   {
     name: "suggest_options",
     description:
-      "Present clickable quick-reply options to the user. Use this when asking a question to make the conversation faster. Options should be specific to the user's context. The user will click one and it becomes their response.",
+      "Present clickable quick-reply options to the user. Use this when asking a question to make the conversation faster. Options should be specific to the user's context. The user will click one and it becomes their response. Never use this for quantity, MOQ, min/max order size, or numeric amounts—ask for those in plain text without option chips.",
     input_schema: {
       type: "object" as const,
       properties: {
@@ -261,11 +263,22 @@ async function handleToolCall(
       if (materials) requirements.materials = materials;
       if (additional_notes) requirements.additional_notes = additional_notes;
 
-      const { data } = await supabaseAdmin
+      const { data, error: insErr } = await supabaseAdmin
         .from("projects")
-        .insert({ user_id: userId, company_id: company?.id || null, title, description: description || "", requirements, status: "intake" })
+        .insert({
+          user_id: userId,
+          company_id: company?.id || null,
+          title,
+          description: description || "",
+          requirements,
+          status: "intake",
+          pipeline_step: 1,
+          coordination_mode: "supi_manual",
+        })
         .select("id")
         .single();
+      if (insErr) return `Could not create project: ${insErr.message}`;
+      if (data?.id) await seedSupiWelcome(data.id, userId);
       return `Created project "${title}" (id: ${data?.id}).`;
     }
 

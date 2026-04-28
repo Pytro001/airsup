@@ -7,6 +7,7 @@ import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
 import { runJobPollOnce } from "../jobs/poll.js";
 import { ingestRegisteredProjectFile, ingestRawTextIntoProject, reingestPendingProjectFiles } from "../lib/project-brief-ingest.js";
 import { fetchChatShare, UnsupportedShareError, detectProvider } from "../lib/chat-share.js";
+import { seedSupiWelcome } from "../lib/supi-seed.js";
 
 export const projectsRouter = Router();
 
@@ -15,6 +16,7 @@ projectsRouter.get("/", requireAuth, async (req: AuthRequest, res: Response) => 
     .from("projects")
     .select(`
       id, title, description, status, requirements, ai_summary, created_at,
+      pipeline_step, coordination_mode,
       companies(name),
       matches(id, status, quote, factories(name, location))
     `)
@@ -78,6 +80,8 @@ projectsRouter.post("/bootstrap", requireAuth, async (req: AuthRequest, res: Res
       requirements: {},
       ai_summary: { readiness: "low" as const },
       status: "intake",
+      pipeline_step: 1,
+      coordination_mode: "supi_manual",
       brief_source_type: "file",
       brief_source_url: null,
       brief_raw: null,
@@ -90,6 +94,8 @@ projectsRouter.post("/bootstrap", requireAuth, async (req: AuthRequest, res: Res
     res.status(500).json({ error: pe?.message || "Could not create project" });
     return;
   }
+
+  await seedSupiWelcome(projectRow.id, userId);
 
   const project = projectRow as {
     id: string;
@@ -290,6 +296,7 @@ projectsRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) 
     .from("projects")
     .select(`
       id, title, description, status, requirements, ai_summary, created_at,
+      pipeline_step, coordination_mode,
       brief_source_type, brief_source_url, brief_raw,
       companies(name),
       matches(id, status, quote, context_summary, factories(name, location, category)),

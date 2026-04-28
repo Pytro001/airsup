@@ -4,6 +4,35 @@ import { supabaseAdmin } from "../services/supabase.js";
 
 export const factoriesRouter = Router();
 
+type ContactEntry = { name?: string; whatsapp: string };
+
+/** Normalize contact_info to `{ contacts: [{ name?, whatsapp }] }` from new shape or legacy `name`/`phone`. */
+export function normalizeContactInfo(raw: unknown): { contacts: ContactEntry[] } {
+  if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
+    const o = raw as Record<string, unknown>;
+    if (Array.isArray(o.contacts)) {
+      const contacts: ContactEntry[] = [];
+      for (const item of o.contacts) {
+        if (!item || typeof item !== "object") continue;
+        const c = item as Record<string, unknown>;
+        const wa = String(c.whatsapp ?? "").trim();
+        const name = c.name != null ? String(c.name).trim() : "";
+        if (!wa) continue;
+        contacts.push(name ? { name, whatsapp: wa } : { whatsapp: wa });
+      }
+      if (contacts.length) return { contacts };
+    }
+    const legacyPhone = String(o.phone ?? o.whatsapp ?? "").trim();
+    const legacyName = String(o.name ?? "").trim();
+    if (legacyPhone || legacyName) {
+      return {
+        contacts: [{ ...(legacyName ? { name: legacyName } : {}), whatsapp: legacyPhone }],
+      };
+    }
+  }
+  return { contacts: [{ whatsapp: "" }] };
+}
+
 /** Resolve the authenticated user from the Bearer token in the request. */
 async function resolveUserId(req: Request): Promise<string | null> {
   const auth = req.headers.authorization;
@@ -29,6 +58,9 @@ factoriesRouter.get("/me", async (req: Request, res: Response) => {
     .maybeSingle();
 
   if (error) { res.status(500).json({ error: error.message }); return; }
+  if (data) {
+    (data as { contact_info: unknown }).contact_info = normalizeContactInfo(data.contact_info);
+  }
   res.json({ factory: data });
 });
 
@@ -42,13 +74,19 @@ factoriesRouter.put("/me", async (req: Request, res: Response) => {
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const body = req.body as Record<string, unknown>;
+  const normalized = normalizeContactInfo(body.contact_info);
+  if (!normalized.contacts[0]?.whatsapp?.trim()) {
+    res.status(400).json({ error: "Primary WhatsApp is required in contact_info.contacts[0].whatsapp" });
+    return;
+  }
+
   const payload = {
     user_id: userId,
     name: String(body.name || "").trim(),
     location: String(body.location || "").trim(),
     category: String(body.category || "").trim(),
     capabilities: body.capabilities || {},
-    contact_info: body.contact_info || {},
+    contact_info: normalized,
     active: body.active !== false,
   };
 
@@ -78,7 +116,9 @@ factoriesRouter.put("/me", async (req: Request, res: Response) => {
   }
 
   if (result.error) { res.status(500).json({ error: result.error.message }); return; }
-  res.json({ factory: result.data });
+  const row = result.data as Record<string, unknown> | null;
+  if (row) row.contact_info = normalizeContactInfo(row.contact_info);
+  res.json({ factory: row });
 });
 
 /**

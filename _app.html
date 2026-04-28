@@ -126,7 +126,6 @@
         <p id="supplier-dash-flash" class="form-message" role="status" hidden></p>
         <div class="supplier-stats" id="supplier-stats"></div>
         <h2 class="section-title">Incoming briefs</h2>
-        <p class="section-sub">AI-curated projects that match your capabilities. Review and accept to start working directly with the buyer.</p>
         <div id="supplier-briefs" class="projects-grid"></div>
         <h2 class="section-title" style="margin-top:40px;">Active projects</h2>
         <div id="supplier-active" class="projects-grid"></div>
@@ -151,6 +150,7 @@
         <h1 class="page-title">Admin overview</h1>
         <p class="page-lead" id="admin-lead">Customers, factories, and AI-made connections.</p>
         <p id="admin-flash" class="form-message" role="status" hidden></p>
+        <div id="admin-overview-wrap">
         <div class="admin-stats" id="admin-stats"></div>
         <div class="admin-grid">
           <div class="admin-col">
@@ -171,6 +171,24 @@
         <h2 class="section-title" style="margin-top:48px;">&#128465; Bin</h2>
         <p class="section-sub">Soft-deleted profiles. Restore or permanently delete them here.</p>
         <div id="admin-bin" class="projects-grid"></div>
+        </div>
+        <div id="admin-workspace" class="admin-workspace" hidden>
+          <div class="admin-workspace-bar">
+            <button type="button" class="btn-outline btn-sm" id="admin-workspace-back">Back</button>
+            <span id="admin-workspace-heading" class="admin-workspace-heading"></span>
+          </div>
+          <div class="admin-workspace-grid">
+            <aside class="admin-ws-left" id="admin-ws-left"></aside>
+            <div class="admin-ws-mid">
+              <div id="admin-ws-messages" class="admin-ws-messages chat-messages"></div>
+              <div class="admin-ws-composer">
+                <textarea id="admin-ws-input" class="settings-input admin-ws-input" rows="3" placeholder="Message as Supi…"></textarea>
+                <button type="button" class="btn-primary btn-sm" id="admin-ws-send">Send</button>
+              </div>
+            </div>
+            <aside class="admin-ws-right" id="admin-ws-right"></aside>
+          </div>
+        </div>
       </div>
     </section>
 

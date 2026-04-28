@@ -94,6 +94,21 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   }
 
   try {
+    let projectCoordination: string | null = null;
+    if (project_id) {
+      const { data: proj, error: perr } = await supabaseAdmin
+        .from("projects")
+        .select("coordination_mode")
+        .eq("id", project_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (perr || !proj) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+      projectCoordination = proj.coordination_mode;
+    }
+
     let historyQuery = supabaseAdmin.from("conversations").select("role, content").eq("user_id", userId);
     if (project_id) {
       historyQuery = historyQuery.eq("project_id", project_id);
@@ -114,6 +129,11 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
       content: message.trim(),
     });
 
+    if (projectCoordination === "supi_manual") {
+      res.json({ reply: null, pending_human: true, options: null, action: null });
+      return;
+    }
+
     const { reply, options, action } = await runIntakeAgent(userId, message.trim(), conversationHistory);
 
     const metadata: Record<string, unknown> = {};
@@ -128,7 +148,7 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
       ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     });
 
-    res.json({ reply, options: options || null, action: action || null });
+    res.json({ reply, options: options || null, action: action || null, pending_human: false });
   } catch (err) {
     console.error("[Airsup] chat error:", err);
     res.status(500).json({ error: "Something went wrong. Please try again." });

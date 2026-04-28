@@ -59,13 +59,16 @@
   /** File[] selected on onboarding brief step (any type; uploaded after project is created). */
   let onboardingProjectFiles = [];
   let latestProjectId = null;
+  /** Cached from last admin overview load (factory picker in workspace). */
+  let adminWorkspaceFactoriesCache = [];
+  let adminWorkspaceBackWired = false;
   let activeConnectionMatchId = null;
   let visitsMatchesCache = [];
 
   function resetOnboardData() {
     onboardingProjectFiles = [];
     onboardData = {
-      role: "", fullName: "", phone: "", companyName: "", location: "",
+      role: "", fullName: "", phone: "", whatsapp1: "", whatsapp2: "", person2Name: "", companyName: "", location: "",
       briefUrl: "", briefPastedText: "", briefText: "", briefSource: "", briefFileName: "",
       capabilities: "", certifications: "", moq: "", specialization: "",
     };
@@ -704,6 +707,16 @@
     }
   }
 
+  function closeAdminWorkspace() {
+    const ws = $("admin-workspace");
+    const ow = $("admin-overview-wrap");
+    if (ws) {
+      ws.hidden = true;
+      delete ws.dataset.projectId;
+    }
+    if (ow) ow.hidden = false;
+  }
+
   /* ── View switching ── */
   function setView(name) {
     if (name === "chat" && !CHAT_ENABLED) {
@@ -725,7 +738,10 @@
     if (name === "onboarding") renderOnboardStep();
     if (name === "supplier-dashboard") loadSupplierDashboard();
     if (name === "supplier-profile") loadSupplierProfile();
-    if (name === "admin") loadAdminOverview();
+    if (name === "admin") {
+      closeAdminWorkspace();
+      loadAdminOverview();
+    }
   }
 
   /* ══════════════════════════════════════
@@ -761,10 +777,12 @@
           { key: "moq", label: "Typical MOQ" },
         ]},
       ] },
-    { id: "contact", type: "form", title: "Who should buyers work with?", sub: "We\u2019ll connect projects directly to your designer or engineer, not a sales team. This is your competitive advantage.",
+    { id: "contact", type: "form", title: "Who should buyers work with?", sub: "Two WhatsApp lines optional for a second person; first is required.",
       fields: [
-        { key: "fullName", label: "Contact name", required: true },
-        { key: "phone", label: "Phone / WeChat / WhatsApp", type: "tel", required: true },
+        { key: "fullName", label: "Primary contact name", required: true },
+        { key: "whatsapp1", label: "WhatsApp (primary)", type: "tel", required: true },
+        { key: "whatsapp2", label: "WhatsApp (second person, optional)", type: "tel", required: false },
+        { key: "person2Name", label: "Second contact name (optional)" },
       ] },
     { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and PIN on the home page to log in on another device. You can change them later in Settings." },
   ];
@@ -1080,21 +1098,25 @@
       company: d.companyName, location: d.location,
       headline: d.role === "supplier" ? "supplier" : d.role,
       role: d.role === "supplier" ? "supplier" : "customer",
-      phone: d.phone,
+      phone: d.role === "supplier" ? (d.whatsapp1 || d.phone || "") : d.phone,
     }, { onConflict: "id" });
 
     await supabaseClient.from("user_settings").upsert({
       user_id: currentUser.id,
-      preferred_name: displayName, company: d.companyName, phone: d.phone,
+      preferred_name: displayName, company: d.companyName, phone: d.role === "supplier" ? (d.whatsapp1 || d.phone || "") : d.phone,
     }, { onConflict: "user_id" });
 
     if (d.role === "supplier") {
+      const wa1 = (d.whatsapp1 || "").trim();
+      const wa2 = (d.whatsapp2 || "").trim();
+      const contacts = [{ name: (d.fullName || "").trim(), whatsapp: wa1 }];
+      if (wa2) contacts.push({ name: (d.person2Name || "").trim(), whatsapp: wa2 });
       const facPayload = {
         name: d.companyName,
         location: d.location,
         category: d.specialization,
         capabilities: { description: d.capabilities, certifications: d.certifications, moq: d.moq },
-        contact_info: { name: d.fullName, phone: d.phone },
+        contact_info: { contacts },
         active: true,
       };
       await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify(facPayload) });
@@ -1248,13 +1270,33 @@
   /* ══════════════════════════════════════
      CHAT
      ══════════════════════════════════════ */
-  function appendMessage(role, text, metadata) {
-    $("chat-welcome")?.remove();
-    const container = $("chat-messages");
-    const bubble = document.createElement("div");
-    bubble.className = `chat-bubble chat-bubble--${role}`;
-    if (role === "assistant") { bubble.innerHTML = simpleMarkdown(text); } else { bubble.textContent = text; }
-    container.appendChild(bubble);
+  const SUPI_AVATAR_SRC = "assets/supi.png";
+
+  function appendChatLine(container, role, text, metadata) {
+    if (!container) return;
+    if (container.id === "chat-messages") $("chat-welcome")?.remove();
+
+    const supi = role === "assistant" && metadata && metadata.supi;
+    const wrap = document.createElement("div");
+    wrap.className = "chat-line chat-line--" + role + (supi ? " chat-line--supi" : "");
+
+    if (supi) {
+      wrap.innerHTML =
+        '<img class="chat-line-avatar" src="' +
+        escapeAttr(SUPI_AVATAR_SRC) +
+        '" alt="" width="36" height="36" loading="lazy" />' +
+        '<div class="chat-line-body"><div class="chat-line-name">Supi</div><div class="chat-bubble chat-bubble--assistant">' +
+        simpleMarkdown(text) +
+        "</div></div>";
+      container.appendChild(wrap);
+    } else {
+      const bubble = document.createElement("div");
+      bubble.className = "chat-bubble chat-bubble--" + role;
+      if (role === "assistant") bubble.innerHTML = simpleMarkdown(text);
+      else bubble.textContent = text;
+      wrap.appendChild(bubble);
+      container.appendChild(wrap);
+    }
 
     if (role === "assistant" && metadata) {
       if (metadata.options && metadata.options.length) {
@@ -1266,6 +1308,10 @@
     }
 
     container.scrollTop = container.scrollHeight;
+  }
+
+  function appendMessage(role, text, metadata) {
+    appendChatLine($("chat-messages"), role, text, metadata);
   }
 
   function renderOptionButtons(container, options) {
@@ -1359,7 +1405,13 @@
       const data = await apiCall("/api/chat", { method: "POST", body: JSON.stringify({ message: msgText }) });
       hideTyping();
       document.querySelectorAll(".chat-status").forEach((el) => el.remove());
-      appendMessage("assistant", data.reply, { options: data.options, action: data.action });
+      if (data.reply != null && String(data.reply).trim() !== "") {
+        appendMessage("assistant", data.reply, { options: data.options, action: data.action });
+      } else if (data.pending_human) {
+        appendStatus("Message sent. Supi will reply soon.");
+      } else {
+        appendMessage("assistant", data.reply || "(No reply)", { options: data.options, action: data.action });
+      }
       await refreshLatestProject();
     } catch (err) {
       hideTyping();
@@ -1449,6 +1501,91 @@
     return '<span class="project-status-text project-status-text--neutral">' + escapeHtml(label) + "</span>";
   }
 
+  function buildProjectPipelineStepper(project) {
+    var step = Number(project.pipeline_step);
+    if (!Number.isFinite(step) || step < 1) step = 1;
+    if (step > 3) step = 3;
+    var labels = ["Contact", "Refine", "Sample"];
+    var parts = [];
+    for (var i = 1; i <= 3; i++) {
+      var cls = "pipeline-node";
+      if (step > i) cls += " pipeline-node--done";
+      else if (step === i) cls += " pipeline-node--active";
+      parts.push(
+        '<div class="' +
+          cls +
+          '"><span class="pipeline-node-num">' +
+          i +
+          '</span><span class="pipeline-node-label">' +
+          escapeHtml(labels[i - 1]) +
+          "</span></div>"
+      );
+      if (i < 3) {
+        var segCls = "pipeline-bridge";
+        if (step > i) segCls += " pipeline-bridge--done";
+        else if (step === i) segCls += " pipeline-bridge--active";
+        parts.push('<div class="' + segCls + '"><div class="pipeline-bridge-line"></div></div>');
+      }
+    }
+    return '<div class="project-pipeline" role="status"><div class="project-pipeline-track">' + parts.join("") + "</div></div>";
+  }
+
+  function buildProjectChatSection() {
+    return (
+      '<section class="project-detail-section project-detail-chat-block"><h3 class="project-detail-h">Messages</h3>' +
+      '<div id="project-chat-messages" class="project-chat-messages chat-messages"></div>' +
+      '<div class="project-chat-composer composer-inner">' +
+      '<textarea id="project-chat-input" class="composer-input" rows="2" placeholder="Message\u2026"></textarea>' +
+      '<button type="button" class="composer-send" id="project-chat-send" aria-label="Send">' +
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></button>' +
+      "</div></section>"
+    );
+  }
+
+  async function loadProjectChatHistory(projectId) {
+    const box = $("project-chat-messages");
+    if (!box) return;
+    try {
+      const { messages } = await apiCall("/api/chat/history?project_id=" + encodeURIComponent(projectId));
+      box.innerHTML = "";
+      (messages || []).forEach(function (m) {
+        appendChatLine(box, m.role, m.content, m.metadata);
+      });
+    } catch (_) {
+      box.innerHTML = '<p class="project-detail-muted">Could not load messages.</p>';
+    }
+  }
+
+  async function sendProjectChat(projectId) {
+    const inp = $("project-chat-input");
+    const btn = $("project-chat-send");
+    const box = $("project-chat-messages");
+    const text = (inp && inp.value || "").trim();
+    if (!text || !box) return;
+    if (!(await ensureSession())) return;
+    appendChatLine(box, "user", text, null);
+    if (inp) inp.value = "";
+    if (btn) btn.disabled = true;
+    try {
+      const data = await apiCall("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ message: text, project_id: projectId }),
+      });
+      if (data.reply != null && String(data.reply).trim() !== "") {
+        appendChatLine(box, "assistant", data.reply, { options: data.options, action: data.action });
+      } else if (data.pending_human) {
+        const st = document.createElement("div");
+        st.className = "chat-status";
+        st.textContent = "Sent. Supi will reply soon.";
+        box.appendChild(st);
+        box.scrollTop = box.scrollHeight;
+      }
+    } catch (e) {
+      appendChatLine(box, "assistant", "Error: " + (e.message || String(e)), null);
+    }
+    if (btn) btn.disabled = false;
+  }
+
   /* ── Projects ── */
   async function loadProjects() {
     setFormFlash("project-list-flash", "", false);
@@ -1528,6 +1665,7 @@
         '<p class="project-detail-description">' +
         escapeHtml(project.description || "") +
         "</p>" +
+        buildProjectPipelineStepper(project) +
         '<p class="project-detail-status-row">' + projectStatusTextHtml(project) + "</p></section>";
 
       var inner =
@@ -1535,6 +1673,7 @@
         escapeAttr(id) +
         '">' +
         overview +
+        buildProjectChatSection() +
         buildRequirementsSection(project.requirements) +
         buildAiSummarySection(project.ai_summary, project.requirements) +
         buildMatchesSection(project.matches) +
@@ -1549,6 +1688,16 @@
         "</div>";
 
       container.innerHTML = inner;
+      void loadProjectChatHistory(id);
+      $("project-chat-send")?.addEventListener("click", function () {
+        void sendProjectChat(id);
+      });
+      $("project-chat-input")?.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          void sendProjectChat(id);
+        }
+      });
       const fileIn = $("project-detail-file-input");
       const fileBtn = $("project-detail-file-btn");
       if (fileBtn && fileIn) {
@@ -2538,6 +2687,208 @@
     setTimeout(() => input?.focus(), 100);
   }
 
+  function wireAdminWorkspaceOnce() {
+    if (adminWorkspaceBackWired) return;
+    adminWorkspaceBackWired = true;
+    $("admin-workspace-back")?.addEventListener("click", () => {
+      closeAdminWorkspace();
+      void loadAdminOverview();
+    });
+  }
+
+  async function openAdminProjectWorkspace(projectId, customerId) {
+    const ow = $("admin-overview-wrap");
+    const ws = $("admin-workspace");
+    if (ow) ow.hidden = true;
+    if (ws) {
+      ws.hidden = false;
+      ws.dataset.projectId = projectId;
+      if (customerId) ws.dataset.customerId = customerId;
+    }
+    const head = $("admin-workspace-heading");
+    const left = $("admin-ws-left");
+    const mid = $("admin-ws-messages");
+    const right = $("admin-ws-right");
+    if (mid) mid.innerHTML = '<div class="projects-empty">Loading\u2026</div>';
+    if (left) left.innerHTML = "";
+    if (right) right.innerHTML = "";
+
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Load failed");
+
+      if (head) head.textContent = (data.project && data.project.title) ? String(data.project.title).slice(0, 80) : "Project";
+
+      const buyerLine = data.buyer_profile
+        ? "<p class=\"admin-ws-buyer\">" +
+          escapeHtml(data.buyer_profile.display_name || "") +
+          (data.company && data.company.name ? " · " + escapeHtml(data.company.name) : "") +
+          "</p>"
+        : "";
+
+      if (left) {
+        left.innerHTML =
+          (buyerLine || "") +
+          buildRequirementsSection(data.project.requirements || {}) +
+          buildAiSummarySection(data.project.ai_summary || {}, data.project.requirements || {}) +
+          buildMatchesSection(data.matches || []);
+      }
+
+      if (mid) {
+        mid.innerHTML = "";
+        (data.conversations || []).forEach((m) => {
+          appendChatLine(mid, m.role, m.content, m.metadata);
+        });
+        mid.scrollTop = mid.scrollHeight;
+      }
+
+      const sendSupi = async () => {
+        const inp = $("admin-ws-input");
+        const txt = (inp && inp.value || "").trim();
+        if (!txt) return;
+        try {
+          const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ body: txt }),
+          });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j?.error || "Failed");
+          if (inp) inp.value = "";
+          if (mid && j.message) appendChatLine(mid, j.message.role, j.message.content, j.message.metadata);
+          if (mid) mid.scrollTop = mid.scrollHeight;
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      const rebindSupiComposer = () => {
+        ["admin-ws-send", "admin-ws-input"].forEach((id) => {
+          const el = $(id);
+          if (!el || !el.parentNode) return;
+          const nu = el.cloneNode(true);
+          el.parentNode.replaceChild(nu, el);
+        });
+        $("admin-ws-send")?.addEventListener("click", () => void sendSupi());
+        $("admin-ws-input")?.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            void sendSupi();
+          }
+        });
+      };
+
+      if (right) {
+        const st = Number(data.project.pipeline_step);
+        const step = Number.isFinite(st) && st >= 1 && st <= 3 ? st : 1;
+        const co = data.project.coordination_mode || "supi_manual";
+        const facOpts = (adminWorkspaceFactoriesCache || [])
+          .map((f) => '<option value="' + escapeAttr(String(f.id)) + '">' + escapeHtml(f.name || "#" + f.id) + "</option>")
+          .join("");
+        right.innerHTML =
+          '<p class="admin-ws-h">Steps</p>' +
+          '<div class="admin-step-btns">' +
+          [1, 2, 3]
+            .map(
+              (n) =>
+                '<button type="button" class="btn-outline btn-sm admin-step-btn" data-step="' +
+                n +
+                '">' +
+                n +
+                "</button>"
+            )
+            .join("") +
+          "</div>" +
+          '<p class="admin-ws-h">AI replies</p>' +
+          '<label class="admin-ws-toggle"><input type="checkbox" id="admin-ws-ai-toggle" ' +
+          (co === "ai" ? "checked" : "") +
+          " /> Claude handles buyer chat</label>" +
+          '<p class="admin-ws-h">Link factory</p>' +
+          '<select id="admin-ws-factory" class="settings-input">' +
+          '<option value="">Choose factory\u2026</option>' +
+          facOpts +
+          "</select>" +
+          '<button type="button" class="btn-primary btn-sm" id="admin-ws-link-factory" style="margin-top:8px;width:100%;">Connect</button>' +
+          '<p id="admin-ws-flash" class="form-message" role="status" hidden></p>';
+
+        right.querySelectorAll(".admin-step-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const n = parseInt(btn.getAttribute("data-step") || "1", 10);
+            const flash = $("admin-ws-flash");
+            try {
+              const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/pipeline`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pipeline_step: n }),
+              });
+              const j = await r.json();
+              if (!r.ok) throw new Error(j?.error || "Failed");
+              if (flash) {
+                flash.hidden = false;
+                flash.textContent = "Step " + n + " saved.";
+                flash.style.color = "";
+              }
+            } catch (e) {
+              if (flash) {
+                flash.hidden = false;
+                flash.textContent = e.message || "Error";
+                flash.style.color = "#d93025";
+              }
+            }
+          });
+        });
+
+        $("admin-ws-ai-toggle")?.addEventListener("change", async (ev) => {
+          const mode = ev.target.checked ? "ai" : "supi_manual";
+          try {
+            const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/coordination`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ coordination_mode: mode }),
+            });
+            const j = await r.json();
+            if (!r.ok) throw new Error(j?.error || "Failed");
+          } catch (e) {
+            console.error(e);
+          }
+        });
+
+        $("admin-ws-link-factory")?.addEventListener("click", async () => {
+          const sel = $("admin-ws-factory");
+          const fid = sel && parseInt(String(sel.value || ""), 10);
+          const flash = $("admin-ws-flash");
+          if (!fid) return;
+          try {
+            const r = await fetch(`${API_BASE}/api/admin/matches`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ project_id: projectId, factory_id: fid }),
+            });
+            const j = await r.json();
+            if (!r.ok) throw new Error(j?.error || "Failed");
+            if (flash) {
+              flash.hidden = false;
+              flash.textContent = j.deduped ? "Already linked." : "Connected.";
+              flash.style.color = "";
+            }
+            void openAdminProjectWorkspace(projectId, customerId || "");
+          } catch (e) {
+            if (flash) {
+              flash.hidden = false;
+              flash.textContent = e.message || "Error";
+              flash.style.color = "#d93025";
+            }
+          }
+        });
+      }
+
+      rebindSupiComposer();
+    } catch (e) {
+      if (mid) mid.innerHTML = '<div class="projects-empty">' + escapeHtml(e.message || "Error") + "</div>";
+    }
+  }
+
   async function loadAdminOverview() {
     setFormFlash("admin-flash", "", false);
     const stats = $("admin-stats");
@@ -2562,6 +2913,9 @@
     const customers = data.customers || [];
     const factories = data.factories || [];
     const connections = data.connections || [];
+    adminWorkspaceFactoriesCache = factories;
+
+    wireAdminWorkspaceOnce();
 
     if (stats) {
       const connectedBuyers = customers.filter((c) => c.connected).length;
@@ -2583,11 +2937,23 @@
         : `<span class="project-card-badge badge--pending">Not connected</span>`;
       const meta = `<span class="project-card-meta-item">${c.project_count} project${c.project_count === 1 ? "" : "s"}</span>` +
         `<span class="project-card-meta-item">${c.match_count} match${c.match_count === 1 ? "" : "es"}</span>`;
+      const chips =
+        c.projects && c.projects.length
+          ? `<div class="admin-proj-chips">${c.projects
+              .map(
+                (p) =>
+                  `<button type="button" class="admin-proj-chip" data-customer-id="${escapeAttr(c.id)}" data-project-id="${escapeAttr(p.id)}">${escapeHtml(
+                    String(p.title || "Project").slice(0, 42)
+                  )}</button>`
+              )
+              .join("")}</div>`
+          : "";
       return `<div class="project-card" style="position:relative;">
         <button class="admin-delete-btn" data-type="customer" data-id="${escapeAttr(c.id)}" title="Move to bin">&#128465;</button>
         <div class="project-card-title">${title}</div>
         ${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}
         <div class="project-card-desc">${escapeHtml(desc || "No description")}</div>
+        ${chips}
         <div class="project-card-meta">${badge}${meta}</div>
       </div>`;
     };
@@ -2612,7 +2978,20 @@
 
     if (custEl) {
       if (!customers.length) custEl.innerHTML = '<div class="projects-empty">No customers yet.</div>';
-      else custEl.innerHTML = customers.map(renderCustomerCard).join("");
+      else {
+        custEl.innerHTML = customers.map(renderCustomerCard).join("");
+        if (!custEl.dataset.projChipWired) {
+          custEl.dataset.projChipWired = "1";
+          custEl.addEventListener("click", (e) => {
+            const chip = e.target.closest(".admin-proj-chip");
+            if (!chip) return;
+            e.preventDefault();
+            const pid = chip.getAttribute("data-project-id");
+            const cid = chip.getAttribute("data-customer-id") || "";
+            if (pid) void openAdminProjectWorkspace(pid, cid);
+          });
+        }
+      }
     }
 
     if (facEl) {
@@ -2762,6 +3141,13 @@
     if (!factory) { root.innerHTML = '<p class="settings-hint">No factory profile found. Complete onboarding as a supplier.</p>'; return; }
     const c = factory.capabilities || {};
     const ci = factory.contact_info || {};
+    const contacts = Array.isArray(ci.contacts) ? ci.contacts : [];
+    const c0 = contacts[0] || {};
+    const c1 = contacts[1] || {};
+    const name0 = c0.name != null ? String(c0.name) : ci.name != null ? String(ci.name) : "";
+    const wa0 = c0.whatsapp != null ? String(c0.whatsapp) : ci.phone != null ? String(ci.phone) : "";
+    const name1 = c1.name != null ? String(c1.name) : "";
+    const wa1 = c1.whatsapp != null ? String(c1.whatsapp) : "";
     root.innerHTML = `<div class="settings-section">
       <div class="settings-field"><label class="settings-label">Factory name</label><input type="text" id="fp-name" class="settings-input" value="${escapeAttr(factory.name)}" /></div>
       <div class="settings-field"><label class="settings-label">Location</label><input type="text" id="fp-location" class="settings-input" value="${escapeAttr(factory.location)}" /></div>
@@ -2769,8 +3155,10 @@
       <div class="settings-field"><label class="settings-label">Capabilities</label><textarea id="fp-capabilities" class="settings-input" rows="3">${escapeHtml(c.description || "")}</textarea></div>
       <div class="settings-field"><label class="settings-label">Certifications</label><input type="text" id="fp-certifications" class="settings-input" value="${escapeAttr(c.certifications || "")}" /></div>
       <div class="settings-field"><label class="settings-label">Typical MOQ</label><input type="text" id="fp-moq" class="settings-input" value="${escapeAttr(c.moq || "")}" /></div>
-      <div class="settings-field"><label class="settings-label">Contact name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(ci.name || "")}" /></div>
-      <div class="settings-field"><label class="settings-label">Contact phone</label><input type="tel" id="fp-contact-phone" class="settings-input" value="${escapeAttr(ci.phone || "")}" /></div>
+      <div class="settings-field"><label class="settings-label">Primary contact name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(name0)}" /></div>
+      <div class="settings-field"><label class="settings-label">WhatsApp (primary)</label><input type="tel" id="fp-contact-wa1" class="settings-input" value="${escapeAttr(wa0)}" /></div>
+      <div class="settings-field"><label class="settings-label">Second contact name (optional)</label><input type="text" id="fp-contact-name2" class="settings-input" value="${escapeAttr(name1)}" /></div>
+      <div class="settings-field"><label class="settings-label">WhatsApp (second, optional)</label><input type="tel" id="fp-contact-wa2" class="settings-input" value="${escapeAttr(wa1)}" /></div>
       <p class="settings-saved" id="fp-saved" hidden></p>
       <button type="button" class="btn-primary" id="fp-save">Save profile</button>
       <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
@@ -2783,10 +3171,14 @@
       const g = (k) => ($(`fp-${k}`)?.value || "").trim();
       const saved = $("fp-saved");
       try {
+        const wa1 = g("contact-wa1");
+        const wa2 = g("contact-wa2");
+        const contacts = [{ name: g("contact-name"), whatsapp: wa1 }];
+        if (wa2) contacts.push({ name: g("contact-name2"), whatsapp: wa2 });
         await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify({
           name: g("name"), location: g("location"), category: g("category"),
           capabilities: { description: g("capabilities"), certifications: g("certifications"), moq: g("moq") },
-          contact_info: { name: g("contact-name"), phone: g("contact-phone") },
+          contact_info: { contacts },
         })});
         if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
       } catch (err) {

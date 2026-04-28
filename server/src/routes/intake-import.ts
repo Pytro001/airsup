@@ -6,6 +6,7 @@ import { fetchChatShare, UnsupportedShareError, detectProvider } from "../lib/ch
 import { importBriefFromText } from "../agents/import-brief.js";
 import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
 import { runJobPollOnce } from "../jobs/poll.js";
+import { seedSupiWelcome } from "../lib/supi-seed.js";
 
 export const intakeImportRouter = Router();
 
@@ -113,6 +114,8 @@ intakeImportRouter.post("/import", requireAuth, async (req: AuthRequest, res: Re
       brief_source_type: briefSourceType,
       brief_source_url: briefSourceUrl,
       brief_raw: briefRaw,
+      pipeline_step: 1,
+      coordination_mode: "supi_manual",
     })
     .select("id, title, description, requirements, ai_summary")
     .single();
@@ -122,6 +125,8 @@ intakeImportRouter.post("/import", requireAuth, async (req: AuthRequest, res: Re
     res.status(500).json({ error: pe?.message || "Could not create project" });
     return;
   }
+
+  await seedSupiWelcome(projectRow.id, userId);
 
   const project = projectRow as {
     id: string;
