@@ -91,12 +91,16 @@
     const lib = window.AIRSUP_PHONE;
     if (!lib) {
       return (
-        '<div class="onboard-field"><label class="onboard-label">' +
-        escapeHtml(label) +
-        '</label><input class="onboard-input" data-key="' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-ph-sf-' +
         escapeAttr(dataKey) +
-        '" type="tel" value="' +
-        escapeAttr(value || "") +
+        '">' +
+        escapeHtml(label) +
+        '</label><input class="onboard-input onboard-input-phone-tel" data-key="' +
+        escapeAttr(dataKey) +
+        '" id="onboard-ph-sf-' +
+        escapeAttr(dataKey) +
+        '" type="tel" inputmode="numeric" pattern="[0-9]*" placeholder="Digits only" value="' +
+        escapeAttr(phoneDigits(value || "")) +
         '"' +
         (required ? " required" : "") +
         " /></div>"
@@ -1211,6 +1215,11 @@
     });
     stage.querySelectorAll(".phone-local-num").forEach((inp) => {
       window.AIRSUP_PHONE?.wirePhoneLocalInput(inp);
+    });
+    stage.querySelectorAll(".onboard-input-phone-tel").forEach((inp) => {
+      inp.addEventListener("input", () => {
+        inp.value = phoneDigits(inp.value);
+      });
     });
 
     function collectOnboardFormFields() {
