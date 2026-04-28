@@ -286,16 +286,38 @@ html[data-theme="dark"] .site-logo img {
 .onboard-input::placeholder, .onboard-textarea::placeholder { color: var(--text-soft); }
 .onboard-textarea { resize: vertical; min-height: 80px; line-height: 1.5; font-family: inherit; }
 .onboard-textarea--compact { min-height: 48px; padding: 10px 14px; line-height: 1.45; }
+/* Country code + local number: .onboard-input sets width:100% which breaks the flex row without these overrides. */
 .phone-inline {
-  display: flex; gap: 10px; align-items: stretch; width: 100%;
+  display: flex; gap: 8px; align-items: stretch; width: 100%;
 }
-.phone-inline .phone-cc-select {
-  flex: 0 0 auto; min-width: 7.5rem; max-width: 46%;
-  padding-left: 10px; padding-right: 8px;
+.phone-inline .onboard-input.phone-cc-select,
+.phone-inline .settings-input.phone-cc-select {
+  width: auto !important;
+  max-width: 5.75rem;
+  min-width: 4.1rem;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  font-size: 14px;
+  padding: 12px 6px 12px 8px;
+  color: var(--text);
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  -webkit-appearance: menulist;
+  appearance: menulist;
 }
-.phone-inline .phone-local-num { flex: 1; min-width: 0; }
-.settings-field .phone-inline .settings-input.phone-cc-select { max-width: 46%; }
-.settings-field .phone-inline .settings-input.phone-local-num { flex: 1; }
+.phone-inline .onboard-input.phone-local-num,
+.phone-inline .settings-input.phone-local-num {
+  width: 0 !important;
+  flex: 1 1 0%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+select.phone-cc-select option {
+  background: var(--bg);
+  color: var(--text);
+}
 textarea.settings-input.onboard-textarea--compact {
   min-height: 48px;
   padding: 10px 14px;

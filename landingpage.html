@@ -180,6 +180,41 @@
     .lp-choice-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
     .lp-choice-sub { font-size: 13px; color: var(--text-soft); line-height: 1.4; }
 
+    .lp-start-wrap {
+      margin-bottom: 40px;
+    }
+
+    /* Primary CTA: play only, no pill background */
+    .lp-start-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: none;
+      background: none;
+      text-decoration: none;
+      color: var(--text);
+      border-radius: 50%;
+      line-height: 0;
+      transition: transform 0.15s ease, opacity 0.15s;
+    }
+    .lp-start-link:hover {
+      transform: scale(1.08);
+      opacity: 0.92;
+    }
+    .lp-start-link:focus-visible {
+      outline: 2px solid var(--text);
+      outline-offset: 6px;
+    }
+    .lp-start-play {
+      width: 80px;
+      height: 80px;
+      display: block;
+    }
+    @media (max-width: 480px) {
+      .lp-start-play { width: 72px; height: 72px; }
+    }
+
     /* ── Login ── */
     .lp-login { width: 100%; max-width: 360px; }
     .lp-login-label {
@@ -188,12 +223,18 @@
     .lp-login-row {
       display: flex; gap: 8px;
     }
-    .lp-phone-row .lp-phone-cc {
-      flex: 0 0 auto; min-width: 7.5rem; max-width: 44%;
-      border-radius: 999px; padding-left: 12px; padding-right: 8px;
-      appearance: auto; cursor: pointer;
+    .lp-phone-row .lp-email-input.lp-phone-cc {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: 4.1rem;
+      max-width: 5.75rem;
+      color: var(--text);
+      background: var(--card-bg);
+      cursor: pointer;
+      -webkit-appearance: menulist;
+      appearance: menulist;
     }
-    .lp-phone-row .lp-phone-local { flex: 1; min-width: 0; }
+    .lp-phone-row .lp-phone-local { flex: 1; min-width: 0; width: 0; }
     .lp-email-input {
       flex: 1; padding: 11px 14px; border-radius: 999px;
       border: 1.5px solid var(--border); font-size: 14px; outline: none;
@@ -287,9 +328,11 @@
 
     <h1 class="lp-headline">From idea to product,<br>in one conversation.</h1>
 
-    <div style="margin-bottom:40px;">
-      <a href="/start" class="lp-choice" style="display:inline-flex;align-items:center;justify-content:center;padding:14px 40px;border-radius:999px;max-width:320px;width:100%;">
-        <span style="font-size:15px;font-weight:600;">Start</span>
+    <div class="lp-start-wrap">
+      <a href="/start" class="lp-start-link" aria-label="Start">
+        <svg class="lp-start-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="M8 5v14l11-7z" />
+        </svg>
       </a>
     </div>
 
