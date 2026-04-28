@@ -242,6 +242,45 @@
     }
     .lp-email-input::placeholder { color: var(--text-soft); }
     .lp-email-input:focus { border-color: var(--text); }
+    .lp-password-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+    }
+    .lp-password-wrap .lp-email-input {
+      width: 100%;
+      max-width: none !important;
+      padding-right: 44px;
+      box-sizing: border-box;
+    }
+    .lp-login-row.lp-password-row { align-items: center; }
+    .btn-password-toggle {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-soft);
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .btn-password-toggle:hover {
+      color: var(--text);
+      background: var(--accent-bg);
+    }
+    .btn-password-toggle:focus-visible {
+      outline: 2px solid var(--text);
+      outline-offset: 2px;
+    }
+    .btn-password-toggle svg { display: block; }
     .lp-email-btn {
       padding: 11px 20px; border-radius: 999px;
       background: var(--primary); color: var(--on-primary);
@@ -342,8 +381,14 @@
         <select class="lp-email-input lp-phone-cc" id="lp-phone-cc" aria-label="Country code"></select>
         <input type="text" class="lp-email-input lp-phone-local" id="lp-phone-local" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" placeholder="Digits only" />
       </div>
-      <div class="lp-login-row" style="margin-top:8px;">
-        <input type="password" class="lp-email-input" id="lp-password" placeholder="Password (6+)" minlength="6" maxlength="64" autocomplete="current-password" style="max-width:160px;" />
+      <div class="lp-login-row lp-password-row" style="margin-top:8px;">
+        <div class="lp-password-wrap">
+          <input type="password" class="lp-email-input" id="lp-password" placeholder="Password (6+)" minlength="6" maxlength="64" autocomplete="current-password" />
+          <button type="button" class="btn-password-toggle" data-password-for="lp-password" aria-label="Show password" aria-pressed="false" tabindex="0">
+            <span class="btn-password-toggle__show" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+            <span class="btn-password-toggle__hide" hidden aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 3-4.5M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
+          </button>
+        </div>
         <button type="button" class="lp-email-btn" id="lp-send-btn">Login</button>
       </div>
       <p class="lp-login-msg" id="lp-login-msg"></p>
@@ -363,6 +408,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
   <script src="assets/phone-dial.js"></script>
+  <script src="assets/password-toggles.js"></script>
   <script>
     document.getElementById("lp-year").textContent = new Date().getFullYear();
 

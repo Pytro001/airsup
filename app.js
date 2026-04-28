@@ -196,6 +196,22 @@
   function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
   function escapeAttr(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
+  /** Pairs with .password-input-wrap and assets/password-toggles.js */
+  function passwordToggleButtonHtml(forId) {
+    return (
+      '<button type="button" class="btn-password-toggle" data-password-for="' +
+      escapeAttr(forId) +
+      '" aria-label="Show password" aria-pressed="false" tabindex="0">' +
+      '<span class="btn-password-toggle__show" aria-hidden="true">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+      "</span>" +
+      '<span class="btn-password-toggle__hide" hidden aria-hidden="true">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 3-4.5M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>' +
+      "</span>" +
+      "</button>"
+    );
+  }
+
   /** One-line inline validation (onboarding), no browser alert. */
   function setOnboardLineError(elementId, message) {
     const el = document.getElementById(elementId);
@@ -1018,9 +1034,15 @@
         '<div class="onboard-form">' +
         phoneRowHtml +
         '<div class="onboard-field"><label class="onboard-label" for="onboard-pin">Password (min. 6 characters)</label>' +
-        '<input class="onboard-input" type="password" id="onboard-pin" minlength="6" maxlength="64" autocomplete="new-password" required /></div>' +
+        '<div class="password-input-wrap">' +
+        '<input class="onboard-input" type="password" id="onboard-pin" minlength="6" maxlength="64" autocomplete="new-password" required />' +
+        passwordToggleButtonHtml("onboard-pin") +
+        "</div></div>" +
         '<div class="onboard-field"><label class="onboard-label" for="onboard-pin2">Confirm password</label>' +
-        '<input class="onboard-input" type="password" id="onboard-pin2" minlength="6" maxlength="64" autocomplete="new-password" required /></div>' +
+        '<div class="password-input-wrap">' +
+        '<input class="onboard-input" type="password" id="onboard-pin2" minlength="6" maxlength="64" autocomplete="new-password" required />' +
+        passwordToggleButtonHtml("onboard-pin2") +
+        "</div></div>" +
         "</div>" +
         '<p class="onboard-field-error" id="onboard-pin-error" role="status" hidden></p>' +
         '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
@@ -1386,8 +1408,8 @@
       <p class="settings-saved" id="settings-saved" hidden></p>
       <button type="button" class="btn-primary" id="settings-save">Save changes</button>
       <div class="settings-signin-block">
-        <div class="settings-field"><label class="settings-label" for="settings-signin-pin">New password (min. 6 characters)</label><input type="password" id="settings-signin-pin" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
-        <div class="settings-field"><label class="settings-label" for="settings-signin-pin2">Confirm password</label><input type="password" id="settings-signin-pin2" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
+        <div class="settings-field"><label class="settings-label" for="settings-signin-pin">New password (min. 6 characters)</label><div class="password-input-wrap"><input type="password" id="settings-signin-pin" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" />${passwordToggleButtonHtml("settings-signin-pin")}</div></div>
+        <div class="settings-field"><label class="settings-label" for="settings-signin-pin2">Confirm password</label><div class="password-input-wrap"><input type="password" id="settings-signin-pin2" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" />${passwordToggleButtonHtml("settings-signin-pin2")}</div></div>
         <button type="button" class="btn-outline" id="settings-save-signin">Save sign-in (phone + password)</button>
       </div>${settingsDangerZoneHtml}</div>`;
     root.querySelectorAll(".phone-local-num").forEach((el) => {
@@ -2844,7 +2866,10 @@
           <h1 style="font-size:22px;font-weight:600;margin-bottom:8px;">Admin access</h1>
           <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Enter the admin password to continue.</p>
           <div style="display:flex;flex-direction:column;gap:12px;">
-            <input type="password" id="admin-pw-input" style="padding:11px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none;width:100%;font-family:inherit;" placeholder="Password" autocomplete="current-password" />
+            <div class="password-input-wrap" style="position:relative;width:100%;">
+            <input type="password" id="admin-pw-input" style="padding:11px 44px 11px 14px;border-radius:999px;border:1.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;outline:none;width:100%;box-sizing:border-box;font-family:inherit;" placeholder="Password" autocomplete="current-password" />
+            ${passwordToggleButtonHtml("admin-pw-input")}
+            </div>
             <p id="admin-pw-error" style="color:#d93025;font-size:13px;display:none;margin:0;">Wrong password.</p>
             <button type="button" id="admin-pw-btn" style="padding:11px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:500;border:none;cursor:pointer;">Unlock</button>
           </div>
