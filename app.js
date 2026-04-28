@@ -872,7 +872,7 @@
         { key: "fullName", label: "Full name", required: true },
         { key: "phone", label: "Phone / WhatsApp", type: "phone", required: true },
       ] },
-    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and password on the home page to log in on another device. You can change them later in Settings." },
+    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Set a password to log in on the home page with the phone number you entered in the last step. You can change it later in Settings." },
   ];
 
   const SUPPLIER_STEPS = [
@@ -1003,14 +1003,16 @@
 
     const step = steps[stepIdx];
     if (step.type === "pin") {
+      const isSupplier = onboardData.role === "supplier";
       var pphone = (onboardData.phone || "").trim();
+      var phoneRowHtml = isSupplier ? onboardPinPhoneRowHtml(pphone) : "";
       var pinH =
         '<div class="onboard-question"><h1 class="onboard-title">' +
         step.title +
         "</h1>" +
         (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
         '<div class="onboard-form">' +
-        onboardPinPhoneRowHtml(pphone) +
+        phoneRowHtml +
         '<div class="onboard-field"><label class="onboard-label" for="onboard-pin">Password (min. 6 characters)</label>' +
         '<input class="onboard-input" type="password" id="onboard-pin" minlength="6" maxlength="64" autocomplete="new-password" required /></div>' +
         '<div class="onboard-field"><label class="onboard-label" for="onboard-pin2">Confirm password</label>' +
@@ -1021,14 +1023,26 @@
         '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
       stage.innerHTML = pinH;
       var pinErrClear = function () { setOnboardLineError("onboard-pin-error", ""); };
-      ["onboard-pin-phone-cc", "onboard-pin-phone-local", "onboard-pin", "onboard-pin2"].forEach(function (iid) {
-        document.getElementById(iid)?.addEventListener("input", pinErrClear);
-      });
-      window.AIRSUP_PHONE?.wirePhoneLocalInput($("onboard-pin-phone-local"));
+      if (isSupplier) {
+        ["onboard-pin-phone-cc", "onboard-pin-phone-local", "onboard-pin", "onboard-pin2"].forEach(function (iid) {
+          document.getElementById(iid)?.addEventListener("input", pinErrClear);
+        });
+        window.AIRSUP_PHONE?.wirePhoneLocalInput($("onboard-pin-phone-local"));
+      } else {
+        ["onboard-pin", "onboard-pin2"].forEach(function (iid) {
+          document.getElementById(iid)?.addEventListener("input", pinErrClear);
+        });
+      }
       $("onboard-next")?.addEventListener("click", async function () {
         if (!(await ensureSession())) return;
         setOnboardLineError("onboard-pin-error", "");
-        const a = mergePhoneFromRow($("onboard-pin-phone-cc"), $("onboard-pin-phone-local"));
+        var a = isSupplier
+          ? mergePhoneFromRow($("onboard-pin-phone-cc"), $("onboard-pin-phone-local"))
+          : (onboardData.phone || "").trim();
+        if (!isSupplier && !a) {
+          setOnboardLineError("onboard-pin-error", "Add your phone number in the previous step, or go back to enter it.");
+          return;
+        }
         const b = ($("onboard-pin") && ($("onboard-pin").value)) || "";
         const c = ($("onboard-pin2") && ($("onboard-pin2").value)) || "";
         const nextBtn = $("onboard-next");
@@ -1040,7 +1054,9 @@
             setOnboardLineError("onboard-pin-error", r.error);
             return;
           }
-          onboardData.phone = (a || "").trim();
+          if (isSupplier) {
+            onboardData.phone = (a || "").trim();
+          }
           onboardStep++;
           renderOnboardStep();
         } finally {
@@ -1048,11 +1064,19 @@
         }
       });
       $("onboard-back")?.addEventListener("click", function () {
-        onboardData.phone = mergePhoneFromRow($("onboard-pin-phone-cc"), $("onboard-pin-phone-local")).trim();
+        if (isSupplier) {
+          onboardData.phone = mergePhoneFromRow($("onboard-pin-phone-cc"), $("onboard-pin-phone-local")).trim();
+        }
         onboardStep--;
         renderOnboardStep();
       });
-      setTimeout(function () { $("onboard-pin-phone-local") && ($("onboard-pin-phone-local").focus()); }, 100);
+      setTimeout(
+        function () {
+          if (isSupplier) $("onboard-pin-phone-local") && ($("onboard-pin-phone-local").focus());
+          else $("onboard-pin") && ($("onboard-pin").focus());
+        },
+        100
+      );
       return;
     }
     if (step.type === "brief") {
