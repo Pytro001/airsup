@@ -188,6 +188,12 @@
     .lp-login-row {
       display: flex; gap: 8px;
     }
+    .lp-phone-row .lp-phone-cc {
+      flex: 0 0 auto; min-width: 7.5rem; max-width: 44%;
+      border-radius: 999px; padding-left: 12px; padding-right: 8px;
+      appearance: auto; cursor: pointer;
+    }
+    .lp-phone-row .lp-phone-local { flex: 1; min-width: 0; }
     .lp-email-input {
       flex: 1; padding: 11px 14px; border-radius: 999px;
       border: 1.5px solid var(--border); font-size: 14px; outline: none;
@@ -288,11 +294,13 @@
     </div>
 
     <div class="lp-login" id="lp-login-section" style="display:none;">
-      <div class="lp-login-row">
-        <input type="tel" class="lp-email-input" id="lp-phone" placeholder="+1 555 000 0000" autocomplete="tel" />
+      <p class="lp-login-label" style="margin-bottom:6px;">Login phone number</p>
+      <div class="lp-login-row lp-phone-row">
+        <select class="lp-email-input lp-phone-cc" id="lp-phone-cc" aria-label="Country code"></select>
+        <input type="text" class="lp-email-input lp-phone-local" id="lp-phone-local" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" placeholder="Digits only" />
       </div>
       <div class="lp-login-row" style="margin-top:8px;">
-        <input type="password" class="lp-email-input" id="lp-pin" placeholder="PIN (6+)" minlength="6" maxlength="64" autocomplete="current-password" style="max-width:130px;" />
+        <input type="password" class="lp-email-input" id="lp-password" placeholder="Password (6+)" minlength="6" maxlength="64" autocomplete="current-password" style="max-width:160px;" />
         <button type="button" class="lp-email-btn" id="lp-send-btn">Login</button>
       </div>
       <p class="lp-login-msg" id="lp-login-msg"></p>
@@ -311,6 +319,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
+  <script src="assets/phone-dial.js"></script>
   <script>
     document.getElementById("lp-year").textContent = new Date().getFullYear();
 
@@ -382,14 +391,17 @@
       const visible = loginSection.style.display !== "none";
       loginSection.style.display = visible ? "none" : "block";
       loginToggle.textContent = visible ? "Login" : "Close";
-      if (!visible) document.getElementById("lp-phone").focus();
+      if (!visible) document.getElementById("lp-phone-local")?.focus();
     });
 
-    // Phone + PIN login
-    // Phone is normalized and used as a fake email internally.
-    // No SMS, no email, costs nothing, works forever.
-    const phoneInput = document.getElementById("lp-phone");
-    const pinInput   = document.getElementById("lp-pin");
+    // Phone + password login (digits + country code → fake email).
+    const phoneCc = document.getElementById("lp-phone-cc");
+    const phoneLocal = document.getElementById("lp-phone-local");
+    if (phoneCc && window.AIRSUP_PHONE) {
+      phoneCc.innerHTML = window.AIRSUP_PHONE.dialCodeOptionsHtml("49");
+    }
+    window.AIRSUP_PHONE?.wirePhoneLocalInput(phoneLocal);
+    const passwordInput = document.getElementById("lp-password");
     const sendBtn    = document.getElementById("lp-send-btn");
     const msgEl      = document.getElementById("lp-login-msg");
 
@@ -406,10 +418,12 @@
     }
 
     async function doLogin() {
-      const phone = phoneInput.value.trim();
-      const pin   = pinInput.value;
+      const phone = window.AIRSUP_PHONE
+        ? window.AIRSUP_PHONE.mergeDialAndNational(phoneCc && phoneCc.value, phoneLocal && phoneLocal.value)
+        : "";
+      const pin   = passwordInput.value;
       if (!phone || phone.replace(/[^0-9]/g, "").length < 7) { showMsg("Enter a valid phone number with country code.", true); return; }
-      if (!pin || pin.length < 6) { showMsg("PIN must be at least 6 characters.", true); return; }
+      if (!pin || pin.length < 6) { showMsg("Password must be at least 6 characters.", true); return; }
       if (!sb) { showMsg("Not configured.", true); return; }
       sendBtn.disabled = true;
       sendBtn.textContent = "Signing in…";
@@ -419,7 +433,7 @@
       const { data: siData, error: siErr } = await sb.auth.signInWithPassword({ email: fakeEmail, password: pin });
       if (!siErr && siData?.session) { window.location.href = "/workspace"; return; }
 
-      // If wrong credentials (user exists but wrong PIN)
+      // If wrong credentials (user exists but wrong password)
       const notFound = siErr?.message?.toLowerCase().includes("invalid") || siErr?.message?.toLowerCase().includes("credentials");
       if (!notFound) {
         sendBtn.disabled = false; sendBtn.textContent = "Login";
@@ -440,8 +454,8 @@
     }
 
     sendBtn.addEventListener("click", doLogin);
-    phoneInput.addEventListener("keydown", (e) => { if (e.key === "Enter") pinInput.focus(); });
-    pinInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+    phoneLocal?.addEventListener("keydown", (e) => { if (e.key === "Enter") passwordInput.focus(); });
+    passwordInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
 
     // Cursor-tracking eyes with smooth lerp (lazy follow)
     // Target offset is computed instantly from mouse position, but the

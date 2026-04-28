@@ -1,7 +1,11 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { supabaseAdmin } from "../services/supabase.js";
-import { isMissingDeletedAtColumnError, SOFT_DELETE_MIGRATION_HINT } from "../lib/soft-delete-errors.js";
+import {
+  isMissingDeletedAtColumnError,
+  postgrestErrorText,
+  SOFT_DELETE_MIGRATION_HINT,
+} from "../lib/soft-delete-errors.js";
 import { listFilesForProjectWithUrls } from "../lib/project-files.js";
 
 export const adminRouter = Router();
@@ -29,6 +33,17 @@ type FactoryForAdmin = {
   deleted_at?: string | null;
 };
 
+/** Row shape for admin overview project list (pipeline fields optional until migration 021). */
+type AdminOverviewProject = {
+  id: string;
+  user_id: string;
+  title: string | null;
+  status: string | null;
+  created_at: string;
+  pipeline_step?: number | null;
+  coordination_mode?: string | null;
+};
+
 /** Excludes soft-deleted rows; avoids .is("deleted_at", null) which can break if the column is missing. */
 function filterNotDeleted<T extends { deleted_at?: string | null }>(rows: T[] | null): T[] {
   if (!rows) return [];
@@ -42,14 +57,15 @@ function filterNotDeleted<T extends { deleted_at?: string | null }>(rows: T[] | 
  */
 adminRouter.get("/overview", async (_req, res: Response) => {
   try {
-    const [companiesRes, projectsRes, matchesRes, outreachRes] = await Promise.all([
+    const [companiesRes, projectsResFull, matchesRes, outreachRes] = await Promise.all([
       supabaseAdmin
         .from("companies")
         .select("id, user_id, name, description, industry, location, created_at")
         .limit(500),
       supabaseAdmin
         .from("projects")
-        .select("id, user_id, title, status, created_at, pipeline_step, coordination_mode")
+        // Omit pipeline_step / coordination_mode: overview works without migration 021; details use select *.
+        .select("id, user_id, title, status, created_at")
         .order("created_at", { ascending: false })
         .limit(1000),
       supabaseAdmin
@@ -63,15 +79,38 @@ adminRouter.get("/overview", async (_req, res: Response) => {
         .order("created_at", { ascending: false })
         .limit(1000),
     ]);
+    {
+      // #region agent log
+      const pe = projectsResFull.error;
+      void fetch("http://127.0.0.1:7803/ingest/440abadd-e42c-4ad6-b3c7-7a5e0395097a", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "ba8cdd" },
+        body: JSON.stringify({
+          sessionId: "ba8cdd",
+          hypothesisId: "H1",
+          location: "server/src/routes/admin.ts:overview:post-parallel",
+          message: "admin overview projects query result",
+          data: {
+            hasProjectsError: !!pe,
+            errText: pe ? postgrestErrorText(pe).slice(0, 500) : null,
+            dataLen: Array.isArray(projectsResFull.data) ? projectsResFull.data.length : 0,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+    }
 
     if (companiesRes.error) {
       console.error("[admin/overview] companies:", companiesRes.error);
-      return res.status(500).json({ error: "companies: " + companiesRes.error.message });
+      return res.status(500).json({ error: "companies: " + postgrestErrorText(companiesRes.error) });
     }
-    if (projectsRes.error) {
-      console.error("[admin/overview] projects:", projectsRes.error);
-      return res.status(500).json({ error: "projects: " + projectsRes.error.message });
+    if (projectsResFull.error) {
+      console.error("[admin/overview] projects:", projectsResFull.error);
+      return res.status(500).json({ error: "projects: " + postgrestErrorText(projectsResFull.error) });
     }
+    const projects: AdminOverviewProject[] = (projectsResFull.data as AdminOverviewProject[]) || [];
+
     if (matchesRes.error) {
       console.error("[admin/overview] matches:", matchesRes.error);
       return res.status(500).json({ error: "matches: " + matchesRes.error.message });
@@ -129,7 +168,6 @@ adminRouter.get("/overview", async (_req, res: Response) => {
 
     const profiles = profileRows;
     const companies = companiesRes.data || [];
-    const projects = projectsRes.data || [];
     const matches = matchesRes.data || [];
     const outreach = outreachRes.data || [];
 

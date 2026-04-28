@@ -3,11 +3,11 @@
  *
  * Set supabaseAnonKey here OR use config.local.js (see config.local.example.js).
  *
- * The app starts with Supabase Anonymous sign-in, then users set phone + PIN (onboarding
+ * The app starts with Supabase Anonymous sign-in, then users set phone + password (onboarding
  * or Settings) so the home page can sign them in. Configure:
  * - Authentication → Providers → Anonymous sign-ins → ON → Save (the workspace uses it).
  * - (Recommended) Auth → signups: disable "Confirm email" for @login.airsup accounts.
- * - PINs use the auth password: Supabase default minimum is 6 characters; keep the site copy in sync.
+ * - Passwords use Supabase auth password: default minimum is 6 characters; keep the site copy in sync.
  * - Run SQL migrations (003_platform_pivot.sql, 004_profile_trigger_names.sql) so new users get profiles rows.
  *
  * Dev-only: localStorage.setItem("airsup_supabase_anon_key", "<anon key>") then reload.

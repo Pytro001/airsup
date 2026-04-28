@@ -70,10 +70,123 @@
     onboardData = {
       role: "", fullName: "", phone: "", whatsapp1: "", whatsapp2: "", person2Name: "", companyName: "", location: "",
       briefUrl: "", briefPastedText: "", briefText: "", briefSource: "", briefFileName: "",
-      capabilities: "", certifications: "", moq: "", specialization: "",
+      capabilities: "", priceRange: "", moqMin: "", moqMax: "", specialization: "",
     };
   }
   resetOnboardData();
+
+  function mergePhoneFromRow(ccEl, localEl) {
+    const lib = window.AIRSUP_PHONE;
+    if (lib) {
+      const m = lib.mergeDialAndNational(ccEl && ccEl.value, localEl && localEl.value);
+      return m || "";
+    }
+    const c = phoneDigits((ccEl && ccEl.value) || "");
+    const n = phoneDigits((localEl && localEl.value) || "");
+    if (!c || !n) return "";
+    return "+" + c + n;
+  }
+
+  function onboardPhoneFieldHtml(dataKey, label, value, required) {
+    const lib = window.AIRSUP_PHONE;
+    if (!lib) {
+      return (
+        '<div class="onboard-field"><label class="onboard-label">' +
+        escapeHtml(label) +
+        '</label><input class="onboard-input" data-key="' +
+        escapeAttr(dataKey) +
+        '" type="tel" value="' +
+        escapeAttr(value || "") +
+        '"' +
+        (required ? " required" : "") +
+        " /></div>"
+      );
+    }
+    const parts = lib.parseStoredPhoneToParts(value || "");
+    const idBase = "onboard-ph-" + dataKey;
+    return (
+      '<div class="onboard-field onboard-field-phone" data-phone-key="' +
+      escapeAttr(dataKey) +
+      '">' +
+      '<label class="onboard-label" for="' +
+      idBase +
+      '-local">' +
+      escapeHtml(label) +
+      "</label>" +
+      '<div class="phone-inline">' +
+      '<select class="onboard-input phone-cc-select" id="' +
+      idBase +
+      '-cc" aria-label="Country code">' +
+      lib.dialCodeOptionsHtml(parts.dial) +
+      "</select>" +
+      '<input class="onboard-input phone-local-num" id="' +
+      idBase +
+      '-local" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" value="' +
+      escapeAttr(parts.national) +
+      '"' +
+      (required ? " required" : "") +
+      " /></div></div>"
+    );
+  }
+
+  function onboardPinPhoneRowHtml(value) {
+    const lib = window.AIRSUP_PHONE;
+    const parts = lib ? lib.parseStoredPhoneToParts(value || "") : { dial: "49", national: phoneDigits(value || "") };
+    const idBase = "onboard-pin-phone";
+    return (
+      '<div class="onboard-field onboard-field-phone onboard-field-phone--signin">' +
+      '<label class="onboard-label" for="' +
+      idBase +
+      '-local">Login phone number</label>' +
+      '<div class="phone-inline">' +
+      '<select class="onboard-input phone-cc-select" id="' +
+      idBase +
+      '-cc" aria-label="Country code">' +
+      (lib ? lib.dialCodeOptionsHtml(parts.dial) : "") +
+      "</select>" +
+      '<input class="onboard-input phone-local-num" id="' +
+      idBase +
+      '-local" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" value="' +
+      escapeAttr(parts.national) +
+      '" required /></div></div>'
+    );
+  }
+
+  function settingsPhoneRowHtml(label, idCc, idLocal, storedPhone) {
+    const lib = window.AIRSUP_PHONE;
+    if (!lib) {
+      return (
+        '<div class="settings-field"><label class="settings-label">' +
+        escapeHtml(label) +
+        '</label><input type="tel" id="settings-phone" class="settings-input" value="' +
+        escapeAttr(storedPhone || "") +
+        '" /></div>'
+      );
+    }
+    const parts = lib.parseStoredPhoneToParts(storedPhone || "");
+    return (
+      '<div class="settings-field"><label class="settings-label">' +
+      escapeHtml(label) +
+      '</label><div class="phone-inline">' +
+      '<select class="settings-input phone-cc-select" id="' +
+      escapeAttr(idCc) +
+      '" aria-label="Country code">' +
+      lib.dialCodeOptionsHtml(parts.dial) +
+      "</select>" +
+      '<input type="text" class="settings-input phone-local-num" id="' +
+      escapeAttr(idLocal) +
+      '" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" value="' +
+      escapeAttr(parts.national) +
+      '" /></div></div>'
+    );
+  }
+
+  function readSettingsStoredPhone() {
+    if ($("settings-phone-cc") && $("settings-phone-local")) {
+      return mergePhoneFromRow($("settings-phone-cc"), $("settings-phone-local"));
+    }
+    return ($("settings-phone")?.value || "").trim();
+  }
 
   /* ── Helpers ── */
   function escapeHtml(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
@@ -594,7 +707,7 @@
   }
 
   /**
-   * Binds the current session to phone + PIN (Supabase email + password) so the user can
+   * Binds the current session to phone + password (Supabase email + password) so the user can
    * sign in from the landing page. Safe to call on anonymous or existing email users.
    */
   async function applyPhonePinSignIn(phoneRaw, pin, pinConfirm) {
@@ -602,8 +715,8 @@
     const phone = (phoneRaw || "").trim();
     const digits = phoneDigits(phone);
     if (digits.length < 7) { return { error: "Use a full phone number with country code (at least 7 digits)." }; }
-    if (!pin || String(pin).length < 6) { return { error: "PIN must be at least 6 characters." }; }
-    if (String(pin) !== String(pinConfirm)) { return { error: "PINs do not match." }; }
+    if (!pin || String(pin).length < 6) { return { error: "Password must be at least 6 characters." }; }
+    if (String(pin) !== String(pinConfirm)) { return { error: "Passwords do not match." }; }
 
     const email = phoneToFakeEmail(phone);
     const { data: ures, error: guErr } = await supabaseClient.auth.getUser();
@@ -623,7 +736,7 @@
     const { data, error } = await supabaseClient.auth.updateUser(attrs);
     if (error) {
       var m = String(error.message || "Could not save sign-in.");
-      if (/same\s+as\s+the\s+old\s+password/i.test(m)) { return { error: "Choose a new PIN, different from the old one." }; }
+      if (/same\s+as\s+the\s+old\s+password/i.test(m)) { return { error: "Choose a new password, different from the old one." }; }
       if (/already|registered|exists|user already/i.test(m)) {
         return { error: "This phone is already used by another account. On the home page use Login with that number, or use a different phone in your profile." };
       }
@@ -757,34 +870,33 @@
     { id: "contact", type: "form", title: "How can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { key: "fullName", label: "Full name", required: true },
-        { key: "phone", label: "Phone / WhatsApp", type: "tel", required: true },
+        { key: "phone", label: "Phone / WhatsApp", type: "phone", required: true },
       ] },
-    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and PIN on the home page to log in on another device. You can change them later in Settings." },
+    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and password on the home page to log in on another device. You can change them later in Settings." },
   ];
 
   const SUPPLIER_STEPS = [
     { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers hate talking to sales. Our AI briefs your designers and engineers directly. Less overhead, faster iterations.",
       fields: [
-        { key: "companyName", label: "Factory / company name", required: true },
+        { key: "companyName", label: "Company name", required: true },
         { key: "location", label: "Location", required: true },
-        { key: "specialization", label: "Specialization", required: true },
+        { key: "specialization", label: "What do you manufacture?", required: true },
       ] },
     { id: "capabilities", type: "form", title: "What can you produce?", sub: "This helps our AI match you with the right projects. Be specific about what your team excels at.",
       fields: [
-        { key: "capabilities", label: "Core capabilities", type: "textarea" },
-        { row: [
-          { key: "certifications", label: "Certifications" },
-          { key: "moq", label: "Typical MOQ" },
-        ]},
+        { key: "capabilities", label: "Describe", type: "textarea", compact: true },
+        { key: "priceRange", label: "Project price range" },
+        { key: "moqMin", label: "Minimal order quantity", type: "digits" },
+        { key: "moqMax", label: "Maximal order quantity", type: "digits" },
       ] },
-    { id: "contact", type: "form", title: "Who should buyers work with?", sub: "Two WhatsApp lines optional for a second person; first is required.",
+    { id: "contact", type: "form", title: "Who should buyers work with?", sub: "Pick a country code, then digits only in the number field. Person 2 is optional.",
       fields: [
-        { key: "fullName", label: "Primary contact name", required: true },
-        { key: "whatsapp1", label: "WhatsApp (primary)", type: "tel", required: true },
-        { key: "whatsapp2", label: "WhatsApp (second person, optional)", type: "tel", required: false },
-        { key: "person2Name", label: "Second contact name (optional)" },
+        { key: "fullName", label: "Person 1 first name", required: true },
+        { key: "whatsapp1", label: "Person 1 WhatsApp", type: "phone", required: true },
+        { key: "person2Name", label: "Person 2 first name" },
+        { key: "whatsapp2", label: "Person 2 WhatsApp", type: "phone", required: false },
       ] },
-    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and PIN on the home page to log in on another device. You can change them later in Settings." },
+    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and password on the home page to log in on another device. You can change them later in Settings." },
   ];
 
   function getSteps() { return onboardData.role === "supplier" ? SUPPLIER_STEPS : STARTUP_STEPS; }
@@ -898,13 +1010,10 @@
         "</h1>" +
         (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
         '<div class="onboard-form">' +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin-phone">Phone</label>' +
-        '<input class="onboard-input" type="tel" id="onboard-pin-phone" autocomplete="tel" value="' +
-        escapeAttr(pphone) +
-        '" required /></div>' +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin">PIN (min. 6 characters)</label>' +
+        onboardPinPhoneRowHtml(pphone) +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin">Password (min. 6 characters)</label>' +
         '<input class="onboard-input" type="password" id="onboard-pin" minlength="6" maxlength="64" autocomplete="new-password" required /></div>' +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin2">Confirm PIN</label>' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin2">Confirm password</label>' +
         '<input class="onboard-input" type="password" id="onboard-pin2" minlength="6" maxlength="64" autocomplete="new-password" required /></div>' +
         "</div>" +
         '<p class="onboard-field-error" id="onboard-pin-error" role="status" hidden></p>' +
@@ -912,14 +1021,14 @@
         '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
       stage.innerHTML = pinH;
       var pinErrClear = function () { setOnboardLineError("onboard-pin-error", ""); };
-      ["onboard-pin-phone", "onboard-pin", "onboard-pin2"].forEach(function (iid) {
+      ["onboard-pin-phone-cc", "onboard-pin-phone-local", "onboard-pin", "onboard-pin2"].forEach(function (iid) {
         document.getElementById(iid)?.addEventListener("input", pinErrClear);
       });
+      window.AIRSUP_PHONE?.wirePhoneLocalInput($("onboard-pin-phone-local"));
       $("onboard-next")?.addEventListener("click", async function () {
         if (!(await ensureSession())) return;
         setOnboardLineError("onboard-pin-error", "");
-        const phEl = $("onboard-pin-phone");
-        const a = phEl && (phEl).value;
+        const a = mergePhoneFromRow($("onboard-pin-phone-cc"), $("onboard-pin-phone-local"));
         const b = ($("onboard-pin") && ($("onboard-pin").value)) || "";
         const c = ($("onboard-pin2") && ($("onboard-pin2").value)) || "";
         const nextBtn = $("onboard-next");
@@ -939,12 +1048,11 @@
         }
       });
       $("onboard-back")?.addEventListener("click", function () {
-        var ph = $("onboard-pin-phone");
-        if (ph) onboardData.phone = (ph.value || "").trim();
+        onboardData.phone = mergePhoneFromRow($("onboard-pin-phone-cc"), $("onboard-pin-phone-local")).trim();
         onboardStep--;
         renderOnboardStep();
       });
-      setTimeout(function () { $("onboard-pin-phone") && ($("onboard-pin-phone").focus()); }, 100);
+      setTimeout(function () { $("onboard-pin-phone-local") && ($("onboard-pin-phone-local").focus()); }, 100);
       return;
     }
     if (step.type === "brief") {
@@ -1058,8 +1166,14 @@
           html += `<div class="onboard-field"><label class="onboard-label">${rf.label}</label><input class="onboard-input" data-key="${rf.key}" type="${rf.type || "text"}" value="${escapeAttr(onboardData[rf.key] || "")}" ${rf.required ? "required" : ""} /></div>`;
         });
         html += "</div>";
+      } else if (f.type === "phone") {
+        html += onboardPhoneFieldHtml(f.key, f.label, onboardData[f.key] || "", !!f.required);
       } else if (f.type === "textarea") {
-        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><textarea class="onboard-textarea onboard-input" data-key="${f.key}" ${f.required ? "required" : ""}>${escapeHtml(onboardData[f.key] || "")}</textarea></div>`;
+        const rows = f.compact ? 2 : 4;
+        const cls = f.compact ? " onboard-textarea--compact" : "";
+        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><textarea class="onboard-textarea onboard-input${cls}" data-key="${f.key}" rows="${rows}" ${f.required ? "required" : ""}>${escapeHtml(onboardData[f.key] || "")}</textarea></div>`;
+      } else if (f.type === "digits") {
+        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><input class="onboard-input onboard-input-digits" data-key="${f.key}" type="text" inputmode="numeric" pattern="[0-9]*" value="${escapeAttr(onboardData[f.key] || "")}" ${f.required ? "required" : ""} /></div>`;
       } else {
         html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><input class="onboard-input" data-key="${f.key}" type="${f.type || "text"}" value="${escapeAttr(onboardData[f.key] || "")}" ${f.required ? "required" : ""} /></div>`;
       }
@@ -1068,16 +1182,35 @@
     html += '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
     stage.innerHTML = html;
 
+    stage.querySelectorAll(".onboard-input-digits").forEach((inp) => {
+      inp.addEventListener("input", () => { inp.value = phoneDigits(inp.value); });
+    });
+    stage.querySelectorAll(".phone-local-num").forEach((inp) => {
+      window.AIRSUP_PHONE?.wirePhoneLocalInput(inp);
+    });
+
+    function collectOnboardFormFields() {
+      stage.querySelectorAll("[data-phone-key]").forEach((wrap) => {
+        const key = wrap.dataset.phoneKey;
+        if (!key) return;
+        const idBase = "onboard-ph-" + key;
+        onboardData[key] = mergePhoneFromRow($(idBase + "-cc"), $(idBase + "-local"));
+      });
+      stage.querySelectorAll(".onboard-input[data-key]").forEach((inp) => {
+        onboardData[inp.dataset.key] = (inp.value || "").trim();
+      });
+    }
+
     $("onboard-next")?.addEventListener("click", () => {
-      stage.querySelectorAll(".onboard-input").forEach((inp) => { onboardData[inp.dataset.key] = (inp.value || inp.textContent || "").trim(); });
-      for (const inp of stage.querySelectorAll(".onboard-input[required]")) {
+      collectOnboardFormFields();
+      for (const inp of stage.querySelectorAll(".onboard-input[required], textarea.onboard-input[required]")) {
         if (!(inp.value || "").trim()) { inp.focus(); return; }
       }
       onboardStep++;
       renderOnboardStep();
     });
     $("onboard-back")?.addEventListener("click", () => {
-      stage.querySelectorAll(".onboard-input").forEach((inp) => { onboardData[inp.dataset.key] = (inp.value || inp.textContent || "").trim(); });
+      collectOnboardFormFields();
       onboardStep--;
       renderOnboardStep();
     });
@@ -1115,7 +1248,13 @@
         name: d.companyName,
         location: d.location,
         category: d.specialization,
-        capabilities: { description: d.capabilities, certifications: d.certifications, moq: d.moq },
+        capabilities: {
+          description: (d.capabilities || "").trim(),
+          project_price_range: (d.priceRange || "").trim(),
+          moq_min: phoneDigits(d.moqMin || ""),
+          moq_max: phoneDigits(d.moqMax || ""),
+          moq: [phoneDigits(d.moqMin), phoneDigits(d.moqMax)].filter(Boolean).join(" – ") || "",
+        },
         contact_info: { contacts },
         active: true,
       };
@@ -1197,48 +1336,60 @@
       location: profile?.location || "", headline: profile?.headline || "", bio: profile?.bio || "",
       timezone: settings?.timezone || "Europe/Berlin",
     };
+    const onAdminPath = window.location.pathname.replace(/\/+$/, "") === "/admin";
+    const settingsDangerZoneHtml = onAdminPath
+      ? ""
+      : `<div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
+        <p style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">Danger zone</p>
+        <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
+      </div>`;
     root.innerHTML = `<div class="settings-section">
-      ${[["Display name","displayName","text"],["Company","company","text"],["Phone / WhatsApp","phone","tel"],["Location","location","text"],["Timezone","timezone","text"]].map(([l,k,t]) =>
-        `<div class="settings-field"><label class="settings-label">${l}</label><input type="${t}" id="settings-${k}" class="settings-input" value="${escapeAttr(v[k])}" /></div>`).join("")}
+      <div class="settings-field"><label class="settings-label">Display name</label><input type="text" id="settings-displayName" class="settings-input" value="${escapeAttr(v.displayName)}" /></div>
+      <div class="settings-field"><label class="settings-label">Company</label><input type="text" id="settings-company" class="settings-input" value="${escapeAttr(v.company)}" /></div>
+      ${settingsPhoneRowHtml("Phone / WhatsApp", "settings-phone-cc", "settings-phone-local", v.phone)}
+      <div class="settings-field"><label class="settings-label">Location</label><input type="text" id="settings-location" class="settings-input" value="${escapeAttr(v.location)}" /></div>
+      <div class="settings-field"><label class="settings-label">Timezone</label><input type="text" id="settings-timezone" class="settings-input" value="${escapeAttr(v.timezone)}" /></div>
       <div class="settings-field"><label class="settings-label">Bio</label><textarea id="settings-bio" class="settings-input" rows="3">${escapeHtml(v.bio)}</textarea></div>
       <p class="settings-saved" id="settings-saved" hidden></p>
       <button type="button" class="btn-primary" id="settings-save">Save changes</button>
       <div class="settings-signin-block">
-        <div class="settings-field"><label class="settings-label" for="settings-signin-pin">New PIN (min. 6 characters)</label><input type="password" id="settings-signin-pin" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
-        <div class="settings-field"><label class="settings-label" for="settings-signin-pin2">Confirm PIN</label><input type="password" id="settings-signin-pin2" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
-        <button type="button" class="btn-outline" id="settings-save-signin">Save sign-in (phone + PIN)</button>
-      </div>
-      <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
-        <p style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">Danger zone</p>
-        <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
-      </div></div>`;
+        <div class="settings-field"><label class="settings-label" for="settings-signin-pin">New password (min. 6 characters)</label><input type="password" id="settings-signin-pin" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
+        <div class="settings-field"><label class="settings-label" for="settings-signin-pin2">Confirm password</label><input type="password" id="settings-signin-pin2" class="settings-input" autocomplete="new-password" minlength="6" maxlength="64" /></div>
+        <button type="button" class="btn-outline" id="settings-save-signin">Save sign-in (phone + password)</button>
+      </div>${settingsDangerZoneHtml}</div>`;
+    root.querySelectorAll(".phone-local-num").forEach((el) => {
+      window.AIRSUP_PHONE?.wirePhoneLocalInput(el);
+    });
     var settingsLoc = $("settings-location");
     if (settingsLoc) wireLocationAutocomplete(settingsLoc);
     $("settings-save")?.addEventListener("click", saveSettings);
     $("settings-save-signin")?.addEventListener("click", saveSettingsSignIn);
-    $("settings-delete-profile")?.addEventListener("click", async () => {
-      const ok = await showConfirmDialog(
-        "Delete your profile? It will be moved to the admin bin. You can ask support to restore it.",
-        { confirmLabel: "Delete", cancelLabel: "Cancel", danger: true }
-      );
-      if (!ok) return;
-      try {
-        const token = (await supabaseClient.auth.getSession()).data.session?.access_token;
-        await fetch(`${API_BASE}/api/profile/me`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-        await supabaseClient.auth.signOut();
-        window.location.href = "/";
-      } catch (err) {
-        if ($("settings-saved")) { $("settings-saved").hidden = false; $("settings-saved").textContent = "Could not delete: " + (err.message || String(err)); $("settings-saved").style.color = "#d93025"; }
-      }
-    });
+    if (!onAdminPath) {
+      $("settings-delete-profile")?.addEventListener("click", async () => {
+        const ok = await showConfirmDialog(
+          "Delete your profile? It will be moved to the admin bin. You can ask support to restore it.",
+          { confirmLabel: "Delete", cancelLabel: "Cancel", danger: true }
+        );
+        if (!ok) return;
+        try {
+          const token = (await supabaseClient.auth.getSession()).data.session?.access_token;
+          await fetch(`${API_BASE}/api/profile/me`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+          await supabaseClient.auth.signOut();
+          window.location.href = "/";
+        } catch (err) {
+          if ($("settings-saved")) { $("settings-saved").hidden = false; $("settings-saved").textContent = "Could not delete: " + (err.message || String(err)); $("settings-saved").style.color = "#d93025"; }
+        }
+      });
+    }
   }
 
   async function saveSettings() {
     if (!currentUser || !supabaseClient) return;
     const g = (k) => ($(`settings-${k}`)?.value || "").trim();
     const dn = g("displayName") || currentUser.displayName;
-    const { error: pe } = await supabaseClient.from("profiles").upsert({ id: currentUser.id, display_name: dn, avatar_letter: (dn||"?").charAt(0).toUpperCase(), company: g("company"), phone: g("phone"), location: g("location"), bio: g("bio") }, { onConflict: "id" });
-    const { error: se } = await supabaseClient.from("user_settings").upsert({ user_id: currentUser.id, company: g("company"), phone: g("phone"), timezone: g("timezone")||"Europe/Berlin", preferred_name: dn }, { onConflict: "user_id" });
+    const phone = readSettingsStoredPhone();
+    const { error: pe } = await supabaseClient.from("profiles").upsert({ id: currentUser.id, display_name: dn, avatar_letter: (dn||"?").charAt(0).toUpperCase(), company: g("company"), phone, location: g("location"), bio: g("bio") }, { onConflict: "id" });
+    const { error: se } = await supabaseClient.from("user_settings").upsert({ user_id: currentUser.id, company: g("company"), phone, timezone: g("timezone")||"Europe/Berlin", preferred_name: dn }, { onConflict: "user_id" });
     const saved = $("settings-saved");
     if (pe || se) { if (saved) { saved.hidden = false; saved.textContent = "Error: " + (pe?.message||se?.message||""); saved.style.color = "#d93025"; } return; }
     currentUser.displayName = dn; updateAuthUI();
@@ -1247,7 +1398,7 @@
 
   async function saveSettingsSignIn() {
     if (!currentUser || !supabaseClient) return;
-    const phone = ($("settings-phone")?.value || "").trim();
+    const phone = readSettingsStoredPhone();
     const p1 = ($("settings-signin-pin")?.value) || "";
     const p2 = ($("settings-signin-pin2")?.value) || "";
     if (!phone) {
@@ -1264,7 +1415,7 @@
     var sp1 = $("settings-signin-pin2");
     if (sp0) sp0.value = "";
     if (sp1) sp1.value = "";
-    if (saved) { saved.hidden = false; saved.textContent = "Sign-in saved. You can use Login on the home page with this number and PIN."; saved.style.color = ""; setTimeout(function () { if (saved) saved.hidden = true; }, 5000); }
+    if (saved) { saved.hidden = false; saved.textContent = "Sign-in saved. You can use Login on the home page with this number and password."; saved.style.color = ""; setTimeout(function () { if (saved) saved.hidden = true; }, 5000); }
   }
 
   /* ══════════════════════════════════════
@@ -3147,37 +3298,70 @@
     const name0 = c0.name != null ? String(c0.name) : ci.name != null ? String(ci.name) : "";
     const wa0 = c0.whatsapp != null ? String(c0.whatsapp) : ci.phone != null ? String(ci.phone) : "";
     const name1 = c1.name != null ? String(c1.name) : "";
-    const wa1 = c1.whatsapp != null ? String(c1.whatsapp) : "";
-    root.innerHTML = `<div class="settings-section">
-      <div class="settings-field"><label class="settings-label">Factory name</label><input type="text" id="fp-name" class="settings-input" value="${escapeAttr(factory.name)}" /></div>
-      <div class="settings-field"><label class="settings-label">Location</label><input type="text" id="fp-location" class="settings-input" value="${escapeAttr(factory.location)}" /></div>
-      <div class="settings-field"><label class="settings-label">Specialization</label><input type="text" id="fp-category" class="settings-input" value="${escapeAttr(factory.category)}" /></div>
-      <div class="settings-field"><label class="settings-label">Capabilities</label><textarea id="fp-capabilities" class="settings-input" rows="3">${escapeHtml(c.description || "")}</textarea></div>
-      <div class="settings-field"><label class="settings-label">Certifications</label><input type="text" id="fp-certifications" class="settings-input" value="${escapeAttr(c.certifications || "")}" /></div>
-      <div class="settings-field"><label class="settings-label">Typical MOQ</label><input type="text" id="fp-moq" class="settings-input" value="${escapeAttr(c.moq || "")}" /></div>
-      <div class="settings-field"><label class="settings-label">Primary contact name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(name0)}" /></div>
-      <div class="settings-field"><label class="settings-label">WhatsApp (primary)</label><input type="tel" id="fp-contact-wa1" class="settings-input" value="${escapeAttr(wa0)}" /></div>
-      <div class="settings-field"><label class="settings-label">Second contact name (optional)</label><input type="text" id="fp-contact-name2" class="settings-input" value="${escapeAttr(name1)}" /></div>
-      <div class="settings-field"><label class="settings-label">WhatsApp (second, optional)</label><input type="tel" id="fp-contact-wa2" class="settings-input" value="${escapeAttr(wa1)}" /></div>
-      <p class="settings-saved" id="fp-saved" hidden></p>
-      <button type="button" class="btn-primary" id="fp-save">Save profile</button>
-      <div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
+    const wa1c = c1.whatsapp != null ? String(c1.whatsapp) : "";
+    let moqMinV = c.moq_min != null ? String(c.moq_min) : "";
+    let moqMaxV = c.moq_max != null ? String(c.moq_max) : "";
+    if (!moqMinV && !moqMaxV && c.moq) {
+      const legacy = String(c.moq).trim();
+      const parts = legacy.split(/\s*[–-]\s*/);
+      if (parts.length >= 2) {
+        moqMinV = phoneDigits(parts[0]);
+        moqMaxV = phoneDigits(parts[1]);
+      } else if (legacy) {
+        moqMinV = phoneDigits(legacy);
+      }
+    }
+    const priceR =
+      (c.project_price_range != null && String(c.project_price_range).trim()) ||
+      (c.certifications != null && String(c.certifications)) ||
+      "";
+    const onAdminPath = window.location.pathname.replace(/\/+$/, "") === "/admin";
+    const fpDangerHtml = onAdminPath
+      ? ""
+      : `<div style="margin-top:40px;padding-top:24px;border-top:1px solid var(--border-light);">
         <p style="font-size:13px;color:var(--text-soft);margin-bottom:10px;">Danger zone</p>
         <button type="button" class="btn-danger" id="fp-delete-profile">Delete my profile</button>
-      </div></div>`;
+      </div>`;
+    root.innerHTML = `<div class="settings-section">
+      <div class="settings-field"><label class="settings-label">Company name</label><input type="text" id="fp-name" class="settings-input" value="${escapeAttr(factory.name)}" /></div>
+      <div class="settings-field"><label class="settings-label">Location</label><input type="text" id="fp-location" class="settings-input" value="${escapeAttr(factory.location)}" /></div>
+      <div class="settings-field"><label class="settings-label">What do you manufacture?</label><input type="text" id="fp-category" class="settings-input" value="${escapeAttr(factory.category)}" /></div>
+      <div class="settings-field"><label class="settings-label">Describe</label><textarea id="fp-capabilities" class="settings-input onboard-textarea--compact" rows="2">${escapeHtml(c.description || "")}</textarea></div>
+      <div class="settings-field"><label class="settings-label">Project price range</label><input type="text" id="fp-price-range" class="settings-input" value="${escapeAttr(priceR)}" /></div>
+      <div class="settings-field"><label class="settings-label">Minimal order quantity</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="fp-moq-min" class="settings-input fp-digits" value="${escapeAttr(moqMinV)}" /></div>
+      <div class="settings-field"><label class="settings-label">Maximal order quantity</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="fp-moq-max" class="settings-input fp-digits" value="${escapeAttr(moqMaxV)}" /></div>
+      <div class="settings-field"><label class="settings-label">Person 1 first name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(name0)}" /></div>
+      ${settingsPhoneRowHtml("Person 1 WhatsApp", "fp-wa1-cc", "fp-wa1-local", wa0)}
+      <div class="settings-field"><label class="settings-label">Person 2 first name</label><input type="text" id="fp-contact-name2" class="settings-input" value="${escapeAttr(name1)}" /></div>
+      ${settingsPhoneRowHtml("Person 2 WhatsApp", "fp-wa2-cc", "fp-wa2-local", wa1c)}
+      <p class="settings-saved" id="fp-saved" hidden></p>
+      <button type="button" class="btn-primary" id="fp-save">Save profile</button>
+      ${fpDangerHtml}</div>`;
+    root.querySelectorAll(".phone-local-num").forEach((el) => {
+      window.AIRSUP_PHONE?.wirePhoneLocalInput(el);
+    });
+    root.querySelectorAll(".fp-digits").forEach((inp) => {
+      inp.addEventListener("input", () => { inp.value = phoneDigits(inp.value); });
+    });
     var fpLoc = $("fp-location");
     if (fpLoc) wireLocationAutocomplete(fpLoc);
     $("fp-save")?.addEventListener("click", async () => {
       const g = (k) => ($(`fp-${k}`)?.value || "").trim();
       const saved = $("fp-saved");
       try {
-        const wa1 = g("contact-wa1");
-        const wa2 = g("contact-wa2");
+        const wa1 = mergePhoneFromRow($("fp-wa1-cc"), $("fp-wa1-local"));
+        const wa2 = mergePhoneFromRow($("fp-wa2-cc"), $("fp-wa2-local"));
         const contacts = [{ name: g("contact-name"), whatsapp: wa1 }];
         if (wa2) contacts.push({ name: g("contact-name2"), whatsapp: wa2 });
         await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify({
           name: g("name"), location: g("location"), category: g("category"),
-          capabilities: { description: g("capabilities"), certifications: g("certifications"), moq: g("moq") },
+          capabilities: {
+            description: g("capabilities"),
+            project_price_range: g("price-range"),
+            moq_min: phoneDigits(g("moq-min")),
+            moq_max: phoneDigits(g("moq-max")),
+            moq: [phoneDigits(g("moq-min")), phoneDigits(g("moq-max"))].filter(Boolean).join(" – ") || "",
+          },
           contact_info: { contacts },
         })});
         if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
@@ -3185,21 +3369,23 @@
         if (saved) { saved.hidden = false; saved.textContent = "Error: " + (err.message || String(err)); saved.style.color = "#d93025"; }
       }
     });
-    $("fp-delete-profile")?.addEventListener("click", async () => {
-      const ok = await showConfirmDialog(
-        "Delete your factory profile? It will be moved to the admin bin. You can ask support to restore it.",
-        { confirmLabel: "Delete", cancelLabel: "Cancel", danger: true }
-      );
-      if (!ok) return;
-      try {
-        await apiCall("/api/factories/me", { method: "DELETE" });
-        await supabaseClient.auth.signOut();
-        window.location.href = "/";
-      } catch (err) {
-        const saved = $("fp-saved");
-        if (saved) { saved.hidden = false; saved.textContent = "Could not delete: " + (err.message || String(err)); saved.style.color = "#d93025"; }
-      }
-    });
+    if (!onAdminPath) {
+      $("fp-delete-profile")?.addEventListener("click", async () => {
+        const ok = await showConfirmDialog(
+          "Delete your factory profile? It will be moved to the admin bin. You can ask support to restore it.",
+          { confirmLabel: "Delete", cancelLabel: "Cancel", danger: true }
+        );
+        if (!ok) return;
+        try {
+          await apiCall("/api/factories/me", { method: "DELETE" });
+          await supabaseClient.auth.signOut();
+          window.location.href = "/";
+        } catch (err) {
+          const saved = $("fp-saved");
+          if (saved) { saved.hidden = false; saved.textContent = "Could not delete: " + (err.message || String(err)); saved.style.color = "#d93025"; }
+        }
+      });
+    }
   }
 
   /* ── Event wiring ── */

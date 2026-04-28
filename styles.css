@@ -285,6 +285,22 @@ html[data-theme="dark"] .site-logo img {
 .onboard-input:focus, .onboard-textarea:focus { outline: none; border-color: var(--primary); }
 .onboard-input::placeholder, .onboard-textarea::placeholder { color: var(--text-soft); }
 .onboard-textarea { resize: vertical; min-height: 80px; line-height: 1.5; font-family: inherit; }
+.onboard-textarea--compact { min-height: 48px; padding: 10px 14px; line-height: 1.45; }
+.phone-inline {
+  display: flex; gap: 10px; align-items: stretch; width: 100%;
+}
+.phone-inline .phone-cc-select {
+  flex: 0 0 auto; min-width: 7.5rem; max-width: 46%;
+  padding-left: 10px; padding-right: 8px;
+}
+.phone-inline .phone-local-num { flex: 1; min-width: 0; }
+.settings-field .phone-inline .settings-input.phone-cc-select { max-width: 46%; }
+.settings-field .phone-inline .settings-input.phone-local-num { flex: 1; }
+textarea.settings-input.onboard-textarea--compact {
+  min-height: 48px;
+  padding: 10px 14px;
+  line-height: 1.45;
+}
 .onboard-actions { display: flex; gap: 12px; margin-top: 12px; }
 .onboard-field-error { color: #d93025; font-size: 14px; margin: 0; line-height: 1.35; }
 .onboard-brief { gap: 14px; }
