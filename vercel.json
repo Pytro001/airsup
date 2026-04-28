@@ -28,6 +28,8 @@
     { "source": "/admin/", "destination": "/_app.html" },
     { "source": "/workspace", "destination": "/_app.html" },
     { "source": "/workspace/", "destination": "/_app.html" },
+    { "source": "/start", "destination": "/start.html" },
+    { "source": "/start/", "destination": "/start.html" },
     { "source": "/landingpage", "destination": "/landingpage.html" },
     { "source": "/landingpage/", "destination": "/landingpage.html" },
     { "source": "/supi", "destination": "/supi.html" },
