@@ -816,7 +816,7 @@
       nav.innerHTML = '<button type="button" class="nav-link active" data-view="supplier-dashboard">Dashboard</button><button type="button" class="nav-link" data-view="supplier-profile">Factory profile</button>';
     } else {
       nav.innerHTML =
-        '<button type="button" class="nav-link active" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections<span class="nav-connections-badge" id="nav-connections-badge" hidden>+1</span></button><button type="button" class="nav-link" data-view="visit">Visit</button>' +
+        '<button type="button" class="nav-link active" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections<span class="nav-connections-badge" id="nav-connections-badge" hidden>+1</span></button>' +
         (CHAT_ENABLED ? '<button type="button" class="nav-link" data-view="chat">Chat</button>' : "");
     }
     nav.querySelectorAll(".nav-link").forEach((btn) => {
@@ -2229,7 +2229,7 @@
           appendChatLine(msgContainer, m.role, m.content, m.metadata);
         });
       } else {
-        appendChatLine(msgContainer, "assistant", "Hi! I’m Supi, your Airsup assistant. How can I help you with your project or sourcing needs?", { supi: true });
+        appendChatLine(msgContainer, "assistant", "Got any questions about your projects or the platform? I’m here to help.", { supi: true });
       }
       markSupiRead();
     } catch (_) {
