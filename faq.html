@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ · Airsup</title>
+  <meta name="description" content="Frequently asked questions for buyers and suppliers on Airsup." />
+  <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("airsupTheme");
+        document.documentElement.dataset.theme = (t === "light") ? "light" : "dark";
+      } catch (e) { document.documentElement.dataset.theme = "dark"; }
+    })();
+  </script>
+  <script src="assets/theme.js" defer></script>
+  <style>
+    :root {
+      --page-bg: #fff;
+      --text: #111;
+      --text-muted: #555;
+      --text-soft: #888;
+      --text-faint: #aaa;
+      --border: #e0e0e0;
+      --card-border: #e8e8e8;
+      --card-bg: #fff;
+      --accent-bg: #f5f5f5;
+      --badge-c-bg: #E6F1FB;
+      --badge-c-fg: #185FA5;
+      --badge-s-bg: #E1F5EE;
+      --badge-s-fg: #0F6E56;
+      --tab-inactive: #888;
+      color-scheme: light;
+    }
+    html[data-theme="dark"] {
+      --text: #f2f2f3;
+      --text-muted: #b8b8c0;
+      --text-soft: #8a8a92;
+      --text-faint: #5c5c64;
+      --border: #2a2a32;
+      --card-border: #2a2a32;
+      --card-bg: #111114;
+      --accent-bg: #1a1a1e;
+      --badge-c-bg: rgba(24, 95, 165, 0.22);
+      --badge-c-fg: #8ec5f6;
+      --badge-s-bg: rgba(15, 110, 86, 0.28);
+      --badge-s-fg: #7dccb0;
+      --tab-inactive: #9a9aa2;
+      --page-bg: #0b0b0d;
+      color-scheme: dark;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--page-bg); color: var(--text); line-height: 1.6;
+      min-height: 100dvh; -webkit-font-smoothing: antialiased;
+      display: flex; flex-direction: column;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+    .sp-header {
+      padding: 20px 28px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+    .sp-brand {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-weight: 600; font-size: 16px; color: var(--text);
+    }
+    .sp-brand img { height: 22px; width: 22px; border-radius: 6px; }
+    html[data-theme="dark"] .sp-brand img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
+    .sp-theme-toggle {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: transparent; color: var(--text-soft); border: none; cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .sp-theme-toggle:hover { color: var(--text); background: var(--accent-bg); }
+    .sp-content {
+      flex: 1; max-width: 640px; width: 100%;
+      margin: 0 auto; padding: 40px 24px 64px;
+    }
+    h1 {
+      font-size: clamp(26px, 4vw, 36px); font-weight: 600;
+      letter-spacing: -0.02em; line-height: 1.12; margin-bottom: 8px;
+    }
+    .faq-lede {
+      font-size: 15px; color: var(--text-muted);
+      margin-bottom: 24px; line-height: 1.5;
+    }
+    .faq-tabs {
+      display: flex; gap: 8px; margin-bottom: 28px;
+      padding: 4px; border-radius: 999px; background: var(--accent-bg);
+      border: 1px solid var(--card-border);
+    }
+    .faq-tab {
+      flex: 1; text-align: center; padding: 10px 14px; border-radius: 999px;
+      font-size: 14px; font-weight: 600; color: var(--tab-inactive);
+      background: transparent; border: none; cursor: pointer;
+      transition: color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .faq-tab[aria-selected="true"] {
+      color: var(--text); background: var(--card-bg);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    html[data-theme="dark"] .faq-tab[aria-selected="true"] {
+      box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+    }
+    .faq-section { margin: 0 0 2rem; }
+    .faq-panels > section[hidden] { display: none !important; }
+    .faq-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-soft); margin: 0 0 0.75rem; }
+    .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; margin-bottom: 0.5rem; }
+    .badge-supplier { background: var(--badge-s-bg); color: var(--badge-s-fg); }
+    .badge-customer { background: var(--badge-c-bg); color: var(--badge-c-fg); }
+    .faq-title { font-size: 20px; font-weight: 600; color: var(--text); margin: 0 0 1.25rem; }
+    .faq-item { border-top: 1px solid var(--card-border); padding: 0.9rem 0; cursor: pointer; }
+    .faq-item:last-child { border-bottom: 1px solid var(--card-border); }
+    .faq-q { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .faq-q-text { font-size: 14px; font-weight: 500; color: var(--text); }
+    .faq-arrow { font-size: 16px; color: var(--text-muted); flex-shrink: 0; transition: transform 0.2s; }
+    .faq-a { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-top: 0.5rem; display: none; }
+    .faq-item.open .faq-a { display: block; }
+    .faq-item.open .faq-arrow { transform: rotate(90deg); }
+    .sp-footer {
+      display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+      gap: 0; padding: 16px 20px; text-align: center;
+      font-size: 12px; color: var(--text-faint); border-top: 1px solid var(--border);
+    }
+    .sp-footer a { color: var(--text-faint); margin: 0 8px; transition: color 0.15s; }
+    .sp-footer a:hover { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <header class="sp-header">
+    <a href="/" class="sp-brand">
+      <img src="assets/brand/logo-air-sup.png" alt="" width="22" height="22" />
+      Airsup
+    </a>
+    <button type="button" class="sp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+  </header>
+
+  <main class="sp-content">
+    <h1>FAQ</h1>
+    <p class="faq-lede">Help for people finding a factory, and for factories on Airsup — switch the audience below.</p>
+
+    <div class="faq-tabs" role="tablist" aria-label="Who are you?">
+      <button type="button" class="faq-tab" id="tab-customers" role="tab" aria-selected="true" aria-controls="panel-customers" data-faq="customers">For customers</button>
+      <button type="button" class="faq-tab" id="tab-suppliers" role="tab" aria-selected="false" aria-controls="panel-suppliers" data-faq="suppliers">For suppliers</button>
+    </div>
+
+    <h2 class="sr-only">Airsup FAQ — answers for suppliers and customers</h2>
+
+    <div class="faq-panels">
+      <section class="faq-section" id="panel-customers" role="tabpanel" aria-labelledby="tab-customers">
+        <span class="badge badge-customer">For customers</span>
+        <p class="faq-title">Buyer and founder questions</p>
+
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">What is Airsup?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">Airsup connects founders and buyers — primarily from Europe and the US — with vetted, high-quality manufacturers in China. It is optimized for the customer side, unlike Alibaba which is built for suppliers.</div>
+        </div>
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">How is this different from Alibaba?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">Alibaba relies on self-service search and AI chat, which makes quality hard to predict. Airsup manually screens factories and uses AI to accurately match your project to the right manufacturer.</div>
+        </div>
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">Who can currently use the platform?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">Right now access is limited to a selected group — mostly personal contacts — to help improve the platform safely. A broader rollout to more customers is planned for May.</div>
+        </div>
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">Does Airsup handle the transaction?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">No. Airsup is a matching platform. Once you are connected with a supplier, all negotiation, ordering, and payment is handled directly between you and the factory.</div>
+        </div>
+      </section>
+
+      <section class="faq-section" id="panel-suppliers" role="tabpanel" aria-labelledby="tab-suppliers" hidden>
+        <span class="badge badge-supplier">For suppliers</span>
+        <p class="faq-title">Factory and supplier questions</p>
+
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">Is it free to join as a supplier?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">Yes — completely free. No entry fees, no commissions, and no hidden charges. If that ever changes, you will be notified in advance and have the right to leave before any costs apply.</div>
+        </div>
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">How do I receive customer inquiries?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">You get notified via the Airsup dashboard when a customer project matches your profile. You can then accept or decline the inquiry and connect directly with the customer via WhatsApp or WeChat.</div>
+        </div>
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">What do I need to provide to get started?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">Just basic company info: production capacity, budget range, minimum order quantity, and a contact person. No product photos or price lists required upfront — it is all handled during onboarding.</div>
+        </div>
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">Who handles payments and disputes?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">All payment terms, transactions, and dispute resolution are agreed directly between you and the customer. Airsup does not process payments or take responsibility for financial disputes.</div>
+        </div>
+        <div class="faq-item" data-faq-item>
+          <div class="faq-q"><span class="faq-q-text">Does Airsup allocate inquiries by category or region?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
+          <div class="faq-a">Currently, matching is based on what works best for both sides. The exact method may evolve over time to whatever produces the fastest, most accurate matches.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="sp-footer">
+    <a href="/">Home</a>
+    <a href="/support">Support</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+  </footer>
+
+  <script>
+    (function () {
+      var pC = document.getElementById("panel-customers");
+      var pS = document.getElementById("panel-suppliers");
+      var tC = document.getElementById("tab-customers");
+      var tS = document.getElementById("tab-suppliers");
+
+      function setAudience(aud) {
+        var isCust = aud === "customers";
+        pC.hidden = !isCust;
+        pS.hidden = isCust;
+        tC.setAttribute("aria-selected", isCust ? "true" : "false");
+        tS.setAttribute("aria-selected", isCust ? "false" : "true");
+        if (window.history && history.replaceState) {
+          var next = isCust ? "#customers" : "#suppliers";
+          if (location.hash !== next) history.replaceState(null, "", next);
+        } else {
+          location.hash = isCust ? "customers" : "suppliers";
+        }
+      }
+
+      function fromHash() {
+        var h = (location.hash || "#customers").replace(/^#/, "");
+        if (h === "suppliers") setAudience("suppliers");
+        else setAudience("customers");
+      }
+      tC.addEventListener("click", function () { setAudience("customers"); });
+      tS.addEventListener("click", function () { setAudience("suppliers"); });
+      window.addEventListener("hashchange", fromHash);
+      fromHash();
+
+      document.querySelectorAll(".faq-item[data-faq-item]").forEach(function (el) {
+        el.addEventListener("click", function (e) { el.classList.toggle("open"); });
+      });
+    })();
+  </script>
+</body>
+</html>
