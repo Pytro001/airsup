@@ -1837,6 +1837,20 @@
         );
       }).join("");
       container.querySelectorAll(".project-card").forEach((c) => c.addEventListener("click", () => { if (c.dataset.id) loadProjectDetail(c.dataset.id); }));
+      if (userRole === "startup" && localStorage.getItem("airsup_supi_welcome_shown") !== "1" && projects.length) {
+        try {
+          await loadProjectDetail(projects[0].id);
+          try {
+            localStorage.setItem("airsup_supi_welcome_shown", "1");
+          } catch (_) {}
+          setTimeout(function () {
+            var el = document.querySelector(".project-detail-chat-block");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 200);
+        } catch (_) {
+          /* list stays; user can open a project manually */
+        }
+      }
     } catch (_) { container.innerHTML = '<div class="projects-empty">Could not load projects.</div>'; }
   }
 

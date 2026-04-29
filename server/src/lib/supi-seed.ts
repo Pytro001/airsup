@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "../services/supabase.js";
 
 export const SUPI_INTRO_MESSAGE =
-  "Hi — I'm Supi from Airsup. I'll coordinate your project here and keep you posted. Share what you're making, timelines, and any quantities when you're ready.";
+  "Hi, I'm Supi. I'm here if you need help with your project or the platform — just send a message anytime.";
 
 /** Seed a single welcome assistant row for a new project (no duplicate if chat already exists). */
 export async function seedSupiWelcome(projectId: string, userId: string): Promise<void> {
