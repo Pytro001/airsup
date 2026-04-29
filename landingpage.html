@@ -247,6 +247,9 @@
       flex: 1;
       min-width: 0;
     }
+    .lp-password-wrap .btn-password-toggle {
+      z-index: 1;
+    }
     .lp-password-wrap .lp-email-input {
       width: 100%;
       max-width: none !important;
@@ -382,7 +385,7 @@
         <input type="text" class="lp-email-input lp-phone-local" id="lp-phone-local" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" placeholder="Digits only" />
       </div>
       <div class="lp-login-row lp-password-row" style="margin-top:8px;">
-        <div class="lp-password-wrap">
+        <div class="lp-password-wrap password-input-wrap">
           <input type="password" class="lp-email-input" id="lp-password" placeholder="Password (6+)" minlength="6" maxlength="64" autocomplete="current-password" />
           <button type="button" class="btn-password-toggle" data-password-for="lp-password" aria-label="Show password" aria-pressed="false" tabindex="0">
             <span class="btn-password-toggle__show" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>

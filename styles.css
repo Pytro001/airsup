@@ -884,13 +884,19 @@ html[data-theme="dark"] .project-status-text--connected { color: #4ade80; }
   display: block;
   width: 100%;
 }
-.password-input-wrap .onboard-input,
-.password-input-wrap .settings-input {
+/* Any password field in a wrap reserves space for the icon (onboarding, settings, admin gate, future fields). */
+.password-input-wrap > input[type="password"],
+.password-input-wrap > input[type="text"] {
   padding-right: 44px;
   box-sizing: border-box;
 }
+.password-input-wrap .onboard-input,
+.password-input-wrap .settings-input {
+  width: 100%;
+}
 .btn-password-toggle {
   position: absolute;
+  z-index: 1;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);

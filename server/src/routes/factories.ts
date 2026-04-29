@@ -6,6 +6,28 @@ export const factoriesRouter = Router();
 
 type ContactEntry = { name?: string; whatsapp: string };
 
+/** If capabilities.website is set, it must be a valid http(s) URL (defense in depth). */
+function validateOptionalWebsiteInCapabilities(raw: unknown): { ok: true } | { ok: false; error: string } {
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return { ok: true };
+  const w = (raw as Record<string, unknown>).website;
+  if (w == null) return { ok: true };
+  const s = String(w).trim();
+  if (s === "") return { ok: true };
+  if (/^(javascript|data|vbscript):/i.test(s)) {
+    return { ok: false, error: "Invalid website URL" };
+  }
+  try {
+    const u = new URL(/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(s) ? s : "https://" + s);
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      return { ok: false, error: "Invalid website URL" };
+    }
+    if (!u.hostname) return { ok: false, error: "Invalid website URL" };
+  } catch {
+    return { ok: false, error: "Invalid website URL" };
+  }
+  return { ok: true };
+}
+
 /** Normalize contact_info to `{ contacts: [{ name?, whatsapp }] }` from new shape or legacy `name`/`phone`. */
 export function normalizeContactInfo(raw: unknown): { contacts: ContactEntry[] } {
   if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
@@ -77,6 +99,12 @@ factoriesRouter.put("/me", async (req: Request, res: Response) => {
   const normalized = normalizeContactInfo(body.contact_info);
   if (!normalized.contacts[0]?.whatsapp?.trim()) {
     res.status(400).json({ error: "Primary WhatsApp is required in contact_info.contacts[0].whatsapp" });
+    return;
+  }
+
+  const capCheck = validateOptionalWebsiteInCapabilities(body.capabilities);
+  if (!capCheck.ok) {
+    res.status(400).json({ error: capCheck.error });
     return;
   }
 
