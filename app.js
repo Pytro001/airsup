@@ -65,6 +65,8 @@
   let adminWorkspaceFactoriesCache = [];
   let adminWorkspaceBackWired = false;
   let activeConnectionMatchId = null;
+  /** Virtual id for the user-level Supi thread in Connections. */
+  const SUPI_THREAD_ID = "__supi__";
   let visitsMatchesCache = [];
 
   function resetOnboardData() {
@@ -814,7 +816,7 @@
       nav.innerHTML = '<button type="button" class="nav-link active" data-view="supplier-dashboard">Dashboard</button><button type="button" class="nav-link" data-view="supplier-profile">Factory profile</button>';
     } else {
       nav.innerHTML =
-        '<button type="button" class="nav-link active" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections</button><button type="button" class="nav-link" data-view="visit">Visit</button>' +
+        '<button type="button" class="nav-link active" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections<span class="nav-connections-badge" id="nav-connections-badge" hidden>+1</span></button><button type="button" class="nav-link" data-view="visit">Visit</button>' +
         (CHAT_ENABLED ? '<button type="button" class="nav-link" data-view="chat">Chat</button>' : "");
     }
     nav.querySelectorAll(".nav-link").forEach((btn) => {
@@ -885,7 +887,10 @@
     updateAuthUI();
 
     if (name === "chat" && CHAT_ENABLED) loadChatHistory();
-    if (name === "projects") loadProjects();
+    if (name === "projects") {
+      loadProjects();
+      if (userRole === "startup") void refreshConnectionsNavBadge();
+    }
     if (name === "connections") loadConnections();
     if (name === "visit") loadVisit();
     if (name === "settings") void loadSettings();
@@ -1734,7 +1739,7 @@
     var step = Number(project.pipeline_step);
     if (!Number.isFinite(step) || step < 1) step = 1;
     if (step > 3) step = 3;
-    var labels = ["Contact", "Refine", "Sample"];
+    var labels = ["Project", "Contact", "Sample"];
     var parts = [];
     for (var i = 1; i <= 3; i++) {
       var cls = "pipeline-node";
@@ -1837,20 +1842,6 @@
         );
       }).join("");
       container.querySelectorAll(".project-card").forEach((c) => c.addEventListener("click", () => { if (c.dataset.id) loadProjectDetail(c.dataset.id); }));
-      if (userRole === "startup" && localStorage.getItem("airsup_supi_welcome_shown") !== "1" && projects.length) {
-        try {
-          await loadProjectDetail(projects[0].id);
-          try {
-            localStorage.setItem("airsup_supi_welcome_shown", "1");
-          } catch (_) {}
-          setTimeout(function () {
-            var el = document.querySelector(".project-detail-chat-block");
-            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-          }, 200);
-        } catch (_) {
-          /* list stays; user can open a project manually */
-        }
-      }
     } catch (_) { container.innerHTML = '<div class="projects-empty">Could not load projects.</div>'; }
   }
 
@@ -1898,18 +1889,29 @@
         '<button type="button" class="btn-outline project-files-pick-btn" id="project-detail-file-btn">Add files</button></div></section>';
 
       var dateLine = formatProjectDate(project.created_at);
-      var overview =
-        '<section class="project-detail-section project-detail-overview"><h2 class="project-detail-title">' +
-        escapeHtml(project.title) +
-        "</h2>" +
-        (dateLine
-          ? '<p class="project-detail-date">' + escapeHtml(dateLine) + "</p>"
-          : "") +
-        '<p class="project-detail-description">' +
-        escapeHtml(project.description || "") +
-        "</p>" +
-        buildProjectPipelineStepper(project) +
-        '<p class="project-detail-status-row">' + projectStatusTextHtml(project) + "</p></section>";
+      var isStartupBuyer = userRole === "startup";
+      var overview;
+      if (isStartupBuyer) {
+        overview =
+          '<section class="project-detail-section project-detail-overview"><h2 class="project-detail-title">' +
+          escapeHtml(project.title) +
+          "</h2>" +
+          (dateLine ? '<p class="project-detail-date">' + escapeHtml(dateLine) + "</p>" : "") +
+          "</section>";
+      } else {
+        overview =
+          '<section class="project-detail-section project-detail-overview"><h2 class="project-detail-title">' +
+          escapeHtml(project.title) +
+          "</h2>" +
+          (dateLine
+            ? '<p class="project-detail-date">' + escapeHtml(dateLine) + "</p>"
+            : "") +
+          '<p class="project-detail-description">' +
+          escapeHtml(project.description || "") +
+          "</p>" +
+          buildProjectPipelineStepper(project) +
+          '<p class="project-detail-status-row">' + projectStatusTextHtml(project) + "</p></section>";
+      }
 
       var inner =
         '<div class="project-detail" data-project-id="' +
@@ -1918,9 +1920,9 @@
         overview +
         buildProjectChatSection() +
         buildRequirementsSection(project.requirements) +
-        buildAiSummarySection(project.ai_summary, project.requirements) +
+        (isStartupBuyer ? "" : buildAiSummarySection(project.ai_summary, project.requirements)) +
         buildMatchesSection(project.matches) +
-        buildBriefSection(project) +
+        (isStartupBuyer ? "" : buildBriefSection(project)) +
         '<section class="project-detail-section project-chatlink-block"><h3 class="project-detail-h">Add chat link</h3>' +
         '<p class="project-detail-muted">Grok, ChatGPT, or Claude share URL.</p>' +
         '<div class="project-chatlink-row"><input type="text" id="project-chatlink-label" class="settings-input project-chatlink-label" placeholder="Label" maxlength="120" />' +
@@ -2178,33 +2180,133 @@
   /* ══════════════════════════════════════
      CONNECTIONS
      ══════════════════════════════════════ */
+  function markSupiRead() {
+    try {
+      localStorage.setItem("airsup_supi_last_read", new Date().toISOString());
+    } catch (_) {}
+  }
+
+  function getSupiLastRead() {
+    try {
+      return localStorage.getItem("airsup_supi_last_read");
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function refreshConnectionsNavBadge() {
+    const badge = $("nav-connections-badge");
+    if (!badge || userRole !== "startup") return;
+    try {
+      const { messages } = await apiCall("/api/chat/history?supi_thread=1");
+      const lastRead = getSupiLastRead();
+      const lastReadTs = lastRead ? new Date(lastRead).getTime() : 0;
+      const unread = (messages || []).some(function (m) {
+        if (m.role !== "assistant") return false;
+        return new Date(m.created_at).getTime() > lastReadTs;
+      });
+      badge.hidden = !unread;
+    } catch (_) {
+      badge.hidden = true;
+    }
+  }
+
+  async function openSupiConnectionChat() {
+    activeConnectionMatchId = SUPI_THREAD_ID;
+    const list = $("connections-list");
+    const chatWrap = $("connection-chat-wrap");
+    if (!chatWrap) return;
+    if (list) list.hidden = true;
+    chatWrap.hidden = false;
+    chatWrap.classList.add("conn-chat-wrap--supi");
+    if ($("conn-chat-title")) $("conn-chat-title").textContent = "Supi";
+    if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message Supi…";
+    const filesEl = $("conn-chat-files");
+    if (filesEl) {
+      filesEl.hidden = true;
+      filesEl.innerHTML = "";
+    }
+    const msgContainer = $("conn-chat-messages");
+    msgContainer.innerHTML = '<div class="chat-status">Loading messages\u2026</div>';
+    try {
+      const { messages } = await apiCall("/api/chat/history?supi_thread=1");
+      msgContainer.innerHTML = "";
+      (messages || []).forEach(function (m) {
+        appendChatLine(msgContainer, m.role, m.content, m.metadata);
+      });
+      markSupiRead();
+    } catch (_) {
+      msgContainer.innerHTML = '<div class="chat-status">Could not load messages.</div>';
+    }
+    void refreshConnectionsNavBadge();
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+  }
+
   async function loadConnections() {
     const container = $("connections-list");
     const chatWrap = $("connection-chat-wrap");
-    if (chatWrap) chatWrap.hidden = true;
+    if (chatWrap) {
+      chatWrap.hidden = true;
+      chatWrap.classList.remove("conn-chat-wrap--supi");
+    }
     if (container) container.hidden = false;
     activeConnectionMatchId = null;
+    if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message the engineer…";
 
     try {
       const { matches } = await apiCall("/api/matches");
-      if (!matches?.length) {
-        container.innerHTML = "";
+      const matchRows = (matches && matches.length)
+        ? matches.map((m) => {
+            const f = m.factories, p = m.projects, ctx = m.context_summary || {};
+            const contact = ctx.direct_contact || {};
+            const contactLine = contact.name ? `${contact.name}${contact.role ? ` \u00b7 ${contact.role}` : ""}` : "";
+            const q = m.quote || {};
+            return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(f?.name || "Factory")}</span><span class="connection-location">${escapeHtml(f?.location || "")}</span></div><span class="project-card-badge badge--${m.status}">${escapeHtml(formatMatchStatusLabel(m.status))}</span></div>${contactLine ? `<div class="connection-summary-bar" style="font-weight:500;">Your contact: ${escapeHtml(contactLine)}</div>` : ""}<div class="connection-summary-bar">${escapeHtml(ctx.short || "Connection established")}</div><div class="connection-body"><div class="connection-project-line">Project: ${escapeHtml(p?.title || "")}</div>${q.unit_price ? `<div class="connection-quote">${escapeHtml(q.unit_price)}/unit \u00b7 ${escapeHtml(q.lead_time || "TBD")}</div>` : ""}</div></div>`;
+          })
+        : [];
+
+      var supiCard = "";
+      if (userRole === "startup") {
+        const src = "assets/supi.png";
+        var supiUnsub = false;
+        try {
+          const sm = await apiCall("/api/chat/history?supi_thread=1");
+          const lastReadTs = getSupiLastRead() ? new Date(getSupiLastRead()).getTime() : 0;
+          supiUnsub = (sm.messages || []).some(function (m) {
+            return m.role === "assistant" && new Date(m.created_at).getTime() > lastReadTs;
+          });
+        } catch (_) {}
+        const badgeU = supiUnsub ? '<span class="connection-unread" aria-label="New message">+1</span>' : "";
+        supiCard =
+          '<div class="connection-card connection-card--clickable connection-card--supi" data-supi="1" role="button" tabindex="0"><div class="connection-header"><div class="connection-header-left connection-header--supi"><img class="connection-card-avatar" src="' +
+          escapeAttr(src) +
+          '" alt="" width="40" height="40" loading="lazy" />' +
+          "<div class=\"connection-header-titles\"><span class=\"connection-factory\">Supi</span><span class=\"connection-location\">Airsup assistant</span></div></div>" +
+          '<span class="project-card-badge badge--accepted">Here to help</span></div><div class="connection-summary-bar">Message Supi for help with your project or the platform' +
+          badgeU +
+          "</div></div>";
+      }
+
+      if (!matchRows.length && !supiCard) {
+        container.innerHTML = '<div class="connections-empty">No connections yet.</div>';
+        void refreshConnectionsNavBadge();
         return;
       }
-      container.innerHTML = matches.map((m) => {
-        const f = m.factories, p = m.projects, ctx = m.context_summary || {};
-        const contact = ctx.direct_contact || {};
-        const contactLine = contact.name ? `${contact.name}${contact.role ? ` \u00b7 ${contact.role}` : ""}` : "";
-        const q = m.quote || {};
-        return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(f?.name||"Factory")}</span><span class="connection-location">${escapeHtml(f?.location||"")}</span></div><span class="project-card-badge badge--${m.status}">${escapeHtml(formatMatchStatusLabel(m.status))}</span></div>${contactLine?`<div class="connection-summary-bar" style="font-weight:500;">Your contact: ${escapeHtml(contactLine)}</div>`:""}<div class="connection-summary-bar">${escapeHtml(ctx.short||"Connection established")}</div><div class="connection-body"><div class="connection-project-line">Project: ${escapeHtml(p?.title||"")}</div>${q.unit_price?`<div class="connection-quote">${escapeHtml(q.unit_price)}/unit \u00b7 ${escapeHtml(q.lead_time||"TBD")}</div>`:""}</div></div>`;
-      }).join("");
+      container.innerHTML = (supiCard || "") + matchRows.join("");
+
       container.querySelectorAll(".connection-card--clickable").forEach((card) => {
         card.addEventListener("click", () => {
-          const matchId = card.dataset.matchId;
-          if (matchId) openConnectionChat(matchId, card);
+          if (card.getAttribute("data-supi") === "1") void openSupiConnectionChat();
+          else {
+            const matchId = card.getAttribute("data-match-id");
+            if (matchId) void openConnectionChat(matchId, card);
+          }
         });
       });
-    } catch (_) { container.innerHTML = '<div class="connections-empty">Could not load connections.</div>'; }
+      void refreshConnectionsNavBadge();
+    } catch (_) {
+      container.innerHTML = '<div class="connections-empty">Could not load connections.</div>';
+    }
   }
 
   async function openConnectionChat(matchId, cardEl) {
@@ -2212,6 +2314,8 @@
     const list = $("connections-list");
     const chatWrap = $("connection-chat-wrap");
     if (!chatWrap) return;
+    chatWrap.classList.remove("conn-chat-wrap--supi");
+    if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message the engineer…";
 
     const factoryName = cardEl?.querySelector(".connection-factory")?.textContent || "Factory";
     $("conn-chat-title").textContent = factoryName;
@@ -2281,12 +2385,16 @@
     const list = $("connections-list");
     const chatWrap = $("connection-chat-wrap");
     const filesEl = $("conn-chat-files");
+    if (chatWrap) {
+      chatWrap.classList.remove("conn-chat-wrap--supi");
+    }
     if (filesEl) {
       filesEl.hidden = true;
       filesEl.innerHTML = "";
     }
     if (list) list.hidden = false;
     if (chatWrap) chatWrap.hidden = true;
+    if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message the engineer…";
   }
 
   async function sendConnectionMessage() {
@@ -2310,6 +2418,20 @@
     msgContainer.scrollTop = msgContainer.scrollHeight;
 
     try {
+      if (activeConnectionMatchId === SUPI_THREAD_ID) {
+        const data = await apiCall("/api/chat", {
+          method: "POST",
+          body: JSON.stringify({ message: text, supi_thread: true }),
+        });
+        if (data && data.pending_human) {
+          const st = document.createElement("div");
+          st.className = "chat-status";
+          st.textContent = "Sent. Supi will reply soon.";
+          msgContainer.appendChild(st);
+          msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+        return;
+      }
       await apiCall(`/api/connections/${activeConnectionMatchId}/messages`, {
         method: "POST",
         body: JSON.stringify({ content: text }),
@@ -3033,16 +3155,26 @@
           .map((f) => '<option value="' + escapeAttr(String(f.id)) + '">' + escapeHtml(f.name || "#" + f.id) + "</option>")
           .join("");
         right.innerHTML =
-          '<p class="admin-ws-h">Steps</p>' +
+          '<p class="admin-ws-h">Steps (Project \u2192 Contact \u2192 Sample)</p>' +
           '<div class="admin-step-btns">' +
           [1, 2, 3]
             .map(
-              (n) =>
-                '<button type="button" class="btn-outline btn-sm admin-step-btn" data-step="' +
-                n +
-                '">' +
-                n +
-                "</button>"
+              (n) => {
+                const lab = n === 1 ? "Project" : n === 2 ? "Contact" : "Sample";
+                return (
+                  '<button type="button" class="btn-outline btn-sm admin-step-btn" data-step="' +
+                  n +
+                  '" title="Step ' +
+                  n +
+                  " — " +
+                  lab +
+                  '"><span class="admin-step-num">' +
+                  n +
+                  '</span><span class="admin-step-lab">' +
+                  lab +
+                  "</span></button>"
+                );
+              }
             )
             .join("") +
           "</div>" +

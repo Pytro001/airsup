@@ -412,6 +412,37 @@ adminRouter.post("/projects/:id/messages", async (req: Request, res: Response) =
     .insert({
       user_id: project.user_id,
       project_id: projectId,
+      is_supi_connection: false,
+      role: "assistant",
+      content: text,
+      metadata: { supi: true, from_admin: true },
+    })
+    .select("id, role, content, metadata, created_at")
+    .single();
+
+  if (insErr) {
+    res.status(500).json({ error: insErr.message });
+    return;
+  }
+  res.json({ message: row });
+});
+
+/** Admin: post a Supi reply in the buyer's user-level Connections thread. */
+adminRouter.post("/users/:userId/supi-messages", async (req: Request, res: Response) => {
+  const userId = req.params.userId;
+  const bodyText = (req.body as { body?: string })?.body;
+  const text = typeof bodyText === "string" ? bodyText.trim() : "";
+  if (!userId?.trim() || !text) {
+    res.status(400).json({ error: "userId and body are required" });
+    return;
+  }
+
+  const { data: row, error: insErr } = await supabaseAdmin
+    .from("conversations")
+    .insert({
+      user_id: userId.trim(),
+      project_id: null,
+      is_supi_connection: true,
       role: "assistant",
       content: text,
       metadata: { supi: true, from_admin: true },

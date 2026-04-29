@@ -152,7 +152,15 @@ html[data-theme="dark"] .site-logo img {
   padding: 8px 16px; border-radius: 999px;
   font-size: 14px; font-weight: 500; color: var(--text-muted);
   transition: color 0.15s, background 0.15s;
+  position: relative;
 }
+.nav-link .nav-connections-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 6px;
+  font-size: 11px; font-weight: 700; line-height: 1.2;
+  background: var(--primary); color: var(--on-primary);
+  vertical-align: 1px;
+}
+.nav-link .nav-connections-badge[hidden] { display: none; }
 .nav-link:hover { color: var(--text); background: var(--primary-light); }
 .nav-link.active { color: var(--text); background: var(--primary-light); }
 
@@ -696,6 +704,29 @@ html[data-theme="dark"] .project-status-text--connected { color: #4ade80; }
   padding: 16px 20px; border-bottom: 1px solid var(--border-light);
 }
 .connection-header-left { display: flex; align-items: baseline; gap: 8px; }
+.connection-header--supi {
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.connection-header--supi .connection-header-titles { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.connection-header--supi .connection-factory { line-height: 1.2; }
+.connection-header--supi .connection-location { line-height: 1.2; }
+.connection-card-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  object-fit: cover; object-position: 85% center;
+  border: 1px solid var(--border-light);
+  flex-shrink: 0;
+  transform: scale(1.08);
+}
+.connection-card--supi .connection-header { align-items: flex-start; }
+.connection-unread { margin-left: 8px; font-weight: 700; color: #ca8a04; }
+html[data-theme="dark"] .connection-unread { color: #facc15; }
+.conn-chat-wrap--supi .chat-line--supi .chat-line-avatar {
+  object-position: 86% 35%;
+  transform: scale(1.18);
+}
 .connection-factory { font-size: 16px; font-weight: 600; }
 .connection-location { font-size: 13px; color: var(--text-muted); }
 .connection-summary-bar {
@@ -1103,8 +1134,10 @@ html[data-theme="dark"] .composer-inner:focus-within {
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
+  object-position: 82% center;
   flex-shrink: 0;
   border: 1px solid var(--border-light);
+  transform: scale(1.08);
 }
 .chat-line-body { flex: 1; min-width: 0; }
 .chat-line-name {
@@ -1195,6 +1228,12 @@ html[data-theme="dark"] .composer-inner:focus-within {
 }
 .admin-ws-right .admin-ws-h:not(:first-child) { margin-top: 16px; }
 .admin-step-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.admin-step-btns .admin-step-btn {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 4.2rem; padding: 6px 8px; line-height: 1.2;
+}
+.admin-step-num { font-size: 14px; font-weight: 600; }
+.admin-step-lab { font-size: 10px; font-weight: 500; opacity: 0.9; text-transform: none; margin-top: 2px; }
 .admin-ws-toggle { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text); }
 .admin-proj-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
 .admin-proj-chip {

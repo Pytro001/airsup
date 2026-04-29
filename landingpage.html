@@ -299,28 +299,44 @@
     }
     .lp-login-msg--error { color: #d93025; }
 
-    /* ── Footer: copyright left, links right; scroll on small screens ── */
+    /* Footer: one centered block (copyright + links), full width */
     .lp-footer {
-      display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center;
-      gap: 12px; padding: 16px 20px; text-align: left;
-      font-size: 12px; color: var(--text-faint); border-top: 1px solid var(--border-light);
-      white-space: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
-      scrollbar-width: thin;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      padding: 16px 20px;
+      font-size: 12px;
+      color: var(--text-faint);
+      border-top: 1px solid var(--border-light);
       background: var(--page-bg);
       position: relative;
       z-index: 2;
       flex-shrink: 0;
+      box-sizing: border-box;
+    }
+    .lp-footer-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      max-width: 100%;
+      text-align: center;
     }
     .lp-footer-legal { flex-shrink: 0; }
     .lp-footer-nav {
-      display: flex; align-items: center; flex-wrap: nowrap; flex-shrink: 0; margin-left: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px 14px;
     }
-    .lp-footer-nav a { color: var(--text-faint); margin: 0 0 0 12px; transition: color 0.15s; }
-    .lp-footer-nav a:first-child { margin-left: 0; }
+    .lp-footer-nav a { color: var(--text-faint); margin: 0; transition: color 0.15s; white-space: nowrap; }
     .lp-footer-nav a:hover { color: var(--text-muted); }
     @media (max-width: 480px) {
       .lp-footer { font-size: 10px; padding: 14px 12px; }
-      .lp-footer-nav a { margin-left: 8px; }
+      .lp-footer-nav { gap: 6px 10px; }
       .lp-choices { grid-template-columns: 1fr; }
       .lp-login-row { flex-direction: column; }
       .lp-email-btn { border-radius: 999px; }
@@ -404,14 +420,16 @@
   </div>
 
   <footer class="lp-footer">
-    <span class="lp-footer-legal">&copy; <span id="lp-year"></span> Airsup</span>
-    <nav class="lp-footer-nav" aria-label="Footer">
-      <a href="/supi">Supi</a>
-      <a href="/support">Support</a>
-      <a href="/privacy">Privacy Policy</a>
-      <a href="/terms">Terms of Service</a>
-      <a href="/faq">FAQ</a>
-    </nav>
+    <div class="lp-footer-inner">
+      <span class="lp-footer-legal">&copy; <span id="lp-year"></span> Airsup</span>
+      <nav class="lp-footer-nav" aria-label="Footer">
+        <a href="/supi">Supi</a>
+        <a href="/support">Support</a>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="/faq">FAQ</a>
+      </nav>
+    </div>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -509,6 +527,23 @@
       msgEl.className = "lp-login-msg" + (isError ? " lp-login-msg--error" : "");
     }
 
+    /**
+     * Phone login still goes through Supabase "email" auth with a technical address
+     * (digits@login.airsup). If the Email provider is disabled, Supabase returns errors about
+     * email even though the user entered only a number.
+     */
+    function formatPhoneLoginAuthError(err) {
+      var m = (err && err.message) || "Login failed.";
+      var low = m.toLowerCase();
+      if (
+        low.indexOf("email") !== -1 &&
+        (low.indexOf("disabled") !== -1 || low.indexOf("not enabled") !== -1 || low.indexOf("provider") !== -1)
+      ) {
+        return "Phone sign-in must have Authentication \u2192 Providers \u2192 Email enabled in the Supabase dashboard. The app only asks for your number; internally it uses a technical address (your digits @ login.airsup) with a password, not a real inbox. After enabling Email, try again. Turn off \u201cConfirm email\u201d if you use email confirmation.";
+      }
+      return m;
+    }
+
     function phoneToFakeEmail(phone) {
       // Strip everything except digits and leading +
       const digits = phone.replace(/[^0-9]/g, "");
@@ -535,14 +570,14 @@
       const notFound = siErr?.message?.toLowerCase().includes("invalid") || siErr?.message?.toLowerCase().includes("credentials");
       if (!notFound) {
         sendBtn.disabled = false; sendBtn.textContent = "Login";
-        showMsg(siErr?.message || "Login failed.", true); return;
+        showMsg(formatPhoneLoginAuthError(siErr) || "Login failed.", true); return;
       }
 
       // Try sign up (new user)
       const { data: suData, error: suErr } = await sb.auth.signUp({ email: fakeEmail, password: pin, options: { data: { phone } } });
       if (suErr) {
         sendBtn.disabled = false; sendBtn.textContent = "Login";
-        showMsg(suErr.message || "Could not create account.", true); return;
+        showMsg(formatPhoneLoginAuthError(suErr) || "Could not create account.", true); return;
       }
       if (suData?.session) { window.location.href = "/workspace"; return; }
 

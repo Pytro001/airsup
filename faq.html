@@ -29,10 +29,6 @@
       --card-border: #e8e8e8;
       --card-bg: #fff;
       --accent-bg: #f5f5f5;
-      --badge-c-bg: #E6F1FB;
-      --badge-c-fg: #185FA5;
-      --badge-s-bg: #E1F5EE;
-      --badge-s-fg: #0F6E56;
       --tab-inactive: #888;
       color-scheme: light;
     }
@@ -45,10 +41,6 @@
       --card-border: #2a2a32;
       --card-bg: #111114;
       --accent-bg: #1a1a1e;
-      --badge-c-bg: rgba(24, 95, 165, 0.22);
-      --badge-c-fg: #8ec5f6;
-      --badge-s-bg: rgba(15, 110, 86, 0.28);
-      --badge-s-fg: #7dccb0;
       --tab-inactive: #9a9aa2;
       --page-bg: #0b0b0d;
       color-scheme: dark;
@@ -86,16 +78,12 @@
     }
     .sp-theme-toggle:hover { color: var(--text); background: var(--accent-bg); }
     .sp-content {
-      flex: 1; max-width: 640px; width: 100%;
+      flex: 1; max-width: 720px; width: 100%;
       margin: 0 auto; padding: 40px 24px 64px;
     }
     h1 {
       font-size: clamp(26px, 4vw, 36px); font-weight: 600;
-      letter-spacing: -0.02em; line-height: 1.12; margin-bottom: 8px;
-    }
-    .faq-lede {
-      font-size: 15px; color: var(--text-muted);
-      margin-bottom: 24px; line-height: 1.5;
+      letter-spacing: -0.02em; line-height: 1.12; margin-bottom: 24px;
     }
     .faq-tabs {
       display: flex; gap: 8px; margin-bottom: 28px;
@@ -104,7 +92,7 @@
     }
     .faq-tab {
       flex: 1; text-align: center; padding: 10px 14px; border-radius: 999px;
-      font-size: 14px; font-weight: 600; color: var(--tab-inactive);
+      font-size: 15px; font-weight: 600; color: var(--tab-inactive);
       background: transparent; border: none; cursor: pointer;
       transition: color 0.2s, background 0.2s, box-shadow 0.2s;
     }
@@ -118,25 +106,25 @@
     .faq-section { margin: 0 0 2rem; }
     .faq-panels > section[hidden] { display: none !important; }
     .faq-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-soft); margin: 0 0 0.75rem; }
-    .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 100px; margin-bottom: 0.5rem; }
-    .badge-supplier { background: var(--badge-s-bg); color: var(--badge-s-fg); }
-    .badge-customer { background: var(--badge-c-bg); color: var(--badge-c-fg); }
-    .faq-title { font-size: 20px; font-weight: 600; color: var(--text); margin: 0 0 1.25rem; }
+    .faq-title { font-size: 22px; font-weight: 600; color: var(--text); margin: 0 0 1.25rem; }
     .faq-item { border-top: 1px solid var(--card-border); padding: 0.9rem 0; cursor: pointer; }
     .faq-item:last-child { border-bottom: 1px solid var(--card-border); }
     .faq-q { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .faq-q-text { font-size: 14px; font-weight: 500; color: var(--text); }
-    .faq-arrow { font-size: 16px; color: var(--text-muted); flex-shrink: 0; transition: transform 0.2s; }
-    .faq-a { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin-top: 0.5rem; display: none; }
+    .faq-q-text { font-size: 16px; font-weight: 500; color: var(--text); }
+    .faq-arrow { font-size: 18px; color: var(--text-muted); flex-shrink: 0; transition: transform 0.2s; }
+    .faq-a { font-size: 15px; color: var(--text-muted); line-height: 1.65; margin-top: 0.5rem; display: none; }
     .faq-item.open .faq-a { display: block; }
     .faq-item.open .faq-arrow { transform: rotate(90deg); }
     .sp-footer {
       display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
-      gap: 0; padding: 16px 20px; text-align: center;
+      gap: 6px 12px; padding: 16px 20px; text-align: center;
       font-size: 12px; color: var(--text-faint); border-top: 1px solid var(--border);
     }
-    .sp-footer a { color: var(--text-faint); margin: 0 8px; transition: color 0.15s; }
+    .sp-footer a { color: var(--text-faint); margin: 0; transition: color 0.15s; }
     .sp-footer a:hover { color: var(--text-muted); }
+    .sp-footer-logo { display: inline-flex; align-items: center; }
+    .sp-footer-logo img { display: block; width: 18px; height: 18px; border-radius: 5px; object-fit: contain; }
+    html[data-theme="dark"] .sp-footer-logo img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
   </style>
 </head>
 <body>
@@ -150,23 +138,21 @@
 
   <main class="sp-content">
     <h1>FAQ</h1>
-    <p class="faq-lede">Help for people finding a factory, and for factories on Airsup — switch the audience below.</p>
 
     <div class="faq-tabs" role="tablist" aria-label="Who are you?">
       <button type="button" class="faq-tab" id="tab-customers" role="tab" aria-selected="true" aria-controls="panel-customers" data-faq="customers">For customers</button>
       <button type="button" class="faq-tab" id="tab-suppliers" role="tab" aria-selected="false" aria-controls="panel-suppliers" data-faq="suppliers">For suppliers</button>
     </div>
 
-    <h2 class="sr-only">Airsup FAQ — answers for suppliers and customers</h2>
+    <h2 class="sr-only">Airsup FAQ: answers for suppliers and customers</h2>
 
     <div class="faq-panels">
       <section class="faq-section" id="panel-customers" role="tabpanel" aria-labelledby="tab-customers">
-        <span class="badge badge-customer">For customers</span>
         <p class="faq-title">Buyer and founder questions</p>
 
         <div class="faq-item" data-faq-item>
           <div class="faq-q"><span class="faq-q-text">What is Airsup?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
-          <div class="faq-a">Airsup connects founders and buyers — primarily from Europe and the US — with vetted, high-quality manufacturers in China. It is optimized for the customer side, unlike Alibaba which is built for suppliers.</div>
+          <div class="faq-a">Airsup connects founders and buyers, primarily from Europe and the US, with vetted, high-quality manufacturers in China. It is optimized for the customer side, unlike Alibaba which is built for suppliers.</div>
         </div>
         <div class="faq-item" data-faq-item>
           <div class="faq-q"><span class="faq-q-text">How is this different from Alibaba?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
@@ -174,7 +160,7 @@
         </div>
         <div class="faq-item" data-faq-item>
           <div class="faq-q"><span class="faq-q-text">Who can currently use the platform?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
-          <div class="faq-a">Right now access is limited to a selected group — mostly personal contacts — to help improve the platform safely. A broader rollout to more customers is planned for May.</div>
+          <div class="faq-a">Right now access is limited to a selected group, mostly personal contacts, to help improve the platform safely. A broader rollout to more customers is planned for May.</div>
         </div>
         <div class="faq-item" data-faq-item>
           <div class="faq-q"><span class="faq-q-text">Does Airsup handle the transaction?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
@@ -183,12 +169,11 @@
       </section>
 
       <section class="faq-section" id="panel-suppliers" role="tabpanel" aria-labelledby="tab-suppliers" hidden>
-        <span class="badge badge-supplier">For suppliers</span>
         <p class="faq-title">Factory and supplier questions</p>
 
         <div class="faq-item" data-faq-item>
           <div class="faq-q"><span class="faq-q-text">Is it free to join as a supplier?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
-          <div class="faq-a">Yes — completely free. No entry fees, no commissions, and no hidden charges. If that ever changes, you will be notified in advance and have the right to leave before any costs apply.</div>
+          <div class="faq-a">Yes, completely free. No entry fees, no commissions, and no hidden charges. If that ever changes, you will be notified in advance and have the right to leave before any costs apply.</div>
         </div>
         <div class="faq-item" data-faq-item>
           <div class="faq-q"><span class="faq-q-text">How do I receive customer inquiries?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
@@ -196,7 +181,7 @@
         </div>
         <div class="faq-item" data-faq-item>
           <div class="faq-q"><span class="faq-q-text">What do I need to provide to get started?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
-          <div class="faq-a">Just basic company info: production capacity, budget range, minimum order quantity, and a contact person. No product photos or price lists required upfront — it is all handled during onboarding.</div>
+          <div class="faq-a">Just basic company info: production capacity, budget range, minimum order quantity, and a contact person. No product photos or price lists required upfront; it is all handled during onboarding.</div>
         </div>
         <div class="faq-item" data-faq-item>
           <div class="faq-q"><span class="faq-q-text">Who handles payments and disputes?</span><span class="faq-arrow" aria-hidden="true">›</span></div>
@@ -211,7 +196,7 @@
   </main>
 
   <footer class="sp-footer">
-    <a href="/">Home</a>
+    <a href="/" class="sp-footer-logo" aria-label="Airsup home"><img src="assets/brand/logo-air-sup.png" alt="" width="18" height="18" /></a>
     <a href="/support">Support</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms of Service</a>

@@ -42,11 +42,13 @@
     .start-header {
       padding: 20px 28px; display: flex; align-items: center; justify-content: space-between;
     }
-    .start-back {
-      font-size: 14px; font-weight: 500; color: var(--text-muted);
-      padding: 8px 0; transition: color 0.15s;
+    .start-logo {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 4px 0; border-radius: 8px; transition: opacity 0.15s;
     }
-    .start-back:hover { color: var(--text); }
+    .start-logo:hover { opacity: 0.85; }
+    .start-logo img { display: block; width: 32px; height: 32px; border-radius: 8px; object-fit: contain; }
+    html[data-theme="dark"] .start-logo img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
     .lp-theme-toggle {
       width: 34px; height: 34px; border-radius: 50%;
       display: inline-flex; align-items: center; justify-content: center;
@@ -104,7 +106,9 @@
 </head>
 <body>
   <header class="start-header">
-    <a href="/" class="start-back">← Home</a>
+    <a href="/" class="start-logo" aria-label="Airsup home">
+      <img src="assets/brand/logo-air-sup.png" alt="" width="32" height="32" />
+    </a>
     <button type="button" class="lp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
   </header>
 

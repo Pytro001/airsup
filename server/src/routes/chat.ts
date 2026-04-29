@@ -56,6 +56,7 @@ chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) =>
       .select("id")
       .eq("user_id", userId)
       .is("project_id", null)
+      .eq("is_supi_connection", false)
       .limit(1);
 
     if (existing && existing.length > 0) {
@@ -73,6 +74,7 @@ chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) =>
     await supabaseAdmin.from("conversations").insert({
       user_id: userId,
       project_id: null,
+      is_supi_connection: false,
       role: "assistant",
       content: reply,
       metadata: { options: options || null, action: action || null },
@@ -87,7 +89,11 @@ chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) =>
 
 chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
-  const { message, project_id } = req.body as { message?: string; project_id?: string };
+  const { message, project_id, supi_thread } = req.body as {
+    message?: string;
+    project_id?: string;
+    supi_thread?: boolean;
+  };
 
   if (!message?.trim()) {
     res.status(400).json({ error: "Message is required" });
@@ -95,6 +101,22 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   }
 
   try {
+    if (supi_thread === true) {
+      const { error: uErr } = await supabaseAdmin.from("conversations").insert({
+        user_id: userId,
+        project_id: null,
+        is_supi_connection: true,
+        role: "user",
+        content: message.trim(),
+      });
+      if (uErr) {
+        res.status(500).json({ error: uErr.message });
+        return;
+      }
+      res.json({ reply: null, pending_human: true, options: null, action: null, pending_message: "Sent. Supi will reply soon." });
+      return;
+    }
+
     let projectCoordination: string | null = null;
     if (project_id) {
       const { data: proj, error: perr } = await supabaseAdmin
@@ -120,7 +142,7 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
     if (project_id) {
       historyQuery = historyQuery.eq("project_id", project_id);
     } else {
-      historyQuery = historyQuery.is("project_id", null);
+      historyQuery = historyQuery.is("project_id", null).eq("is_supi_connection", false);
     }
     const { data: history } = await historyQuery.order("created_at", { ascending: true }).limit(50);
 
@@ -132,6 +154,7 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
     await supabaseAdmin.from("conversations").insert({
       user_id: userId,
       project_id: project_id || null,
+      is_supi_connection: false,
       role: "user",
       content: message.trim(),
     });
@@ -150,6 +173,7 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
     await supabaseAdmin.from("conversations").insert({
       user_id: userId,
       project_id: project_id || null,
+      is_supi_connection: false,
       role: "assistant",
       content: reply,
       ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
@@ -222,13 +246,19 @@ chatRouter.post("/ask", requireAuth, async (req: AuthRequest, res: Response) => 
 chatRouter.get("/history", requireAuth, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
   const projectId = req.query.project_id as string | undefined;
+  const supiThread = req.query.supi_thread === "1" || req.query.supi_thread === "true";
 
   try {
-    let q = supabaseAdmin.from("conversations").select("id, role, content, metadata, created_at").eq("user_id", userId);
-    if (projectId) {
+    let q = supabaseAdmin
+      .from("conversations")
+      .select("id, role, content, metadata, created_at")
+      .eq("user_id", userId);
+    if (supiThread) {
+      q = q.is("project_id", null).eq("is_supi_connection", true);
+    } else if (projectId) {
       q = q.eq("project_id", projectId);
     } else {
-      q = q.is("project_id", null);
+      q = q.is("project_id", null).eq("is_supi_connection", false);
     }
 
     const { data, error } = await q.order("created_at", { ascending: true }).limit(100);
