@@ -59,6 +59,8 @@
   /** File[] selected on onboarding brief step (any type; uploaded after project is created). */
   let onboardingProjectFiles = [];
   let latestProjectId = null;
+  /** Cached /api/admin/overview result for fast re-render after soft-delete (avoids re-fetching). */
+  let adminOverviewCache = null;
   /** Cached from last admin overview load (factory picker in workspace). */
   let adminWorkspaceFactoriesCache = [];
   let adminWorkspaceBackWired = false;
@@ -68,7 +70,7 @@
   function resetOnboardData() {
     onboardingProjectFiles = [];
     onboardData = {
-      role: "", fullName: "", phone: "", whatsapp1: "", whatsapp2: "", person2Name: "", companyName: "", location: "",
+      role: "", fullName: "", phone: "", whatsapp1: "", companyName: "", location: "", website: "",
       briefUrl: "", briefPastedText: "", briefText: "", briefSource: "", briefFileName: "",
       capabilities: "", priceRange: "", moqMin: "", moqMax: "", specialization: "",
     };
@@ -222,6 +224,25 @@
     } else {
       el.textContent = "";
       el.hidden = true;
+    }
+  }
+
+  /** Empty ok; else http(s) URL with host. Fills in https for bare hostnames. */
+  function validateOptionalHttpUrl(raw) {
+    const t = String(raw == null ? "" : raw).trim();
+    if (!t) return { ok: true };
+    if (/^(javascript|data|vbscript):/i.test(t)) {
+      return { ok: false, error: "Only http and https links are allowed." };
+    }
+    try {
+      const u = new URL(/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(t) ? t : "https://" + t);
+      if (u.protocol !== "http:" && u.protocol !== "https:") {
+        return { ok: false, error: "Only http and https links are allowed." };
+      }
+      if (!u.hostname) return { ok: false, error: "Enter a valid website URL (e.g. https://example.com)." };
+      return { ok: true, normalized: u.href };
+    } catch (_) {
+      return { ok: false, error: "Enter a valid website URL (e.g. https://example.com)." };
     }
   }
 
@@ -900,23 +921,21 @@
       fields: [
         { key: "companyName", label: "Company name", required: true },
         { key: "location", label: "Location", required: true },
+        { key: "website", label: "Website", type: "url" },
         { key: "specialization", label: "What do you manufacture?", required: true },
       ] },
     { id: "capabilities", type: "form", title: "What can you produce?", sub: "This helps our AI match you with the right projects. Be specific about what your team excels at.",
       fields: [
-        { key: "capabilities", label: "Describe", type: "textarea", compact: true },
+        { key: "capabilities", label: "Additional information about your company", type: "textarea", compact: true },
         { key: "priceRange", label: "Project price range" },
         { key: "moqMin", label: "Minimal order quantity", type: "digits" },
         { key: "moqMax", label: "Maximal order quantity", type: "digits" },
       ] },
-    { id: "contact", type: "form", title: "Who should buyers work with?", sub: "Pick a country code, then digits only in the number field. Person 2 is optional.",
+    { id: "contact", type: "form", title: "How can buyers reach you?", sub: "Pick a country code, then digits only. Your info is stored securely.",
       fields: [
-        { key: "fullName", label: "Person 1 first name", required: true },
-        { key: "whatsapp1", label: "Person 1 WhatsApp", type: "phone", required: true },
-        { key: "person2Name", label: "Person 2 first name" },
-        { key: "whatsapp2", label: "Person 2 WhatsApp", type: "phone", required: false },
+        { key: "whatsapp1", label: "Phone / WhatsApp", type: "phone", required: true },
       ] },
-    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Use the same phone and password on the home page to log in on another device. You can change them later in Settings." },
+    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Set a password to log in on the home page with the phone number you entered in the last step. You can change it later in Settings." },
   ];
 
   function getSteps() { return onboardData.role === "supplier" ? SUPPLIER_STEPS : STARTUP_STEPS; }
@@ -1024,8 +1043,7 @@
     const step = steps[stepIdx];
     if (step.type === "pin") {
       const isSupplier = onboardData.role === "supplier";
-      var pphone = (onboardData.phone || "").trim();
-      var phoneRowHtml = isSupplier ? onboardPinPhoneRowHtml(pphone) : "";
+      var phoneRowHtml = "";
       var pinH =
         '<div class="onboard-question"><h1 class="onboard-title">' +
         step.title +
@@ -1049,23 +1067,16 @@
         '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
       stage.innerHTML = pinH;
       var pinErrClear = function () { setOnboardLineError("onboard-pin-error", ""); };
-      if (isSupplier) {
-        ["onboard-pin-phone-cc", "onboard-pin-phone-local", "onboard-pin", "onboard-pin2"].forEach(function (iid) {
-          document.getElementById(iid)?.addEventListener("input", pinErrClear);
-        });
-        window.AIRSUP_PHONE?.wirePhoneLocalInput($("onboard-pin-phone-local"));
-      } else {
-        ["onboard-pin", "onboard-pin2"].forEach(function (iid) {
-          document.getElementById(iid)?.addEventListener("input", pinErrClear);
-        });
-      }
+      ["onboard-pin", "onboard-pin2"].forEach(function (iid) {
+        document.getElementById(iid)?.addEventListener("input", pinErrClear);
+      });
       $("onboard-next")?.addEventListener("click", async function () {
         if (!(await ensureSession())) return;
         setOnboardLineError("onboard-pin-error", "");
         var a = isSupplier
-          ? mergePhoneFromRow($("onboard-pin-phone-cc"), $("onboard-pin-phone-local"))
+          ? (onboardData.whatsapp1 || "").trim()
           : (onboardData.phone || "").trim();
-        if (!isSupplier && !a) {
+        if (!a) {
           setOnboardLineError("onboard-pin-error", "Add your phone number in the previous step, or go back to enter it.");
           return;
         }
@@ -1090,16 +1101,12 @@
         }
       });
       $("onboard-back")?.addEventListener("click", function () {
-        if (isSupplier) {
-          onboardData.phone = mergePhoneFromRow($("onboard-pin-phone-cc"), $("onboard-pin-phone-local")).trim();
-        }
         onboardStep--;
         renderOnboardStep();
       });
       setTimeout(
         function () {
-          if (isSupplier) $("onboard-pin-phone-local") && ($("onboard-pin-phone-local").focus());
-          else $("onboard-pin") && ($("onboard-pin").focus());
+          $("onboard-pin") && ($("onboard-pin").focus());
         },
         100
       );
@@ -1228,7 +1235,7 @@
         html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><input class="onboard-input" data-key="${f.key}" type="${f.type || "text"}" value="${escapeAttr(onboardData[f.key] || "")}" ${f.required ? "required" : ""} /></div>`;
       }
     });
-    html += '</div><div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>';
+    html += '<p class="onboard-field-error" id="onboard-form-error" role="status" hidden></p></div><div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>';
     html += '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
     stage.innerHTML = html;
 
@@ -1258,6 +1265,18 @@
 
     $("onboard-next")?.addEventListener("click", () => {
       collectOnboardFormFields();
+      if (step.id === "factory" && onboardData.role === "supplier") {
+        const w = (onboardData.website || "").trim();
+        const v = validateOptionalHttpUrl(w);
+        if (!v.ok) {
+          setOnboardLineError("onboard-form-error", v.error || "Invalid website.");
+          return;
+        }
+        onboardData.website = v.normalized ? v.normalized : "";
+        setOnboardLineError("onboard-form-error", "");
+      } else {
+        setOnboardLineError("onboard-form-error", "");
+      }
       for (const inp of stage.querySelectorAll(".onboard-input[required], textarea.onboard-input[required]")) {
         if (!(inp.value || "").trim()) { inp.focus(); return; }
       }
@@ -1278,7 +1297,9 @@
   async function saveOnboardingToSupabase() {
     if (!supabaseClient || !currentUser) return {};
     const d = onboardData;
-    const displayName = d.fullName || currentUser.displayName;
+    const displayName = d.role === "supplier"
+      ? ((d.companyName || "").trim() || d.fullName || currentUser.displayName)
+      : (d.fullName || currentUser.displayName);
     const letter = (displayName || "?").charAt(0).toUpperCase();
 
     await supabaseClient.from("profiles").upsert({
@@ -1296,20 +1317,22 @@
 
     if (d.role === "supplier") {
       const wa1 = (d.whatsapp1 || "").trim();
-      const wa2 = (d.whatsapp2 || "").trim();
-      const contacts = [{ name: (d.fullName || "").trim(), whatsapp: wa1 }];
-      if (wa2) contacts.push({ name: (d.person2Name || "").trim(), whatsapp: wa2 });
+      const contacts = [{ whatsapp: wa1 }];
+      const siteRaw = (d.website || "").trim();
+      const siteV = siteRaw ? validateOptionalHttpUrl(siteRaw) : { ok: true };
+      const cap = {
+        description: (d.capabilities || "").trim(),
+        project_price_range: (d.priceRange || "").trim(),
+        moq_min: phoneDigits(d.moqMin || ""),
+        moq_max: phoneDigits(d.moqMax || ""),
+        moq: [phoneDigits(d.moqMin), phoneDigits(d.moqMax)].filter(Boolean).join(" – ") || "",
+      };
+      if (siteV.ok && siteV.normalized) cap.website = siteV.normalized;
       const facPayload = {
         name: d.companyName,
         location: d.location,
         category: d.specialization,
-        capabilities: {
-          description: (d.capabilities || "").trim(),
-          project_price_range: (d.priceRange || "").trim(),
-          moq_min: phoneDigits(d.moqMin || ""),
-          moq_max: phoneDigits(d.moqMax || ""),
-          moq: [phoneDigits(d.moqMin), phoneDigits(d.moqMax)].filter(Boolean).join(" – ") || "",
-        },
+        capabilities: cap,
         contact_info: { contacts },
         active: true,
       };
@@ -3098,27 +3121,26 @@
     }
   }
 
-  async function loadAdminOverview() {
-    setFormFlash("admin-flash", "", false);
-    const stats = $("admin-stats");
-    const custEl = $("admin-customers");
-    const facEl = $("admin-factories");
-    const connEl = $("admin-connections");
-    if (stats) stats.innerHTML = '<div class="projects-empty">Loading\u2026</div>';
-    if (custEl) custEl.innerHTML = "";
-    if (facEl) facEl.innerHTML = "";
-    if (connEl) connEl.innerHTML = "";
-
-    let data;
-    try {
-      const res = await fetch(`${API_BASE}/api/admin/overview`, { headers: { "Content-Type": "application/json" } });
-      data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Could not load admin data");
-    } catch (err) {
-      if (stats) stats.innerHTML = `<div class="projects-empty">${escapeHtml(err.message || "Failed to load")}</div>`;
-      return;
+  function applyAdminSoftDeleteToCache(type, id) {
+    if (!adminOverviewCache) return false;
+    const sid = String(id);
+    if (type === "customer") {
+      adminOverviewCache.customers = (adminOverviewCache.customers || []).filter((c) => String(c.id) !== sid);
+      adminOverviewCache.connections = (adminOverviewCache.connections || []).filter(
+        (conn) => !conn.buyer || String(conn.buyer.id) !== sid
+      );
+    } else if (type === "factory") {
+      adminOverviewCache.factories = (adminOverviewCache.factories || []).filter((f) => String(f.id) !== sid);
+      adminOverviewCache.connections = (adminOverviewCache.connections || []).filter(
+        (conn) => !conn.factory || String(conn.factory.id) !== sid
+      );
+    } else {
+      return false;
     }
+    return true;
+  }
 
+  function renderAdminOverviewData(data) {
     const customers = data.customers || [];
     const factories = data.factories || [];
     const connections = data.connections || [];
@@ -3126,6 +3148,10 @@
 
     wireAdminWorkspaceOnce();
 
+    const stats = $("admin-stats");
+    const custEl = $("admin-customers");
+    const facEl = $("admin-factories");
+    const connEl = $("admin-connections");
     if (stats) {
       const connectedBuyers = customers.filter((c) => c.connected).length;
       const connectedFactories = factories.filter((f) => f.connected).length;
@@ -3219,14 +3245,14 @@
       }).join("");
     }
 
-    // Wire up delete buttons (soft-delete -> bin; no confirm — restore from Bin below)
     document.querySelectorAll(".admin-delete-btn").forEach((btn) => {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const type = btn.getAttribute("data-type");
         const id = btn.getAttribute("data-id");
         const pathKind = type === "customer" ? "customers" : "factories";
-        if (!id) return;
+        if (!id || btn.disabled) return;
+        btn.disabled = true;
         try {
           const res = await fetch(`${API_BASE}/api/admin/${pathKind}/${encodeURIComponent(id)}`, { method: "DELETE" });
           const j = await res.json().catch(() => ({}));
@@ -3236,15 +3262,46 @@
             setFormFlash("admin-flash", delMsg, true);
             return;
           }
-          await loadAdminOverview();
-          setFormFlash("admin-flash", "Moved to bin.", false, 4000);
+          if (applyAdminSoftDeleteToCache(type, id)) {
+            renderAdminOverviewData(adminOverviewCache);
+            setFormFlash("admin-flash", "Moved to bin.", false, 4000);
+            void loadAdminBin();
+          } else {
+            adminOverviewCache = null;
+            await loadAdminOverview();
+          }
         } catch (err) {
           setFormFlash("admin-flash", err instanceof Error ? err.message : "Could not move to bin.", true);
+        } finally {
+          btn.disabled = false;
         }
       });
     });
+  }
 
-    // Load bin section
+  async function loadAdminOverview() {
+    setFormFlash("admin-flash", "", false);
+    const stats = $("admin-stats");
+    const custEl = $("admin-customers");
+    const facEl = $("admin-factories");
+    const connEl = $("admin-connections");
+    if (stats) stats.innerHTML = '<div class="projects-empty">Loading\u2026</div>';
+    if (custEl) custEl.innerHTML = "";
+    if (facEl) facEl.innerHTML = "";
+    if (connEl) connEl.innerHTML = "";
+
+    let data;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/overview`, { headers: { "Content-Type": "application/json" } });
+      data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Could not load admin data");
+    } catch (err) {
+      if (stats) stats.innerHTML = `<div class="projects-empty">${escapeHtml(err.message || "Failed to load")}</div>`;
+      return;
+    }
+
+    adminOverviewCache = data;
+    renderAdminOverviewData(data);
     await loadAdminBin();
   }
 
@@ -3323,7 +3380,7 @@
               setFormFlash("admin-flash", (j && j.error) || "Could not delete.", true);
               return;
             }
-            await loadAdminOverview();
+            void loadAdminBin();
             setFormFlash("admin-flash", "Deleted permanently.", false, 4000);
           } catch (err) {
             setFormFlash("admin-flash", err instanceof Error ? err.message : "Could not delete.", true);
@@ -3352,11 +3409,8 @@
     const ci = factory.contact_info || {};
     const contacts = Array.isArray(ci.contacts) ? ci.contacts : [];
     const c0 = contacts[0] || {};
-    const c1 = contacts[1] || {};
-    const name0 = c0.name != null ? String(c0.name) : ci.name != null ? String(ci.name) : "";
     const wa0 = c0.whatsapp != null ? String(c0.whatsapp) : ci.phone != null ? String(ci.phone) : "";
-    const name1 = c1.name != null ? String(c1.name) : "";
-    const wa1c = c1.whatsapp != null ? String(c1.whatsapp) : "";
+    const websiteV = c.website != null ? String(c.website) : "";
     let moqMinV = c.moq_min != null ? String(c.moq_min) : "";
     let moqMaxV = c.moq_max != null ? String(c.moq_max) : "";
     if (!moqMinV && !moqMaxV && c.moq) {
@@ -3383,15 +3437,13 @@
     root.innerHTML = `<div class="settings-section">
       <div class="settings-field"><label class="settings-label">Company name</label><input type="text" id="fp-name" class="settings-input" value="${escapeAttr(factory.name)}" /></div>
       <div class="settings-field"><label class="settings-label">Location</label><input type="text" id="fp-location" class="settings-input" value="${escapeAttr(factory.location)}" /></div>
+      <div class="settings-field"><label class="settings-label">Website</label><input type="url" id="fp-website" class="settings-input" placeholder="https://example.com" value="${escapeAttr(websiteV)}" /></div>
       <div class="settings-field"><label class="settings-label">What do you manufacture?</label><input type="text" id="fp-category" class="settings-input" value="${escapeAttr(factory.category)}" /></div>
-      <div class="settings-field"><label class="settings-label">Describe</label><textarea id="fp-capabilities" class="settings-input onboard-textarea--compact" rows="2">${escapeHtml(c.description || "")}</textarea></div>
+      <div class="settings-field"><label class="settings-label">Additional information about your company</label><textarea id="fp-capabilities" class="settings-input onboard-textarea--compact" rows="2">${escapeHtml(c.description || "")}</textarea></div>
       <div class="settings-field"><label class="settings-label">Project price range</label><input type="text" id="fp-price-range" class="settings-input" value="${escapeAttr(priceR)}" /></div>
       <div class="settings-field"><label class="settings-label">Minimal order quantity</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="fp-moq-min" class="settings-input fp-digits" value="${escapeAttr(moqMinV)}" /></div>
       <div class="settings-field"><label class="settings-label">Maximal order quantity</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="fp-moq-max" class="settings-input fp-digits" value="${escapeAttr(moqMaxV)}" /></div>
-      <div class="settings-field"><label class="settings-label">Person 1 first name</label><input type="text" id="fp-contact-name" class="settings-input" value="${escapeAttr(name0)}" /></div>
-      ${settingsPhoneRowHtml("Person 1 WhatsApp", "fp-wa1-cc", "fp-wa1-local", wa0)}
-      <div class="settings-field"><label class="settings-label">Person 2 first name</label><input type="text" id="fp-contact-name2" class="settings-input" value="${escapeAttr(name1)}" /></div>
-      ${settingsPhoneRowHtml("Person 2 WhatsApp", "fp-wa2-cc", "fp-wa2-local", wa1c)}
+      ${settingsPhoneRowHtml("Phone / WhatsApp", "fp-wa1-cc", "fp-wa1-local", wa0)}
       <p class="settings-saved" id="fp-saved" hidden></p>
       <button type="button" class="btn-primary" id="fp-save">Save profile</button>
       ${fpDangerHtml}</div>`;
@@ -3407,19 +3459,25 @@
       const g = (k) => ($(`fp-${k}`)?.value || "").trim();
       const saved = $("fp-saved");
       try {
+        const siteRaw = (g("website") || "").trim();
+        const siteCheck = validateOptionalHttpUrl(siteRaw);
+        if (!siteCheck.ok) {
+          if (saved) { saved.hidden = false; saved.textContent = siteCheck.error || "Invalid website."; saved.style.color = "#d93025"; }
+          return;
+        }
         const wa1 = mergePhoneFromRow($("fp-wa1-cc"), $("fp-wa1-local"));
-        const wa2 = mergePhoneFromRow($("fp-wa2-cc"), $("fp-wa2-local"));
-        const contacts = [{ name: g("contact-name"), whatsapp: wa1 }];
-        if (wa2) contacts.push({ name: g("contact-name2"), whatsapp: wa2 });
+        const contacts = [{ whatsapp: wa1 }];
+        const cap = {
+          description: g("capabilities"),
+          project_price_range: g("price-range"),
+          moq_min: phoneDigits(g("moq-min")),
+          moq_max: phoneDigits(g("moq-max")),
+          moq: [phoneDigits(g("moq-min")), phoneDigits(g("moq-max"))].filter(Boolean).join(" – ") || "",
+        };
+        cap.website = siteCheck.normalized ? siteCheck.normalized : "";
         await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify({
           name: g("name"), location: g("location"), category: g("category"),
-          capabilities: {
-            description: g("capabilities"),
-            project_price_range: g("price-range"),
-            moq_min: phoneDigits(g("moq-min")),
-            moq_max: phoneDigits(g("moq-max")),
-            moq: [phoneDigits(g("moq-min")), phoneDigits(g("moq-max"))].filter(Boolean).join(" – ") || "",
-          },
+          capabilities: cap,
           contact_info: { contacts },
         })});
         if (saved) { saved.hidden = false; saved.textContent = "Saved."; saved.style.color = ""; setTimeout(() => { saved.hidden = true; }, 2500); }
