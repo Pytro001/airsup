@@ -889,7 +889,7 @@
     if (name === "chat" && CHAT_ENABLED) loadChatHistory();
     if (name === "projects") {
       loadProjects();
-      if (userRole === "startup") void refreshConnectionsNavBadge();
+      if (userRole !== "supplier") void refreshConnectionsNavBadge();
     }
     if (name === "connections") loadConnections();
     if (name === "visit") loadVisit();
@@ -1776,6 +1776,11 @@
     );
   }
 
+  /** Buyer workspace: anyone who is not a supplier (including brief null/startup during load). */
+  function isBuyerWorkspace() {
+    return userRole !== "supplier";
+  }
+
   async function loadProjectChatHistory(projectId) {
     const box = $("project-chat-messages");
     if (!box) return;
@@ -1783,6 +1788,9 @@
       const { messages } = await apiCall("/api/chat/history?project_id=" + encodeURIComponent(projectId));
       box.innerHTML = "";
       (messages || []).forEach(function (m) {
+        if (isBuyerWorkspace() && m.metadata && m.metadata.supi) {
+          return;
+        }
         appendChatLine(box, m.role, m.content, m.metadata);
       });
     } catch (_) {
@@ -1889,9 +1897,9 @@
         '<button type="button" class="btn-outline project-files-pick-btn" id="project-detail-file-btn">Add files</button></div></section>';
 
       var dateLine = formatProjectDate(project.created_at);
-      var isStartupBuyer = userRole === "startup";
+      var isCustomerProjectView = isBuyerWorkspace();
       var overview;
-      if (isStartupBuyer) {
+      if (isCustomerProjectView) {
         overview =
           '<section class="project-detail-section project-detail-overview"><h2 class="project-detail-title">' +
           escapeHtml(project.title) +
@@ -1920,9 +1928,9 @@
         overview +
         buildProjectChatSection() +
         buildRequirementsSection(project.requirements) +
-        (isStartupBuyer ? "" : buildAiSummarySection(project.ai_summary, project.requirements)) +
+        (isCustomerProjectView ? "" : buildAiSummarySection(project.ai_summary, project.requirements)) +
         buildMatchesSection(project.matches) +
-        (isStartupBuyer ? "" : buildBriefSection(project)) +
+        (isCustomerProjectView ? "" : buildBriefSection(project)) +
         '<section class="project-detail-section project-chatlink-block"><h3 class="project-detail-h">Add chat link</h3>' +
         '<p class="project-detail-muted">Grok, ChatGPT, or Claude share URL.</p>' +
         '<div class="project-chatlink-row"><input type="text" id="project-chatlink-label" class="settings-input project-chatlink-label" placeholder="Label" maxlength="120" />' +
@@ -2196,7 +2204,7 @@
 
   async function refreshConnectionsNavBadge() {
     const badge = $("nav-connections-badge");
-    if (!badge || userRole !== "startup") return;
+    if (!badge || userRole === "supplier") return;
     try {
       const { messages } = await apiCall("/api/chat/history?supi_thread=1");
       const lastRead = getSupiLastRead();
@@ -2266,7 +2274,7 @@
         : [];
 
       var supiCard = "";
-      if (userRole === "startup") {
+      if (userRole !== "supplier") {
         const src = "assets/supi.png";
         var supiUnsub = false;
         try {
