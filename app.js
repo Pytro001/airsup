@@ -2214,9 +2214,8 @@
     if (!chatWrap) return;
     chatWrap.classList.add("conn-chat-wrap--supi");
     const avatarEl = $("conn-chat-header-avatar");
-    if (avatarEl) { avatarEl.src = "assets/supi.png"; avatarEl.hidden = false; }
+    if (avatarEl) { avatarEl.src = "assets/supi.png"; avatarEl.style.visibility = ""; }
     if ($("conn-chat-title")) $("conn-chat-title").textContent = "Supi";
-    if ($("conn-chat-subtitle")) $("conn-chat-subtitle").textContent = "Airsup assistant";
     if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message Supi…";
     const filesEl = $("conn-chat-files");
     if (filesEl) { filesEl.hidden = true; filesEl.innerHTML = ""; }
@@ -2313,9 +2312,8 @@
 
     const factoryName = cardEl?.querySelector(".conn-item-name")?.textContent || "Factory";
     const avatarEl = $("conn-chat-header-avatar");
-    if (avatarEl) { avatarEl.src = ""; avatarEl.hidden = true; }
+    if (avatarEl) { avatarEl.src = ""; avatarEl.style.visibility = "hidden"; }
     if ($("conn-chat-title")) $("conn-chat-title").textContent = factoryName;
-    if ($("conn-chat-subtitle")) $("conn-chat-subtitle").textContent = "";
 
     const msgContainer = $("conn-chat-messages");
     const filesEl = $("conn-chat-files");

@@ -76,33 +76,27 @@
 
     <!-- Connections (buyer) -->
     <section class="page" id="page-connections">
-      <div class="connections-layout">
-        <div class="connections-sidebar">
-          <div id="connections-list" class="connections-list"></div>
+      <div class="conn-sidebar" id="conn-sidebar">
+        <div id="connections-list" class="connections-list"></div>
+      </div>
+      <div id="connection-chat-wrap" class="conn-chat-panel">
+        <div class="conn-chat-header">
+          <img class="conn-chat-header-avatar" id="conn-chat-header-avatar" src="assets/supi.png" alt="" />
+          <span class="conn-chat-title" id="conn-chat-title">Supi</span>
         </div>
-        <div id="connection-chat-wrap" class="connections-chat-panel conn-chat-wrap">
-          <div class="conn-chat-header">
-            <img class="conn-chat-header-avatar" id="conn-chat-header-avatar" src="assets/supi.png" alt="" />
-            <div class="conn-chat-header-meta">
-              <span class="conn-chat-title" id="conn-chat-title">Supi</span>
-              <span class="conn-chat-subtitle" id="conn-chat-subtitle">Airsup assistant</span>
-            </div>
-          </div>
-          <div id="conn-chat-files" class="conn-chat-files" hidden></div>
-          <div class="conn-chat-messages" id="conn-chat-messages"></div>
-          <div class="conn-chat-composer">
-            <div class="composer-inner">
-              <textarea class="composer-input" id="conn-chat-input" rows="1" placeholder="Message Supi\u2026" autocomplete="off"></textarea>
-              <button type="button" class="composer-send" id="conn-chat-send" aria-label="Send" disabled>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-              </button>
-            </div>
+        <div id="conn-chat-files" class="conn-chat-files" hidden></div>
+        <div class="conn-chat-messages" id="conn-chat-messages"></div>
+        <div class="conn-chat-composer">
+          <div class="composer-inner">
+            <textarea class="composer-input" id="conn-chat-input" rows="1" placeholder="Message…" autocomplete="off"></textarea>
+            <button type="button" class="composer-send" id="conn-chat-send" aria-label="Send" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+            </button>
           </div>
         </div>
       </div>
     </section>
-
-    <!-- Visit (buyer) -->
+        <!-- Visit (buyer) -->
     <section class="page" id="page-visit">
       <div class="page-content page-content--wide">
         <h1 class="page-title">Visit</h1>
@@ -199,6 +193,6 @@
   <script src="config.js"></script>
   <script src="assets/phone-dial.js"></script>
   <script src="assets/password-toggles.js"></script>
-  <script src="app.js?v=20260429c"></script>
+  <script src="app.js?v=20260429d"></script>
 </body>
 </html>
