@@ -8,20 +8,60 @@ import { runJobPollOnce } from "../jobs/poll.js";
 import { ingestRegisteredProjectFile, ingestRawTextIntoProject, reingestPendingProjectFiles } from "../lib/project-brief-ingest.js";
 import { fetchChatShare, UnsupportedShareError, detectProvider } from "../lib/chat-share.js";
 import { seedSupiWelcome } from "../lib/supi-seed.js";
+import { insertProjectWithPipelineColumnsFallback } from "../lib/projects-pipeline-fallback.js";
+import { isMissingProjectsPipelineColumnError } from "../lib/soft-delete-errors.js";
 
 export const projectsRouter = Router();
 
-projectsRouter.get("/", requireAuth, async (req: AuthRequest, res: Response) => {
-  const { data, error } = await supabaseAdmin
-    .from("projects")
-    .select(`
+const PROJECTS_LIST_SELECT_WITH_PIPELINE = `
       id, title, description, status, requirements, ai_summary, created_at,
       pipeline_step, coordination_mode,
       companies(name),
       matches(id, status, quote, factories(name, location))
-    `)
+    `;
+
+const PROJECTS_LIST_SELECT_MIN = `
+      id, title, description, status, requirements, ai_summary, created_at,
+      companies(name),
+      matches(id, status, quote, factories(name, location))
+    `;
+
+const PROJECT_DETAIL_SELECT_WITH_PIPELINE = `
+      id, title, description, status, requirements, ai_summary, created_at,
+      pipeline_step, coordination_mode,
+      brief_source_type, brief_source_url, brief_raw,
+      companies(name),
+      matches(id, status, quote, context_summary, factories(name, location, category)),
+      factory_searches(id, status, search_criteria, created_at)
+    `;
+
+const PROJECT_DETAIL_SELECT_MIN = `
+      id, title, description, status, requirements, ai_summary, created_at,
+      brief_source_type, brief_source_url, brief_raw,
+      companies(name),
+      matches(id, status, quote, context_summary, factories(name, location, category)),
+      factory_searches(id, status, search_criteria, created_at)
+    `;
+
+projectsRouter.get("/", requireAuth, async (req: AuthRequest, res: Response) => {
+  const first = await supabaseAdmin
+    .from("projects")
+    .select(PROJECTS_LIST_SELECT_WITH_PIPELINE)
     .eq("user_id", req.userId!)
     .order("created_at", { ascending: false });
+
+  let data: unknown = first.data;
+  let error = first.error;
+
+  if (error && isMissingProjectsPipelineColumnError(error)) {
+    const second = await supabaseAdmin
+      .from("projects")
+      .select(PROJECTS_LIST_SELECT_MIN)
+      .eq("user_id", req.userId!)
+      .order("created_at", { ascending: false });
+    data = second.data;
+    error = second.error;
+  }
 
   if (error) {
     res.status(500).json({ error: error.message });
@@ -70,9 +110,14 @@ projectsRouter.post("/bootstrap", requireAuth, async (req: AuthRequest, res: Res
   const description =
     "Your reference files are attached. Open chat to add details and refine the factory search.";
 
-  const { data: projectRow, error: pe } = await supabaseAdmin
-    .from("projects")
-    .insert({
+  const { data: projectRow, error: pe } = await insertProjectWithPipelineColumnsFallback<{
+    id: string;
+    title: string;
+    description: string;
+    requirements: Record<string, unknown> | null;
+    ai_summary: Record<string, unknown> | null;
+  }>(
+    {
       user_id: userId,
       company_id: companyId,
       title,
@@ -85,9 +130,9 @@ projectsRouter.post("/bootstrap", requireAuth, async (req: AuthRequest, res: Res
       brief_source_type: "file",
       brief_source_url: null,
       brief_raw: null,
-    })
-    .select("id, title, description, requirements, ai_summary")
-    .single();
+    },
+    "id, title, description, requirements, ai_summary"
+  );
 
   if (pe || !projectRow) {
     console.error("[projects] bootstrap insert:", pe);
@@ -292,19 +337,26 @@ projectsRouter.post("/:id/import-chat-link", requireAuth, async (req: AuthReques
 });
 
 projectsRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) => {
-  const { data, error } = await supabaseAdmin
+  const first = await supabaseAdmin
     .from("projects")
-    .select(`
-      id, title, description, status, requirements, ai_summary, created_at,
-      pipeline_step, coordination_mode,
-      brief_source_type, brief_source_url, brief_raw,
-      companies(name),
-      matches(id, status, quote, context_summary, factories(name, location, category)),
-      factory_searches(id, status, search_criteria, created_at)
-    `)
+    .select(PROJECT_DETAIL_SELECT_WITH_PIPELINE)
     .eq("id", req.params.id)
     .eq("user_id", req.userId!)
     .single();
+
+  let data: unknown = first.data;
+  let error = first.error;
+
+  if (error && isMissingProjectsPipelineColumnError(error)) {
+    const second = await supabaseAdmin
+      .from("projects")
+      .select(PROJECT_DETAIL_SELECT_MIN)
+      .eq("id", req.params.id)
+      .eq("user_id", req.userId!)
+      .single();
+    data = second.data;
+    error = second.error;
+  }
 
   if (error) {
     res.status(404).json({ error: "Project not found" });

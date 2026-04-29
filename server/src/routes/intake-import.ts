@@ -7,6 +7,7 @@ import { importBriefFromText } from "../agents/import-brief.js";
 import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
 import { runJobPollOnce } from "../jobs/poll.js";
 import { seedSupiWelcome } from "../lib/supi-seed.js";
+import { insertProjectWithPipelineColumnsFallback } from "../lib/projects-pipeline-fallback.js";
 
 export const intakeImportRouter = Router();
 
@@ -101,9 +102,14 @@ intakeImportRouter.post("/import", requireAuth, async (req: AuthRequest, res: Re
     readiness: brief.readiness,
   };
 
-  const { data: projectRow, error: pe } = await supabaseAdmin
-    .from("projects")
-    .insert({
+  const { data: projectRow, error: pe } = await insertProjectWithPipelineColumnsFallback<{
+    id: string;
+    title: string;
+    description: string;
+    requirements: Record<string, unknown> | null;
+    ai_summary: Record<string, unknown> | null;
+  }>(
+    {
       user_id: userId,
       company_id: companyId,
       title: brief.title,
@@ -116,9 +122,9 @@ intakeImportRouter.post("/import", requireAuth, async (req: AuthRequest, res: Re
       brief_raw: briefRaw,
       pipeline_step: 1,
       coordination_mode: "supi_manual",
-    })
-    .select("id, title, description, requirements, ai_summary")
-    .single();
+    },
+    "id, title, description, requirements, ai_summary"
+  );
 
   if (pe || !projectRow) {
     console.error("[intake-import] project insert:", pe);

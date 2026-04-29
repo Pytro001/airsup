@@ -6,6 +6,7 @@ import { formatFilesForPrompt } from "../lib/project-files.js";
 import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
 import { runJobPollOnce } from "../jobs/poll.js";
 import { seedSupiWelcome } from "../lib/supi-seed.js";
+import { insertProjectWithPipelineColumnsFallback } from "../lib/projects-pipeline-fallback.js";
 
 const SYSTEM_PROMPT = `You are Airsup, an expert manufacturing sourcing agent.
 
@@ -263,9 +264,10 @@ async function handleToolCall(
       if (materials) requirements.materials = materials;
       if (additional_notes) requirements.additional_notes = additional_notes;
 
-      const { data, error: insErr } = await supabaseAdmin
-        .from("projects")
-        .insert({
+      const { data, error: insErr } = await insertProjectWithPipelineColumnsFallback<{
+        id: string;
+      }>(
+        {
           user_id: userId,
           company_id: company?.id || null,
           title,
@@ -274,9 +276,9 @@ async function handleToolCall(
           status: "intake",
           pipeline_step: 1,
           coordination_mode: "supi_manual",
-        })
-        .select("id")
-        .single();
+        },
+        "id"
+      );
       if (insErr) return `Could not create project: ${insErr.message}`;
       if (data?.id) await seedSupiWelcome(data.id, userId);
       return `Created project "${title}" (id: ${data?.id}).`;

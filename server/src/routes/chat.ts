@@ -5,6 +5,7 @@ import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { runIntakeAgent, loadContext, INIT_SYSTEM_INSTRUCTION } from "../agents/intake.js";
 import { registerProjectFileRecord } from "../lib/project-files.js";
+import { isMissingProjectsPipelineColumnError } from "../lib/soft-delete-errors.js";
 
 export const chatRouter = Router();
 
@@ -102,11 +103,17 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
         .eq("id", project_id)
         .eq("user_id", userId)
         .maybeSingle();
-      if (perr || !proj) {
+      if (perr && isMissingProjectsPipelineColumnError(perr)) {
+        projectCoordination = "supi_manual";
+      } else if (perr) {
         res.status(404).json({ error: "Project not found" });
         return;
+      } else if (!proj) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      } else {
+        projectCoordination = (proj as { coordination_mode?: string | null }).coordination_mode ?? "supi_manual";
       }
-      projectCoordination = proj.coordination_mode;
     }
 
     let historyQuery = supabaseAdmin.from("conversations").select("role, content").eq("user_id", userId);
