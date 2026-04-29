@@ -2297,10 +2297,10 @@
       });
 
       void refreshConnectionsNavBadge();
-      if (userRole !== "supplier") void openSupiConnectionChat();
     } catch (_) {
       container.innerHTML = '<div class="connections-empty">Could not load connections.</div>';
     }
+    if (userRole !== "supplier") void openSupiConnectionChat();
   }
 
   async function openConnectionChat(matchId, cardEl) {
