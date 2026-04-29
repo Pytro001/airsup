@@ -1926,7 +1926,6 @@
         escapeAttr(id) +
         '">' +
         overview +
-        buildProjectChatSection() +
         buildRequirementsSection(project.requirements) +
         (isCustomerProjectView ? "" : buildAiSummarySection(project.ai_summary, project.requirements)) +
         buildMatchesSection(project.matches) +
@@ -1941,16 +1940,6 @@
         "</div>";
 
       container.innerHTML = inner;
-      void loadProjectChatHistory(id);
-      $("project-chat-send")?.addEventListener("click", function () {
-        void sendProjectChat(id);
-      });
-      $("project-chat-input")?.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          void sendProjectChat(id);
-        }
-      });
       const fileIn = $("project-detail-file-input");
       const fileBtn = $("project-detail-file-btn");
       if (fileBtn && fileIn) {
@@ -2221,27 +2210,28 @@
 
   async function openSupiConnectionChat() {
     activeConnectionMatchId = SUPI_THREAD_ID;
-    const list = $("connections-list");
     const chatWrap = $("connection-chat-wrap");
     if (!chatWrap) return;
-    if (list) list.hidden = true;
-    chatWrap.hidden = false;
     chatWrap.classList.add("conn-chat-wrap--supi");
+    const avatarEl = $("conn-chat-header-avatar");
+    if (avatarEl) { avatarEl.src = "assets/supi.png"; avatarEl.hidden = false; }
     if ($("conn-chat-title")) $("conn-chat-title").textContent = "Supi";
+    if ($("conn-chat-subtitle")) $("conn-chat-subtitle").textContent = "Airsup assistant";
     if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message Supi…";
     const filesEl = $("conn-chat-files");
-    if (filesEl) {
-      filesEl.hidden = true;
-      filesEl.innerHTML = "";
-    }
+    if (filesEl) { filesEl.hidden = true; filesEl.innerHTML = ""; }
     const msgContainer = $("conn-chat-messages");
-    msgContainer.innerHTML = '<div class="chat-status">Loading messages\u2026</div>';
+    msgContainer.innerHTML = '<div class="chat-status">Loading…</div>';
     try {
       const { messages } = await apiCall("/api/chat/history?supi_thread=1");
       msgContainer.innerHTML = "";
-      (messages || []).forEach(function (m) {
-        appendChatLine(msgContainer, m.role, m.content, m.metadata);
-      });
+      if ((messages || []).length) {
+        messages.forEach(function (m) {
+          appendChatLine(msgContainer, m.role, m.content, m.metadata);
+        });
+      } else {
+        appendChatLine(msgContainer, "assistant", "Hi! I’m Supi, your Airsup assistant. How can I help you with your project or sourcing needs?", { supi: true });
+      }
       markSupiRead();
     } catch (_) {
       msgContainer.innerHTML = '<div class="chat-status">Could not load messages.</div>';
@@ -2252,66 +2242,63 @@
 
   async function loadConnections() {
     const container = $("connections-list");
-    const chatWrap = $("connection-chat-wrap");
-    if (chatWrap) {
-      chatWrap.hidden = true;
-      chatWrap.classList.remove("conn-chat-wrap--supi");
-    }
-    if (container) container.hidden = false;
     activeConnectionMatchId = null;
-    if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message the engineer…";
 
     try {
       const { matches } = await apiCall("/api/matches");
       const matchRows = (matches && matches.length)
         ? matches.map((m) => {
             const f = m.factories, p = m.projects, ctx = m.context_summary || {};
-            const contact = ctx.direct_contact || {};
-            const contactLine = contact.name ? `${contact.name}${contact.role ? ` \u00b7 ${contact.role}` : ""}` : "";
-            const q = m.quote || {};
-            return `<div class="connection-card connection-card--clickable" data-match-id="${m.id}"><div class="connection-header"><div class="connection-header-left"><span class="connection-factory">${escapeHtml(f?.name || "Factory")}</span><span class="connection-location">${escapeHtml(f?.location || "")}</span></div><span class="project-card-badge badge--${m.status}">${escapeHtml(formatMatchStatusLabel(m.status))}</span></div>${contactLine ? `<div class="connection-summary-bar" style="font-weight:500;">Your contact: ${escapeHtml(contactLine)}</div>` : ""}<div class="connection-summary-bar">${escapeHtml(ctx.short || "Connection established")}</div><div class="connection-body"><div class="connection-project-line">Project: ${escapeHtml(p?.title || "")}</div>${q.unit_price ? `<div class="connection-quote">${escapeHtml(q.unit_price)}/unit \u00b7 ${escapeHtml(q.lead_time || "TBD")}</div>` : ""}</div></div>`;
+            const initial = (f?.name || "F").charAt(0).toUpperCase();
+            const sub = p?.title ? "Project: " + (p.title.length > 28 ? p.title.slice(0, 28) + "…" : p.title) : ctx.short || "Connection established";
+            return (
+              '<div class="conn-item" data-match-id="' + escapeAttr(m.id) + '" role="button" tabindex="0">' +
+              '<div class="conn-item-avatar-initial">' + escapeHtml(initial) + '</div>' +
+              '<div class="conn-item-info">' +
+              '<div class="conn-item-name">' + escapeHtml(f?.name || "Factory") + '</div>' +
+              '<div class="conn-item-sub">' + escapeHtml(sub) + '</div>' +
+              '</div></div>'
+            );
           })
         : [];
 
-      var supiCard = "";
+      var supiItem = "";
+      var supiUnread = false;
       if (userRole !== "supplier") {
-        const src = "assets/supi.png";
-        var supiUnsub = false;
         try {
           const sm = await apiCall("/api/chat/history?supi_thread=1");
           const lastReadTs = getSupiLastRead() ? new Date(getSupiLastRead()).getTime() : 0;
-          supiUnsub = (sm.messages || []).some(function (m) {
+          supiUnread = (sm.messages || []).some(function (m) {
             return m.role === "assistant" && new Date(m.created_at).getTime() > lastReadTs;
           });
         } catch (_) {}
-        const badgeU = supiUnsub ? '<span class="connection-unread" aria-label="New message">+1</span>' : "";
-        supiCard =
-          '<div class="connection-card connection-card--clickable connection-card--supi" data-supi="1" role="button" tabindex="0"><div class="connection-header"><div class="connection-header-left connection-header--supi"><img class="connection-card-avatar" src="' +
-          escapeAttr(src) +
-          '" alt="" width="40" height="40" loading="lazy" />' +
-          "<div class=\"connection-header-titles\"><span class=\"connection-factory\">Supi</span><span class=\"connection-location\">Airsup assistant</span></div></div>" +
-          '<span class="project-card-badge badge--accepted">Here to help</span></div><div class="connection-summary-bar">Message Supi for help with your project or the platform' +
-          badgeU +
-          "</div></div>";
+        supiItem =
+          '<div class="conn-item conn-item--active" data-supi="1" role="button" tabindex="0">' +
+          '<img class="conn-item-avatar" src="assets/supi.png" alt="" loading="lazy" />' +
+          '<div class="conn-item-info">' +
+          '<div class="conn-item-name">Supi</div>' +
+          '<div class="conn-item-sub">Airsup assistant</div>' +
+          '</div>' +
+          (supiUnread ? '<div class="conn-item-unread-dot" aria-label="New message"></div>' : '') +
+          '</div>';
       }
 
-      if (!matchRows.length && !supiCard) {
-        container.innerHTML = '<div class="connections-empty">No connections yet.</div>';
-        void refreshConnectionsNavBadge();
-        return;
-      }
-      container.innerHTML = (supiCard || "") + matchRows.join("");
+      container.innerHTML = (supiItem || "") + matchRows.join("");
 
-      container.querySelectorAll(".connection-card--clickable").forEach((card) => {
-        card.addEventListener("click", () => {
-          if (card.getAttribute("data-supi") === "1") void openSupiConnectionChat();
+      container.querySelectorAll(".conn-item").forEach((item) => {
+        item.addEventListener("click", () => {
+          container.querySelectorAll(".conn-item--active").forEach((el) => el.classList.remove("conn-item--active"));
+          item.classList.add("conn-item--active");
+          if (item.getAttribute("data-supi") === "1") void openSupiConnectionChat();
           else {
-            const matchId = card.getAttribute("data-match-id");
-            if (matchId) void openConnectionChat(matchId, card);
+            const matchId = item.getAttribute("data-match-id");
+            if (matchId) void openConnectionChat(matchId, item);
           }
         });
       });
+
       void refreshConnectionsNavBadge();
+      if (userRole !== "supplier") void openSupiConnectionChat();
     } catch (_) {
       container.innerHTML = '<div class="connections-empty">Could not load connections.</div>';
     }
@@ -2319,25 +2306,21 @@
 
   async function openConnectionChat(matchId, cardEl) {
     activeConnectionMatchId = matchId;
-    const list = $("connections-list");
     const chatWrap = $("connection-chat-wrap");
     if (!chatWrap) return;
     chatWrap.classList.remove("conn-chat-wrap--supi");
     if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message the engineer…";
 
-    const factoryName = cardEl?.querySelector(".connection-factory")?.textContent || "Factory";
-    $("conn-chat-title").textContent = factoryName;
-
-    if (list) list.hidden = true;
-    chatWrap.hidden = false;
+    const factoryName = cardEl?.querySelector(".conn-item-name")?.textContent || "Factory";
+    const avatarEl = $("conn-chat-header-avatar");
+    if (avatarEl) { avatarEl.src = ""; avatarEl.hidden = true; }
+    if ($("conn-chat-title")) $("conn-chat-title").textContent = factoryName;
+    if ($("conn-chat-subtitle")) $("conn-chat-subtitle").textContent = "";
 
     const msgContainer = $("conn-chat-messages");
     const filesEl = $("conn-chat-files");
-    if (filesEl) {
-      filesEl.hidden = true;
-      filesEl.innerHTML = "";
-    }
-    msgContainer.innerHTML = '<div class="chat-status">Loading messages\u2026</div>';
+    if (filesEl) { filesEl.hidden = true; filesEl.innerHTML = ""; }
+    msgContainer.innerHTML = '<div class="chat-status">Loading messages…</div>';
 
     try {
       const { messages } = await apiCall(`/api/connections/${matchId}/messages`);
@@ -2381,28 +2364,18 @@
           "</ul>";
       }
     } catch (_) {
-      if (filesEl) {
-        filesEl.hidden = true;
-        filesEl.innerHTML = "";
-      }
+      if (filesEl) { filesEl.hidden = true; filesEl.innerHTML = ""; }
     }
   }
 
   function closeConnectionChat() {
     activeConnectionMatchId = null;
-    const list = $("connections-list");
-    const chatWrap = $("connection-chat-wrap");
     const filesEl = $("conn-chat-files");
-    if (chatWrap) {
-      chatWrap.classList.remove("conn-chat-wrap--supi");
-    }
-    if (filesEl) {
-      filesEl.hidden = true;
-      filesEl.innerHTML = "";
-    }
-    if (list) list.hidden = false;
-    if (chatWrap) chatWrap.hidden = true;
-    if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message the engineer…";
+    if (filesEl) { filesEl.hidden = true; filesEl.innerHTML = ""; }
+    const chatWrap = $("connection-chat-wrap");
+    if (chatWrap) chatWrap.classList.remove("conn-chat-wrap--supi");
+    const list = $("connections-list");
+    list?.querySelectorAll(".conn-item--active").forEach((el) => el.classList.remove("conn-item--active"));
   }
 
   async function sendConnectionMessage() {

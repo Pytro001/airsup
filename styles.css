@@ -543,27 +543,82 @@ textarea.settings-input.onboard-textarea--compact {
 }
 .chat-action-btn { font-size: 14px; padding: 10px 24px; }
 
+/* ===== Connections WhatsApp layout ===== */
+#page-connections.active { display: flex !important; height: calc(100dvh - var(--header-h)); overflow: hidden; }
+.connections-layout { display: flex; width: 100%; height: 100%; overflow: hidden; }
+.connections-sidebar {
+  width: 300px; min-width: 200px; max-width: 340px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto; flex-shrink: 0;
+}
+.connections-sidebar .connections-list { flex-direction: column; gap: 0; padding: 0; }
+.connections-chat-panel {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%;
+}
+
+/* Contact items */
+.conn-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; cursor: pointer;
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.12s;
+}
+.conn-item:hover { background: var(--bg-subtle); }
+.conn-item--active { background: var(--bg-subtle); }
+.conn-item-avatar {
+  width: 46px; height: 46px; border-radius: 50%;
+  object-fit: cover; object-position: 85% center;
+  border: 1px solid var(--border-light); flex-shrink: 0;
+  transform: scale(1.05);
+}
+.conn-item-avatar-initial {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+  background: var(--primary-light); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: var(--text-soft);
+}
+.conn-item-info { min-width: 0; flex: 1; }
+.conn-item-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conn-item-sub { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.conn-item-unread-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #4ade80; flex-shrink: 0;
+}
+html[data-theme="dark"] .conn-item-unread-dot { background: #22c55e; }
+
 /* ===== Connection chat ===== */
-.conn-chat-wrap[hidden] { display: none !important; }
-.conn-chat-wrap { display: flex; flex-direction: column; height: calc(100dvh - var(--header-h) - 120px); min-height: 400px; }
+.conn-chat-wrap { display: flex; flex-direction: column; }
 .conn-chat-header {
   display: flex; align-items: center; gap: 12px;
-  padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 12px;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
-.conn-chat-back { padding: 6px 12px; font-size: 14px; }
-.conn-chat-title { font-size: 18px; font-weight: 600; }
-.conn-chat-files { padding: 8px 0 12px; border-bottom: 1px solid var(--border-light); margin-bottom: 8px; font-size: 13px; }
+.conn-chat-header-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  object-fit: cover; object-position: 85% center;
+  border: 1px solid var(--border-light); flex-shrink: 0;
+  transform: scale(1.05);
+}
+.conn-chat-header-avatar[hidden] { display: none; }
+.conn-chat-header-meta { display: flex; flex-direction: column; gap: 1px; }
+.conn-chat-title { font-size: 16px; font-weight: 700; }
+.conn-chat-subtitle { font-size: 13px; color: var(--text-muted); }
 .conn-chat-files[hidden] { display: none !important; }
 .conn-chat-files-label { font-weight: 600; margin-bottom: 6px; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; }
 .conn-chat-files-list { list-style: none; margin: 0; padding: 0; }
 .conn-chat-files-list li { margin-bottom: 4px; }
 .conn-chat-file-meta { color: var(--text-muted); font-size: 12px; }
+.conn-chat-files { padding: 8px 20px 12px; border-bottom: 1px solid var(--border-light); font-size: 13px; }
 .conn-chat-messages {
   flex: 1; overflow-y: auto;
   display: flex; flex-direction: column; gap: 12px;
-  padding: 8px 0;
+  padding: 16px 20px;
 }
-.conn-chat-composer { padding: 12px 0 0; }
+.conn-chat-composer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
 .conn-chat-composer .composer-inner { max-width: 100%; }
 
 /* ===== Projects ===== */
@@ -723,7 +778,7 @@ html[data-theme="dark"] .project-status-text--connected { color: #4ade80; }
 .connection-card--supi .connection-header { align-items: flex-start; }
 .connection-unread { margin-left: 8px; font-weight: 700; color: #ca8a04; }
 html[data-theme="dark"] .connection-unread { color: #facc15; }
-.conn-chat-wrap--supi .chat-line--supi .chat-line-avatar {
+.connections-chat-panel.conn-chat-wrap--supi .chat-line--supi .chat-line-avatar {
   object-position: 86% 35%;
   transform: scale(1.18);
 }
