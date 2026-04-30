@@ -816,7 +816,7 @@
       nav.innerHTML = '<button type="button" class="nav-link active" data-view="supplier-dashboard">Dashboard</button><button type="button" class="nav-link" data-view="supplier-profile">Factory profile</button>';
     } else {
       nav.innerHTML =
-        '<button type="button" class="nav-link active" data-view="projects">Projects</button><button type="button" class="nav-link" data-view="connections">Connections<span class="nav-connections-badge" id="nav-connections-badge" hidden>+1</span></button>' +
+        '<button type="button" class="nav-link active" data-view="projects">Projects</button>' +
         (CHAT_ENABLED ? '<button type="button" class="nav-link" data-view="chat">Chat</button>' : "");
     }
     nav.querySelectorAll(".nav-link").forEach((btn) => {
@@ -1965,6 +1965,7 @@
           }
         });
       }
+      attachCompanyCardHandlers(container);
       $("project-chatlink-save")?.addEventListener("click", async function () {
         var urlIn = $("project-chatlink-url");
         var labIn = $("project-chatlink-label");
@@ -2120,28 +2121,160 @@
     );
   }
 
+  function attachCompanyCardHandlers(container) {
+    if (!container) return;
+    container.querySelectorAll(".company-msg-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var matchId = btn.getAttribute("data-match-id");
+        if (matchId) toggleCompanyChat(matchId, btn);
+      });
+    });
+    container.querySelectorAll(".company-wc-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-wechat") || "";
+        showWechatPopover(btn, id);
+      });
+    });
+  }
+
+  async function toggleCompanyChat(matchId, btn) {
+    var panel = $("company-chat-" + matchId);
+    if (!panel) return;
+    if (!panel.hidden) { panel.hidden = true; panel.innerHTML = ""; if (btn) btn.textContent = "Message"; return; }
+    panel.hidden = false;
+    if (btn) btn.textContent = "Hide chat";
+    panel.innerHTML =
+      '<div class="company-chat-messages" id="company-chat-msgs-' + escapeAttr(matchId) + '"><div class="chat-status">Loading…</div></div>' +
+      '<div class="company-chat-composer">' +
+        '<textarea class="composer-input company-chat-input" id="company-chat-input-' + escapeAttr(matchId) + '" rows="1" placeholder="Message the engineer…"></textarea>' +
+        '<button type="button" class="btn-primary btn-sm company-chat-send" id="company-chat-send-' + escapeAttr(matchId) + '">Send</button>' +
+      '</div>';
+    var msgs = $("company-chat-msgs-" + matchId);
+    var input = $("company-chat-input-" + matchId);
+    var send = $("company-chat-send-" + matchId);
+    try {
+      var data = await apiCall("/api/connections/" + encodeURIComponent(matchId) + "/messages");
+      msgs.innerHTML = "";
+      (data.messages || []).forEach(function (m) {
+        var myId = currentUser && currentUser.id;
+        var role = m.sender_id && myId && m.sender_id === myId ? "user" : "assistant";
+        var div = document.createElement("div");
+        div.className = "chat-bubble chat-bubble--" + role;
+        div.textContent = m.content || "";
+        msgs.appendChild(div);
+      });
+      msgs.scrollTop = msgs.scrollHeight;
+    } catch (_) {
+      msgs.innerHTML = '<div class="chat-status">Could not load messages.</div>';
+    }
+    var sendNow = async function () {
+      var text = (input.value || "").trim();
+      if (!text) return;
+      input.value = "";
+      var div = document.createElement("div");
+      div.className = "chat-bubble chat-bubble--user";
+      div.textContent = text;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      try {
+        await apiCall("/api/connections/" + encodeURIComponent(matchId) + "/messages", {
+          method: "POST",
+          body: JSON.stringify({ content: text }),
+        });
+      } catch (_) {
+        var err = document.createElement("div");
+        err.className = "chat-status";
+        err.textContent = "Failed to send.";
+        msgs.appendChild(err);
+      }
+    };
+    send.addEventListener("click", sendNow);
+    input.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendNow(); } });
+    input.focus();
+  }
+
+  function showWechatPopover(anchorBtn, wechatId) {
+    var existing = document.querySelector(".wechat-popover");
+    if (existing) existing.remove();
+    var pop = document.createElement("div");
+    pop.className = "wechat-popover";
+    pop.innerHTML =
+      '<div class="wechat-popover-label">WeChat ID</div>' +
+      '<div class="wechat-popover-id">' + escapeHtml(wechatId) + '</div>' +
+      '<button type="button" class="btn-primary btn-sm wechat-copy-btn">Copy</button>';
+    document.body.appendChild(pop);
+    var rect = anchorBtn.getBoundingClientRect();
+    pop.style.position = "absolute";
+    pop.style.top = (rect.bottom + window.scrollY + 6) + "px";
+    pop.style.left = (rect.left + window.scrollX) + "px";
+    pop.querySelector(".wechat-copy-btn").addEventListener("click", function () {
+      try { navigator.clipboard.writeText(wechatId); } catch (_) {}
+      pop.querySelector(".wechat-copy-btn").textContent = "Copied";
+    });
+    setTimeout(function () {
+      var close = function (e) { if (!pop.contains(e.target)) { pop.remove(); document.removeEventListener("click", close); } };
+      document.addEventListener("click", close);
+    }, 0);
+  }
+
+  function normalizeWhatsappNumber(raw) {
+    if (!raw) return "";
+    var digits = String(raw).replace(/[^0-9]/g, "");
+    return digits;
+  }
+
   function buildMatchesSection(matches) {
     if (!Array.isArray(matches) || !matches.length) return "";
-    var rows = matches
+    var cards = matches
       .map(function (m) {
-        var f = m.factories;
-        var fn = f && f.name ? f.name : "Factory";
-        var st = m.status ? String(m.status).replace(/_/g, " ") : "";
+        var f = m.factories || {};
+        var fn = f.name || "Factory";
+        var loc = f.location ? String(f.location) : "";
+        var status = m.status || "pending";
+        var statusLabel = String(status).replace(/_/g, " ");
+        var initial = fn.charAt(0).toUpperCase();
+        var contact = f.contact_info || {};
+        var waNum = normalizeWhatsappNumber(f.whatsapp_id || contact.whatsapp || "");
+        var waLink = waNum ? "https://wa.me/" + waNum : "";
+        var weChat = contact.wechat || contact.wechat_id || "";
+        var canMessage = status === "active" || status === "in_production" || status === "intro_sent" || status === "completed";
+
+        var actions = "";
+        if (canMessage) {
+          actions =
+            '<div class="company-card-actions">' +
+            '<button type="button" class="btn-secondary btn-sm company-msg-btn" data-match-id="' + escapeAttr(m.id) + '">Message</button>' +
+            (waLink
+              ? '<a class="btn-secondary btn-sm company-wa-btn" href="' + escapeAttr(waLink) + '" target="_blank" rel="noopener">WhatsApp</a>'
+              : '') +
+            (weChat
+              ? '<button type="button" class="btn-secondary btn-sm company-wc-btn" data-wechat="' + escapeAttr(weChat) + '">WeChat</button>'
+              : '') +
+            '</div>';
+        } else {
+          actions = '<div class="company-card-status-note">Briefed — waiting for the engineer to accept.</div>';
+        }
+
         return (
-          "<li><span class=\"project-match-factory\">" +
-          escapeHtml(fn) +
-          "</span> <span class=\"project-card-badge badge--" +
-          (m.status || "pending") +
-          "\">" +
-          escapeHtml(st) +
-          "</span></li>"
+          '<div class="company-card" data-match-id="' + escapeAttr(m.id) + '">' +
+            '<div class="company-card-row">' +
+              '<div class="company-card-avatar">' + escapeHtml(initial) + '</div>' +
+              '<div class="company-card-info">' +
+                '<div class="company-card-name">' + escapeHtml(fn) + '</div>' +
+                (loc ? '<div class="company-card-meta">' + escapeHtml(loc) + '</div>' : '') +
+              '</div>' +
+              '<span class="project-card-badge badge--' + escapeAttr(status) + '">' + escapeHtml(statusLabel) + '</span>' +
+            '</div>' +
+            actions +
+            '<div class="company-chat-panel" id="company-chat-' + escapeAttr(m.id) + '" hidden></div>' +
+          '</div>'
         );
       })
       .join("");
     return (
-      '<section class="project-detail-section"><h3 class="project-detail-h">Matches</h3><ul class="project-detail-ul project-detail-matches">' +
-        rows +
-        "</ul></section>"
+      '<section class="project-detail-section"><h3 class="project-detail-h">Companies</h3><div class="company-cards">' +
+        cards +
+        '</div></section>'
     );
   }
 

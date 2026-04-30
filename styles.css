@@ -656,6 +656,71 @@ textarea.settings-input.onboard-textarea--compact {
 #conn-chat-messages .chat-line--supi { flex-direction: row; gap: 0; }
 #conn-chat-messages .chat-line-body { padding-left: 0; }
 
+/* Company cards inside project detail */
+.company-cards { display: flex; flex-direction: column; gap: 12px; }
+.company-card {
+  border: 1px solid var(--card-border, var(--border));
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: var(--card-bg);
+}
+.company-card-row { display: flex; align-items: center; gap: 12px; }
+.company-card-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--border); color: var(--text-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; flex-shrink: 0;
+}
+.company-card-info { flex: 1; min-width: 0; }
+.company-card-name { font-size: 15px; font-weight: 600; }
+.company-card-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.company-card-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: 12px;
+}
+.company-card-status-note {
+  margin-top: 10px;
+  font-size: 13px; color: var(--text-muted); font-style: italic;
+}
+.company-chat-panel {
+  margin-top: 12px;
+  border-top: 1px solid var(--border-light, var(--border));
+  padding-top: 12px;
+}
+.company-chat-messages {
+  max-height: 320px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 4px 2px 12px;
+}
+.company-chat-composer { display: flex; gap: 8px; align-items: flex-end; }
+.company-chat-input {
+  flex: 1; resize: none; min-height: 38px; max-height: 120px;
+  padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--card-bg); color: var(--text);
+  font-family: inherit; font-size: 14px;
+}
+.company-chat-input:focus { outline: none; border-color: var(--text-soft); }
+
+/* WeChat popover */
+.wechat-popover {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  z-index: 1000;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  min-width: 200px;
+}
+.wechat-popover-label {
+  font-size: 11px; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.wechat-popover-id {
+  font-size: 14px; font-weight: 600;
+  margin-bottom: 10px; word-break: break-all;
+}
+
 /* ===== Projects ===== */
 .projects-grid { display: flex; flex-direction: column; gap: 12px; }
 .project-card {

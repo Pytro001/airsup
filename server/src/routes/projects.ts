@@ -31,7 +31,7 @@ const PROJECT_DETAIL_SELECT_WITH_PIPELINE = `
       pipeline_step, coordination_mode,
       brief_source_type, brief_source_url, brief_raw,
       companies(name),
-      matches(id, status, quote, context_summary, factories(name, location, category)),
+      matches(id, status, quote, context_summary, factories(id, name, location, category, whatsapp_id, contact_info)),
       factory_searches(id, status, search_criteria, created_at)
     `;
 
@@ -39,7 +39,7 @@ const PROJECT_DETAIL_SELECT_MIN = `
       id, title, description, status, requirements, ai_summary, created_at,
       brief_source_type, brief_source_url, brief_raw,
       companies(name),
-      matches(id, status, quote, context_summary, factories(name, location, category)),
+      matches(id, status, quote, context_summary, factories(id, name, location, category, whatsapp_id, contact_info)),
       factory_searches(id, status, search_criteria, created_at)
     `;
 
