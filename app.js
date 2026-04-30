@@ -2284,17 +2284,17 @@
 
       container.innerHTML = (supiItem || "") + matchRows.join("");
 
-      container.querySelectorAll(".conn-item").forEach((item) => {
-        item.addEventListener("click", () => {
-          container.querySelectorAll(".conn-item--active").forEach((el) => el.classList.remove("conn-item--active"));
-          item.classList.add("conn-item--active");
-          if (item.getAttribute("data-supi") === "1") void openSupiConnectionChat();
-          else {
-            const matchId = item.getAttribute("data-match-id");
-            if (matchId) void openConnectionChat(matchId, item);
-          }
-        });
-      });
+      container.onclick = (e) => {
+        const item = e.target.closest(".conn-item");
+        if (!item) return;
+        container.querySelectorAll(".conn-item--active").forEach((el) => el.classList.remove("conn-item--active"));
+        item.classList.add("conn-item--active");
+        if (item.getAttribute("data-supi") === "1") void openSupiConnectionChat();
+        else {
+          const matchId = item.getAttribute("data-match-id");
+          if (matchId) void openConnectionChat(matchId, item);
+        }
+      };
 
       void refreshConnectionsNavBadge();
     } catch (_) {
