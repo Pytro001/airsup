@@ -1504,7 +1504,7 @@
   /* ══════════════════════════════════════
      CHAT
      ══════════════════════════════════════ */
-  const SUPI_AVATAR_SRC = "assets/supi.png";
+  const SUPI_AVATAR_SRC = "assets/brand/logo-air-sup.png";
 
   function appendChatLine(container, role, text, metadata) {
     if (!container) return;
@@ -2214,7 +2214,7 @@
     if (!chatWrap) return;
     chatWrap.classList.add("conn-chat-wrap--supi");
     const avatarEl = $("conn-chat-header-avatar");
-    if (avatarEl) { avatarEl.src = "assets/supi.png"; avatarEl.style.visibility = ""; }
+    if (avatarEl) { avatarEl.src = "assets/brand/logo-air-sup.png"; avatarEl.style.visibility = ""; }
     if ($("conn-chat-title")) $("conn-chat-title").textContent = "Supi";
     if ($("conn-chat-input")) $("conn-chat-input").placeholder = "Message Supi…";
     const filesEl = $("conn-chat-files");
@@ -2273,10 +2273,10 @@
         } catch (_) {}
         supiItem =
           '<div class="conn-item conn-item--active" data-supi="1" role="button" tabindex="0">' +
-          '<img class="conn-item-avatar" src="assets/supi.png" alt="" loading="lazy" />' +
+          '<img class="conn-item-avatar" src="assets/brand/logo-air-sup.png" alt="" loading="lazy" />' +
           '<div class="conn-item-info">' +
           '<div class="conn-item-name">Supi</div>' +
-          '<div class="conn-item-sub">Airsup assistant</div>' +
+          '<div class="conn-item-sub">Working at Airsup</div>' +
           '</div>' +
           (supiUnread ? '<div class="conn-item-unread-dot" aria-label="New message"></div>' : '') +
           '</div>';
@@ -2402,13 +2402,6 @@
           method: "POST",
           body: JSON.stringify({ message: text, supi_thread: true }),
         });
-        if (data && data.pending_human) {
-          const st = document.createElement("div");
-          st.className = "chat-status";
-          st.textContent = "Sent. Supi will reply soon.";
-          msgContainer.appendChild(st);
-          msgContainer.scrollTop = msgContainer.scrollHeight;
-        }
         return;
       }
       await apiCall(`/api/connections/${activeConnectionMatchId}/messages`, {
