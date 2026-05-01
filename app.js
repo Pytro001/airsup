@@ -798,11 +798,11 @@
   /* ── Auth UI ── */
   function updateAuthUI() {
     const inOnboarding = currentView === "onboarding";
-    const inBoard = currentView === "board";
     const loggedIn = !!currentUser;
+    // Buyers use rail for settings/logout — hide header avatar on all their views
+    const buyerView = userRole === "startup" && (currentView === "board" || currentView === "settings");
     const account = $("header-account");
-    // Hide avatar/account button for buyers on the board — settings & logout live in the rail
-    if (account) account.hidden = !loggedIn || inOnboarding || inBoard;
+    if (account) account.hidden = !loggedIn || inOnboarding || buyerView;
     const avatarEl = $("avatar-letter");
     if (loggedIn && avatarEl) avatarEl.textContent = (currentUser.displayName || "?").charAt(0).toUpperCase();
     const nav = $("header-nav");
@@ -1857,7 +1857,11 @@
   let activeBoardProjectId = null;
   let boardSupiInited = false;
   let boardSupiState = "initial"; // "initial" | "replied" | "normal"
-  let boardCanvasPan = { x: 0, y: 0, dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 };
+  let boardCanvasPan = { x: 0, y: 0, scale: 1, dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 };
+  function applyBoardTransform() {
+    const vp = $("board-canvas-viewport");
+    if (vp) vp.style.transform = "translate(" + boardCanvasPan.x + "px," + boardCanvasPan.y + "px) scale(" + boardCanvasPan.scale + ")";
+  }
 
   async function loadBoard() {
     const content = $("board-canvas-content");
@@ -2019,11 +2023,9 @@
     if (boardPanInited) return;
     boardPanInited = true;
     const canvas = $("board-canvas");
-    const vp = $("board-canvas-viewport");
-    if (!canvas || !vp) return;
+    if (!canvas) return;
 
     canvas.addEventListener("mousedown", (e) => {
-      // Only pan on left-click on the canvas background / viewport itself
       if (e.button !== 0) return;
       if (e.target.closest("a,button,textarea,input,.board-company,.board-card")) return;
       boardCanvasPan.dragging = true;
@@ -2038,13 +2040,66 @@
       if (!boardCanvasPan.dragging) return;
       boardCanvasPan.x = boardCanvasPan.originX + (e.clientX - boardCanvasPan.startX);
       boardCanvasPan.y = boardCanvasPan.originY + (e.clientY - boardCanvasPan.startY);
-      vp.style.transform = "translate(" + boardCanvasPan.x + "px," + boardCanvasPan.y + "px)";
+      applyBoardTransform();
     });
     window.addEventListener("mouseup", () => {
       if (!boardCanvasPan.dragging) return;
       boardCanvasPan.dragging = false;
       canvas.classList.remove("board-canvas--panning");
     });
+    // Proximity dot glow (SuperGrok style)
+    const dotCanvas = document.getElementById("board-dot-canvas");
+    if (dotCanvas) {
+      const GRID = 22, RADIUS = 80, MAX_R = 4;
+      let mouseX = -999, mouseY = -999;
+      const ctx = dotCanvas.getContext("2d");
+      const resize = () => { dotCanvas.width = canvas.offsetWidth; dotCanvas.height = canvas.offsetHeight; };
+      resize();
+      new ResizeObserver(resize).observe(canvas);
+      const isDark = () => document.documentElement.dataset.theme === "dark";
+      const render = () => {
+        const w = dotCanvas.width, h = dotCanvas.height;
+        ctx.clearRect(0, 0, w, h);
+        const startX = GRID - (GRID % GRID), startY = GRID - (GRID % GRID);
+        const color = isDark() ? "255,255,255" : "0,0,0";
+        for (let x = GRID / 2; x < w; x += GRID) {
+          for (let y = GRID / 2; y < h; y += GRID) {
+            const dist = Math.sqrt((x - mouseX) ** 2 + (y - mouseY) ** 2);
+            if (dist > RADIUS) continue;
+            const t = 1 - dist / RADIUS;
+            const r = 1 + (MAX_R - 1) * t * t;
+            const alpha = 0.08 + 0.55 * t * t;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(" + color + "," + alpha + ")";
+            ctx.fill();
+          }
+        }
+        requestAnimationFrame(render);
+      };
+      canvas.addEventListener("mousemove", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+      });
+      canvas.addEventListener("mouseleave", () => { mouseX = -999; mouseY = -999; });
+      render();
+    }
+
+    // Pinch/scroll zoom — zoom towards cursor position
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.08 : 0.93;
+      const newScale = Math.max(0.25, Math.min(3, boardCanvasPan.scale * factor));
+      // Adjust pan so zoom is centred on cursor
+      boardCanvasPan.x = cx - (cx - boardCanvasPan.x) * (newScale / boardCanvasPan.scale);
+      boardCanvasPan.y = cy - (cy - boardCanvasPan.y) * (newScale / boardCanvasPan.scale);
+      boardCanvasPan.scale = newScale;
+      applyBoardTransform();
+    }, { passive: false });
   }
 
   /* ── Supi panel (always-on right panel) ── */
@@ -2056,7 +2111,7 @@
     const inp = $("board-supi-input");
     const snd = $("board-supi-send");
     const closeBtn = $("board-supi-close");
-    const reopenBtn = $("board-supi-reopen");
+    const tabBtn = $("board-supi-tab");
     const panel = $("board-supi-panel");
     const fileInput = $("board-supi-file");
 
@@ -2072,11 +2127,11 @@
 
     closeBtn?.addEventListener("click", () => {
       if (panel) panel.hidden = true;
-      if (reopenBtn) reopenBtn.hidden = false;
+      if (tabBtn) tabBtn.hidden = false;
     });
-    reopenBtn?.addEventListener("click", () => {
+    tabBtn?.addEventListener("click", () => {
       if (panel) panel.hidden = false;
-      if (reopenBtn) reopenBtn.hidden = true;
+      if (tabBtn) tabBtn.hidden = true;
     });
 
     if (fileInput) {
@@ -2186,62 +2241,32 @@
     inp.value = ""; inp.style.height = "auto"; if (snd) snd.disabled = true;
     appendSupiBubble(msgs, "user", text);
 
-    // Scripted opening flow
+    // Scripted opening: any reply to the first message triggers search-start messages
     if (boardSupiState === "initial") {
-      boardSupiState = "replied";
-      const lower = text.toLowerCase();
-      const adding = lower.includes("yes") || lower.includes("yeah") || lower.includes("sure") || lower.length > 20;
-      if (adding) {
-        setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "Perfect — go ahead and share any extra details. Once you're done, just let me know and I'll kick off the search.");
-          boardSupiState = "adding";
-        }, 700);
-      } else {
-        setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "Okay, I'll start now! I'll come back in 3–5 hours with my first results. You can in the meantime advance your project and I'll update all details to the supplier. 🚀");
-          setTimeout(() => {
-            appendSupiBubble(msgs, "assistant", "I'll give them all the information about your project so you just have to make the last call with them. 🤝");
-            boardSupiState = "normal";
-          }, 1800);
-        }, 700);
-        // Fire sourcing in background
-        if (activeBoardProjectId) {
-          apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", { method: "POST", body: JSON.stringify({ force: false }) }).catch(() => {});
-        }
-      }
-      return;
-    }
-
-    if (boardSupiState === "adding") {
-      // User added more info — save as idea and check if done
-      if (activeBoardProjectId) {
+      boardSupiState = "normal";
+      // Save anything the user typed as an idea if it looks like info (not just "no"/"ok")
+      const isJustAck = /^(no|nope|nah|ok|okay|sure|yes|yeah|start|go|fine|good)$/i.test(text.trim());
+      if (!isJustAck && activeBoardProjectId) {
         apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/idea", { method: "POST", body: JSON.stringify({ text }) }).catch(() => {});
       }
-      const done = text.toLowerCase().includes("done") || text.toLowerCase().includes("start") || text.toLowerCase().includes("go") || text.toLowerCase().includes("okay") || text.toLowerCase().includes("ok");
-      if (done) {
+      setTimeout(() => {
+        appendSupiBubble(msgs, "assistant", "Okay, I start now my search. I will come back in 3-5h with my first results. You can in the meantime also advance your project and I will update all details to the supplier.");
         setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "Perfect — I'll start the search now! I'll come back in 3–5 hours with my first results. You can in the meantime advance your project and I'll update all details to the supplier. 🚀");
-          setTimeout(() => {
-            appendSupiBubble(msgs, "assistant", "I'll give them all the information about your project so you just have to make the last call with them. 🤝");
-            boardSupiState = "normal";
-          }, 1800);
-        }, 700);
-        if (activeBoardProjectId) {
-          apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", { method: "POST", body: JSON.stringify({ force: false }) }).catch(() => {});
-        }
-      } else {
-        setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "Got it! Anything else to add? Just say \"done\" or \"start\" when you're ready and I'll begin the search.");
-        }, 700);
+          appendSupiBubble(msgs, "assistant", "I will give them all informations about your project so that you just have to make the last call with them.");
+        }, 1800);
+      }, 700);
+      // Kick off sourcing in background
+      if (activeBoardProjectId) {
+        apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", { method: "POST", body: JSON.stringify({ force: false }) }).catch(() => {});
       }
       return;
     }
 
-    // Normal mode — real API
+    // Normal mode — real Supi API
     const thinking = document.createElement("div");
     thinking.className = "board-supi-system board-supi-thinking";
-    thinking.textContent = "Supi is thinking…";
-    if (msgs) msgs.appendChild(thinking);
+    thinking.textContent = "Supi is thinking...";
+    if (msgs) { msgs.appendChild(thinking); msgs.scrollTop = msgs.scrollHeight; }
     try {
       const data = await apiCall("/api/chat", { method: "POST", body: JSON.stringify({ message: text, supi_thread: true }) });
       thinking.remove();
