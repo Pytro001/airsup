@@ -7,6 +7,7 @@ import {
   SOFT_DELETE_MIGRATION_HINT,
 } from "../lib/soft-delete-errors.js";
 import { listFilesForProjectWithUrls } from "../lib/project-files.js";
+import { runSourcingForProject, approveSourcingCandidate, rejectSourcingCandidate } from "../agents/sourcing.js";
 
 export const adminRouter = Router();
 
@@ -313,7 +314,7 @@ adminRouter.get("/projects/:id", async (req: Request, res: Response) => {
 
     const userId = project.user_id as string;
 
-    const [{ data: buyer_profile }, { data: matches }, { data: conversations }] = await Promise.all([
+    const [{ data: buyer_profile }, { data: matches }, { data: conversations }, { data: sourcing_candidates }] = await Promise.all([
       supabaseAdmin.from("profiles").select("*").eq("id", userId).maybeSingle(),
       supabaseAdmin
         .from("matches")
@@ -325,6 +326,11 @@ adminRouter.get("/projects/:id", async (req: Request, res: Response) => {
         .select("id, role, content, metadata, created_at")
         .eq("project_id", projectId)
         .order("created_at", { ascending: true }),
+      supabaseAdmin
+        .from("sourcing_candidates")
+        .select("id, project_id, source, factory_id, supplier_url, supplier_name, supplier_location, reasoning, status, created_at, decided_at, factories(id, name, location, category)")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
     ]);
 
     const files = await listFilesForProjectWithUrls(projectId);
@@ -335,6 +341,7 @@ adminRouter.get("/projects/:id", async (req: Request, res: Response) => {
       buyer_profile: buyer_profile || null,
       matches: matches || [],
       conversations: conversations || [],
+      sourcing_candidates: sourcing_candidates || [],
       files,
     });
   } catch (err) {
@@ -496,6 +503,77 @@ adminRouter.post("/matches", async (req: Request, res: Response) => {
     return;
   }
   res.json({ match: created, deduped: false });
+});
+
+// ──────────────────────────────────────────
+// Sourcing (admin-only): platform-first lookup, then Claude web search on
+// JD / Canton Fair only when no platform match exists. Admin reviews + approves.
+// ──────────────────────────────────────────
+
+adminRouter.get("/projects/:id/sourcing-candidates", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ error: "project id is required" });
+    return;
+  }
+  const { data, error } = await supabaseAdmin
+    .from("sourcing_candidates")
+    .select("id, project_id, source, factory_id, supplier_url, supplier_name, supplier_location, reasoning, status, created_at, decided_at, factories(id, name, location, category)")
+    .eq("project_id", id)
+    .order("created_at", { ascending: false });
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json({ candidates: data || [] });
+});
+
+adminRouter.post("/projects/:id/source", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ error: "project id is required" });
+    return;
+  }
+  const force = !!(req.body as { force?: boolean })?.force;
+  try {
+    const result = await runSourcingForProject(id, { force });
+    const { data: candidates } = await supabaseAdmin
+      .from("sourcing_candidates")
+      .select("id, project_id, source, factory_id, supplier_url, supplier_name, supplier_location, reasoning, status, created_at, decided_at, factories(id, name, location, category)")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false });
+    res.json({ result, candidates: candidates || [] });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Sourcing failed" });
+  }
+});
+
+adminRouter.post("/sourcing-candidates/:id/approve", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ error: "candidate id is required" });
+    return;
+  }
+  try {
+    const out = await approveSourcingCandidate(id);
+    res.json(out);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Approve failed" });
+  }
+});
+
+adminRouter.post("/sourcing-candidates/:id/reject", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ error: "candidate id is required" });
+    return;
+  }
+  try {
+    await rejectSourcingCandidate(id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Reject failed" });
+  }
 });
 
 /** Soft-delete a customer profile (moves to bin). */

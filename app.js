@@ -1905,6 +1905,7 @@
           escapeHtml(project.title) +
           "</h2>" +
           (dateLine ? '<p class="project-detail-date">' + escapeHtml(dateLine) + "</p>" : "") +
+          buildProjectPipelineStepper(project) +
           "</section>";
       } else {
         overview =
@@ -2224,8 +2225,17 @@
   }
 
   function buildMatchesSection(matches) {
-    if (!Array.isArray(matches) || !matches.length) return "";
-    var cards = matches
+    var list = Array.isArray(matches) ? matches : [];
+    if (!list.length) {
+      return (
+        '<section class="project-detail-section"><h3 class="project-detail-h">Companies</h3>' +
+        '<div class="company-empty">' +
+          '<p class="company-empty-title">No engineers connected yet.</p>' +
+          '<p class="company-empty-sub">We are sourcing factories that match your spec. As soon as one accepts the brief, they appear here and you can message them or jump to WhatsApp / WeChat.</p>' +
+        '</div></section>'
+      );
+    }
+    var cards = list
       .map(function (m) {
         var f = m.factories || {};
         var fn = f.name || "Factory";
@@ -3293,6 +3303,11 @@
           facOpts +
           "</select>" +
           '<button type="button" class="btn-primary btn-sm" id="admin-ws-link-factory" style="margin-top:8px;width:100%;">Connect</button>' +
+          '<p class="admin-ws-h">Sourcing</p>' +
+          '<p class="project-detail-muted" style="font-size:11px;margin-bottom:6px;">Platform-first; falls back to Claude web search on JD / Canton Fair.</p>' +
+          '<button type="button" class="btn-primary btn-sm" id="admin-ws-source-run" style="width:100%;">Find suppliers</button>' +
+          '<button type="button" class="btn-outline btn-sm" id="admin-ws-source-rerun" style="width:100%;margin-top:6px;display:none;">Re-run search</button>' +
+          '<div id="admin-ws-sourcing-list" class="admin-sourcing-list"></div>' +
           '<p id="admin-ws-flash" class="form-message" role="status" hidden></p>';
 
         right.querySelectorAll(".admin-step-btn").forEach((btn) => {
@@ -3336,6 +3351,123 @@
             console.error(e);
           }
         });
+
+        const renderSourcingList = (cands) => {
+          const wrap = $("admin-ws-sourcing-list");
+          const reBtn = $("admin-ws-source-rerun");
+          if (!wrap) return;
+          if (!cands || !cands.length) {
+            wrap.innerHTML = '<div class="admin-sourcing-empty">No candidates yet.</div>';
+            if (reBtn) reBtn.style.display = "none";
+            return;
+          }
+          if (reBtn) reBtn.style.display = "";
+          wrap.innerHTML = cands.map((c) => {
+            const src = String(c.source || "platform");
+            const status = String(c.status || "pending");
+            const linkHtml = c.supplier_url
+              ? '<div class="admin-sourcing-link"><a href="' + escapeAttr(c.supplier_url) + '" target="_blank" rel="noopener">' + escapeHtml(c.supplier_url) + "</a></div>"
+              : "";
+            const statusBadge =
+              status === "approved"
+                ? '<span class="admin-sourcing-status admin-sourcing-status--approved">approved</span>'
+                : status === "rejected"
+                ? '<span class="admin-sourcing-status admin-sourcing-status--rejected">rejected</span>'
+                : "";
+            const actions =
+              status === "pending"
+                ? '<div class="admin-sourcing-actions">' +
+                  '<button type="button" class="btn-primary btn-sm admin-sourcing-approve" data-cand-id="' + escapeAttr(c.id) + '">Approve</button>' +
+                  '<button type="button" class="btn-outline btn-sm admin-sourcing-reject" data-cand-id="' + escapeAttr(c.id) + '">Reject</button>' +
+                  "</div>"
+                : "";
+            return (
+              '<div class="admin-sourcing-card">' +
+                '<div class="admin-sourcing-row">' +
+                  '<span class="admin-sourcing-source admin-sourcing-source--' + escapeAttr(src) + '">' + escapeHtml(src) + "</span>" +
+                  '<span class="admin-sourcing-name">' + escapeHtml(c.supplier_name || "") + "</span>" +
+                  statusBadge +
+                "</div>" +
+                (c.supplier_location ? '<div class="admin-sourcing-loc">' + escapeHtml(c.supplier_location) + "</div>" : "") +
+                (c.reasoning ? '<div class="admin-sourcing-reason">' + escapeHtml(c.reasoning) + "</div>" : "") +
+                linkHtml +
+                actions +
+              "</div>"
+            );
+          }).join("");
+
+          wrap.querySelectorAll(".admin-sourcing-approve").forEach((b) => {
+            b.addEventListener("click", async () => {
+              const cid = b.getAttribute("data-cand-id");
+              if (!cid) return;
+              b.disabled = true;
+              try {
+                const r = await fetch(`${API_BASE}/api/admin/sourcing-candidates/${encodeURIComponent(cid)}/approve`, { method: "POST" });
+                const j = await r.json();
+                if (!r.ok) throw new Error(j?.error || "Failed");
+                void openAdminProjectWorkspace(projectId, customerId || "");
+              } catch (e) {
+                const flash = $("admin-ws-flash");
+                if (flash) { flash.hidden = false; flash.textContent = e.message || "Error"; flash.style.color = "#d93025"; }
+                b.disabled = false;
+              }
+            });
+          });
+          wrap.querySelectorAll(".admin-sourcing-reject").forEach((b) => {
+            b.addEventListener("click", async () => {
+              const cid = b.getAttribute("data-cand-id");
+              if (!cid) return;
+              b.disabled = true;
+              try {
+                const r = await fetch(`${API_BASE}/api/admin/sourcing-candidates/${encodeURIComponent(cid)}/reject`, { method: "POST" });
+                const j = await r.json();
+                if (!r.ok) throw new Error(j?.error || "Failed");
+                void openAdminProjectWorkspace(projectId, customerId || "");
+              } catch (e) {
+                const flash = $("admin-ws-flash");
+                if (flash) { flash.hidden = false; flash.textContent = e.message || "Error"; flash.style.color = "#d93025"; }
+                b.disabled = false;
+              }
+            });
+          });
+        };
+
+        renderSourcingList(data.sourcing_candidates || []);
+
+        const runSource = async (force) => {
+          const flash = $("admin-ws-flash");
+          const btn = $("admin-ws-source-run");
+          const reBtn = $("admin-ws-source-rerun");
+          if (btn) { btn.disabled = true; btn.textContent = "Searching…"; }
+          if (reBtn) { reBtn.disabled = true; }
+          if (flash) { flash.hidden = false; flash.textContent = "Searching for suppliers…"; flash.style.color = ""; }
+          try {
+            const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/source`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ force: !!force }),
+            });
+            const j = await r.json();
+            if (!r.ok) throw new Error(j?.error || "Failed");
+            renderSourcingList(j.candidates || []);
+            const used = j.result || {};
+            if (flash) {
+              flash.hidden = false;
+              flash.style.color = "";
+              if (used.reused_existing) flash.textContent = "Showing " + used.reused_existing + " existing candidate(s).";
+              else if (used.used_web_search) flash.textContent = "Web search complete: " + (used.candidate_count || 0) + " candidate(s).";
+              else flash.textContent = "Platform match: " + (used.candidate_count || 0) + " candidate(s).";
+            }
+          } catch (e) {
+            if (flash) { flash.hidden = false; flash.textContent = e.message || "Error"; flash.style.color = "#d93025"; }
+          } finally {
+            if (btn) { btn.disabled = false; btn.textContent = "Find suppliers"; }
+            if (reBtn) { reBtn.disabled = false; }
+          }
+        };
+
+        $("admin-ws-source-run")?.addEventListener("click", () => void runSource(false));
+        $("admin-ws-source-rerun")?.addEventListener("click", () => void runSource(true));
 
         $("admin-ws-link-factory")?.addEventListener("click", async () => {
           const sel = $("admin-ws-factory");

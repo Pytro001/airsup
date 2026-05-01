@@ -701,6 +701,44 @@ textarea.settings-input.onboard-textarea--compact {
 }
 .company-chat-input:focus { outline: none; border-color: var(--text-soft); }
 
+/* Empty Companies state on customer project detail */
+.company-empty {
+  padding: 22px 18px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--bg-subtle, transparent);
+}
+.company-empty-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.company-empty-sub { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+/* Admin sourcing panel */
+.admin-sourcing-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.admin-sourcing-card {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; background: var(--card-bg);
+}
+.admin-sourcing-row { display: flex; align-items: center; gap: 8px; }
+.admin-sourcing-name { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; }
+.admin-sourcing-source {
+  font-size: 10px; padding: 2px 6px; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;
+  background: var(--bg-subtle); color: var(--text-soft);
+}
+.admin-sourcing-source--platform { background: #d1fae5; color: #065f46; }
+.admin-sourcing-source--jd { background: #fee2e2; color: #991b1b; }
+.admin-sourcing-source--cantonfair { background: #dbeafe; color: #1e3a8a; }
+.admin-sourcing-loc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.admin-sourcing-reason { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
+.admin-sourcing-link { font-size: 11px; color: var(--text-soft); margin-top: 4px; word-break: break-all; }
+.admin-sourcing-actions { display: flex; gap: 6px; margin-top: 8px; }
+.admin-sourcing-status {
+  font-size: 11px; padding: 2px 6px; border-radius: 999px;
+  text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700;
+}
+.admin-sourcing-status--approved { background: #d1fae5; color: #065f46; }
+.admin-sourcing-status--rejected { background: #fee2e2; color: #991b1b; }
+.admin-sourcing-empty { font-size: 12px; color: var(--text-muted); padding: 8px 0; }
+
 /* WeChat popover */
 .wechat-popover {
   background: var(--card-bg);
