@@ -1873,10 +1873,10 @@
       activeBoardProjectId = null;
       if (content) {
         content.innerHTML =
-          ‘<div class="board-empty">’ +
-            ‘<h2 class="board-empty-title">Drop your idea — I\’ll find the right factory.</h2>’ +
-            ‘<p class="board-empty-sub">Tell Supi what you need. Upload a spec, paste a chat link, or just describe it in words.</p>’ +
-          ‘</div>’;
+          '<div class="board-empty">' +
+            '<h2 class="board-empty-title">Drop your idea — I\'ll find the right factory.</h2>' +
+            '<p class="board-empty-sub">Tell Supi what you need. Upload a spec, paste a chat link, or just describe it in words.</p>' +
+          '</div>';
       }
     } else {
       activeBoardProjectId = projectId;
@@ -1891,7 +1891,7 @@
         files = (fl?.files) || [];
         conversations = (hist?.messages) || [];
       } catch (e) {
-        if (content) content.innerHTML = ‘<div class="board-empty"><p>Could not load your project.</p></div>’;
+        if (content) content.innerHTML = '<div class="board-empty"><p>Could not load your project.</p></div>';
         return;
       }
       buildBoard(project || {}, files, conversations);
@@ -1938,31 +1938,31 @@
     }
 
     const knowledgeHtml = knowledgeCards.length
-      ? ‘<div class="board-knowledge-row">’ +
+      ? '<div class="board-knowledge-row">' +
         knowledgeCards.map((k) => {
           const icon = k.kind === "file" ? "📎" : k.kind === "link" ? "🔗" : "💡";
-          const inner = ‘<div class="board-card-icon">’ + icon + ‘</div><div class="board-card-body"><div class="board-card-title">’ + escapeHtml(k.title) + ‘</div>’ + (k.sub ? ‘<div class="board-card-sub">’ + escapeHtml(k.sub) + ‘</div>’ : ‘’) + ‘</div>’;
+          const inner = '<div class="board-card-icon">' + icon + '</div><div class="board-card-body"><div class="board-card-title">' + escapeHtml(k.title) + '</div>' + (k.sub ? '<div class="board-card-sub">' + escapeHtml(k.sub) + '</div>' : '') + '</div>';
           return k.url
-            ? ‘<a class="board-card board-card--’ + k.kind + ‘" href="’ + escapeAttr(k.url) + ‘" target="_blank" rel="noopener">’ + inner + ‘</a>’
-            : ‘<div class="board-card board-card--’ + k.kind + ‘">’ + inner + ‘</div>’;
-        }).join("") + ‘</div>’
-      : ‘’;
+            ? '<a class="board-card board-card--' + k.kind + '" href="' + escapeAttr(k.url) + '" target="_blank" rel="noopener">' + inner + '</a>'
+            : '<div class="board-card board-card--' + k.kind + '">' + inner + '</div>';
+        }).join("") + '</div>'
+      : '';
 
     // Timeline: line only between adjacent nodes (not before the first)
     const timelineHtml =
-      ‘<div class="board-timeline">’ +
+      '<div class="board-timeline">' +
         stages.map((s, i) => {
           const cls = s.n < stage ? "done" : s.n === stage ? "active" : "todo";
           const isLast = i === stages.length - 1;
           const connCls = s.n < stage ? "done" : s.n === stage ? "active" : "todo";
           return (
-            ‘<div class="board-stage board-stage--’ + cls + ‘" data-stage="’ + s.n + ‘">’ +
-              ‘<div class="board-stage-node">’ +
-                ‘<div class="board-stage-dot"></div>’ +
-                (!isLast ? ‘<div class="board-stage-conn board-stage-conn--’ + connCls + ‘"><div class="board-stage-conn-fill"></div></div>’ : ‘’) +
-              ‘</div>’ +
-              ‘<div class="board-stage-label">’ + escapeHtml(s.label) + ‘</div>’ +
-              ‘<div class="board-stage-companies">’ +
+            '<div class="board-stage board-stage--' + cls + '" data-stage="' + s.n + '">' +
+              '<div class="board-stage-node">' +
+                '<div class="board-stage-dot"></div>' +
+                (!isLast ? '<div class="board-stage-conn board-stage-conn--' + connCls + '"><div class="board-stage-conn-fill"></div></div>' : '') +
+              '</div>' +
+              '<div class="board-stage-label">' + escapeHtml(s.label) + '</div>' +
+              '<div class="board-stage-companies">' +
                 matchesByStage[s.n].map((m) => {
                   const f = m.factories || {};
                   const name = f.name || "Factory";
@@ -1974,33 +1974,33 @@
                   const wechat = contact.wechat || contact.wechat_id || "";
                   const canMessage = ["active","intro_sent","in_production","completed"].includes(m.status);
                   const actions = canMessage
-                    ? ‘<div class="board-company-actions">’ +
-                        ‘<button type="button" class="board-mini-btn company-msg-btn" data-match-id="’ + escapeAttr(m.id) + ‘">Message</button>’ +
-                        (waLink ? ‘<a class="board-mini-btn board-mini-btn--wa" href="’ + escapeAttr(waLink) + ‘" target="_blank" rel="noopener">WhatsApp</a>’ : ‘’) +
-                        (wechat ? ‘<button type="button" class="board-mini-btn company-wc-btn" data-wechat="’ + escapeAttr(wechat) + ‘">WeChat</button>’ : ‘’) +
-                      ‘</div>’
-                    : ‘’;
+                    ? '<div class="board-company-actions">' +
+                        '<button type="button" class="board-mini-btn company-msg-btn" data-match-id="' + escapeAttr(m.id) + '">Message</button>' +
+                        (waLink ? '<a class="board-mini-btn board-mini-btn--wa" href="' + escapeAttr(waLink) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
+                        (wechat ? '<button type="button" class="board-mini-btn company-wc-btn" data-wechat="' + escapeAttr(wechat) + '">WeChat</button>' : '') +
+                      '</div>'
+                    : '';
                   return (
-                    ‘<div class="board-company" data-match-id="’ + escapeAttr(m.id) + ‘">’ +
-                      ‘<div class="board-company-row">’ +
-                        ‘<div class="board-company-avatar">’ + escapeHtml(initial) + ‘</div>’ +
-                        ‘<div class="board-company-info">’ +
-                          ‘<div class="board-company-name">’ + escapeHtml(name) + ‘</div>’ +
-                          ‘<div class="board-company-status">’ + escapeHtml(status) + ‘</div>’ +
-                        ‘</div>’ +
-                      ‘</div>’ +
+                    '<div class="board-company" data-match-id="' + escapeAttr(m.id) + '">' +
+                      '<div class="board-company-row">' +
+                        '<div class="board-company-avatar">' + escapeHtml(initial) + '</div>' +
+                        '<div class="board-company-info">' +
+                          '<div class="board-company-name">' + escapeHtml(name) + '</div>' +
+                          '<div class="board-company-status">' + escapeHtml(status) + '</div>' +
+                        '</div>' +
+                      '</div>' +
                       actions +
-                      ‘<div class="company-chat-panel" id="company-chat-’ + escapeAttr(m.id) + ‘" hidden></div>’ +
-                    ‘</div>’
+                      '<div class="company-chat-panel" id="company-chat-' + escapeAttr(m.id) + '" hidden></div>' +
+                    '</div>'
                   );
                 }).join("") +
-              ‘</div>’ +
-            ‘</div>’
+              '</div>' +
+            '</div>'
           );
         }).join("") +
-      ‘</div>’;
+      '</div>';
 
-    const titleHtml = project.title ? ‘<div class="board-title">’ + escapeHtml(project.title) + ‘</div>’ : ‘’;
+    const titleHtml = project.title ? '<div class="board-title">' + escapeHtml(project.title) + '</div>' : '';
     content.innerHTML = titleHtml + knowledgeHtml + timelineHtml;
   }
 
@@ -2094,7 +2094,7 @@
         const up = await uploadFilesToProject(activeBoardProjectId, raw);
         if (up.err) { appendSupiBubble(msgs, "system", "Upload failed: " + up.err); return; }
         try { await apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/reingest-files", { method: "POST", body: "{}" }); } catch (_) {}
-        appendSupiBubble(msgs, "assistant", "Got it — I’ve attached " + raw.map((f) => f.name).join(", ") + " to your project. I’ll factor this into the supplier search.");
+        appendSupiBubble(msgs, "assistant", "Got it — I've attached " + raw.map((f) => f.name).join(", ") + " to your project. I'll factor this into the supplier search.");
         loadBoard();
       });
     }
@@ -2102,7 +2102,7 @@
     // Load history then show scripted opening if thread is empty
     (async () => {
       if (!msgs) return;
-      msgs.innerHTML = ‘<div class="chat-status">Loading…</div>’;
+      msgs.innerHTML = '<div class="chat-status">Loading…</div>';
       try {
         const data = await apiCall("/api/chat/history?supi_thread=1");
         msgs.innerHTML = "";
@@ -2116,13 +2116,13 @@
           // First visit — scripted opening
           boardSupiState = "initial";
           setTimeout(() => {
-            appendSupiBubble(msgs, "assistant", "I’ll now start searching for suppliers 🔍 Do you want to add any other information about your project before I begin?");
+            appendSupiBubble(msgs, "assistant", "I'll now start searching for suppliers 🔍 Do you want to add any other information about your project before I begin?");
             msgs.scrollTop = msgs.scrollHeight;
           }, 600);
         }
         msgs.scrollTop = msgs.scrollHeight;
       } catch (_) {
-        if (msgs) msgs.innerHTML = ‘<div class="chat-status">Could not load messages.</div>’;
+        if (msgs) msgs.innerHTML = '<div class="chat-status">Could not load messages.</div>';
       }
     })();
   }
@@ -2150,7 +2150,7 @@
       if (!active.length) return;
       const div = document.createElement("div");
       div.className = "board-supi-contacts";
-      div.innerHTML = ‘<div class="board-supi-contacts-label">Matched factories</div>’ +
+      div.innerHTML = '<div class="board-supi-contacts-label">Matched factories</div>' +
         active.map((m) => {
           const f = m.factories || {};
           const name = f.name || "Factory";
@@ -2159,15 +2159,15 @@
           const wa = normalizeWhatsappNumber(f.whatsapp_id || contact.whatsapp || "");
           const waLink = wa ? "https://wa.me/" + wa : "";
           const wechat = contact.wechat || contact.wechat_id || "";
-          return ‘<div class="board-supi-contact-card">’ +
-            ‘<div class="board-supi-contact-name">’ + escapeHtml(name) + (loc ? ‘ · ‘ + escapeHtml(loc) : ‘’) + ‘</div>’ +
-            ‘<div class="board-supi-contact-actions">’ +
-              (waLink ? ‘<a class="board-mini-btn board-mini-btn--wa" href="’ + escapeAttr(waLink) + ‘" target="_blank" rel="noopener">💬 WhatsApp</a>’ : ‘’) +
-              (wechat ? ‘<button type="button" class="board-mini-btn company-wc-btn" data-wechat="’ + escapeAttr(wechat) + ‘">WeChat</button>’ : ‘’) +
-            ‘</div>’ +
-          ‘</div>’;
+          return '<div class="board-supi-contact-card">' +
+            '<div class="board-supi-contact-name">' + escapeHtml(name) + (loc ? ' · ' + escapeHtml(loc) : '') + '</div>' +
+            '<div class="board-supi-contact-actions">' +
+              (waLink ? '<a class="board-mini-btn board-mini-btn--wa" href="' + escapeAttr(waLink) + '" target="_blank" rel="noopener">💬 WhatsApp</a>' : '') +
+              (wechat ? '<button type="button" class="board-mini-btn company-wc-btn" data-wechat="' + escapeAttr(wechat) + '">WeChat</button>' : '') +
+            '</div>' +
+          '</div>';
         }).join("") +
-      ‘’;
+      '';
       msgs.appendChild(div);
       msgs.scrollTop = msgs.scrollHeight;
       // Wire WeChat buttons
@@ -2193,14 +2193,14 @@
       const adding = lower.includes("yes") || lower.includes("yeah") || lower.includes("sure") || lower.length > 20;
       if (adding) {
         setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "Perfect — go ahead and share any extra details. Once you’re done, just let me know and I’ll kick off the search.");
+          appendSupiBubble(msgs, "assistant", "Perfect — go ahead and share any extra details. Once you're done, just let me know and I'll kick off the search.");
           boardSupiState = "adding";
         }, 700);
       } else {
         setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "Okay, I’ll start now! I’ll come back in 3–5 hours with my first results. You can in the meantime advance your project and I’ll update all details to the supplier. 🚀");
+          appendSupiBubble(msgs, "assistant", "Okay, I'll start now! I'll come back in 3–5 hours with my first results. You can in the meantime advance your project and I'll update all details to the supplier. 🚀");
           setTimeout(() => {
-            appendSupiBubble(msgs, "assistant", "I’ll give them all the information about your project so you just have to make the last call with them. 🤝");
+            appendSupiBubble(msgs, "assistant", "I'll give them all the information about your project so you just have to make the last call with them. 🤝");
             boardSupiState = "normal";
           }, 1800);
         }, 700);
@@ -2220,9 +2220,9 @@
       const done = text.toLowerCase().includes("done") || text.toLowerCase().includes("start") || text.toLowerCase().includes("go") || text.toLowerCase().includes("okay") || text.toLowerCase().includes("ok");
       if (done) {
         setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "Perfect — I’ll start the search now! I’ll come back in 3–5 hours with my first results. You can in the meantime advance your project and I’ll update all details to the supplier. 🚀");
+          appendSupiBubble(msgs, "assistant", "Perfect — I'll start the search now! I'll come back in 3–5 hours with my first results. You can in the meantime advance your project and I'll update all details to the supplier. 🚀");
           setTimeout(() => {
-            appendSupiBubble(msgs, "assistant", "I’ll give them all the information about your project so you just have to make the last call with them. 🤝");
+            appendSupiBubble(msgs, "assistant", "I'll give them all the information about your project so you just have to make the last call with them. 🤝");
             boardSupiState = "normal";
           }, 1800);
         }, 700);
@@ -2231,7 +2231,7 @@
         }
       } else {
         setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "Got it! Anything else to add? Just say \"done\" or \"start\" when you’re ready and I’ll begin the search.");
+          appendSupiBubble(msgs, "assistant", "Got it! Anything else to add? Just say \"done\" or \"start\" when you're ready and I'll begin the search.");
         }, 700);
       }
       return;
@@ -2771,7 +2771,7 @@
           appendChatLine(msgContainer, m.role, m.content, m.metadata);
         });
       } else {
-        appendChatLine(msgContainer, "assistant", "Got any questions about your projects or the platform? I’m here to help.", { supi: true });
+        appendChatLine(msgContainer, "assistant", "Got any questions about your projects or the platform? I'm here to help.", { supi: true });
       }
       markSupiRead();
     } catch (_) {
@@ -3254,7 +3254,7 @@
     const showSaved = !!p.route_feedback_at;
     const sendBlock =
       section === "pending" && hasDraft
-        ? '<div class="visit-submit-factory"><p class="visit-submit-factory-p">Sends a bilingual request to the factory in your connection chat and sets visits to “awaiting factory.”</p><button type="button" class="btn-primary btn-sm" data-visit-submit-confirm="' +
+        ? '<div class="visit-submit-factory"><p class="visit-submit-factory-p">Sends a bilingual request to the factory in your connection chat and sets visits to "awaiting factory."</p><button type="button" class="btn-primary btn-sm" data-visit-submit-confirm="' +
           escapeAttr(p.id) +
           '">Send to factory for confirmation</button></div>'
         : "";
