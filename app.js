@@ -798,13 +798,13 @@
   /* ── Auth UI ── */
   function updateAuthUI() {
     const inOnboarding = currentView === "onboarding";
+    const inBoard = currentView === "board";
     const loggedIn = !!currentUser;
     const account = $("header-account");
-    if (account) account.hidden = !loggedIn || inOnboarding;
+    // Hide avatar/account button for buyers on the board — settings & logout live in the rail
+    if (account) account.hidden = !loggedIn || inOnboarding || inBoard;
     const avatarEl = $("avatar-letter");
-    const avatarBtn = $("user-menu-trigger");
     if (loggedIn && avatarEl) avatarEl.textContent = (currentUser.displayName || "?").charAt(0).toUpperCase();
-    if (avatarBtn) avatarBtn.classList.toggle("avatar-btn--anon", !loggedIn);
     const nav = $("header-nav");
     if (nav) nav.style.display = (loggedIn && !inOnboarding) ? "" : "none";
   }
@@ -1855,6 +1855,9 @@
      BOARD (buyer canvas)
      ══════════════════════════════════════ */
   let activeBoardProjectId = null;
+  let boardSupiInited = false;
+  let boardSupiState = "initial"; // "initial" | "replied" | "normal"
+  let boardCanvasPan = { x: 0, y: 0, dragging: false, startX: 0, startY: 0, originX: 0, originY: 0 };
 
   async function loadBoard() {
     const content = $("board-canvas-content");
@@ -1870,35 +1873,34 @@
       activeBoardProjectId = null;
       if (content) {
         content.innerHTML =
-          '<div class="board-empty">' +
-            '<h2 class="board-empty-title">Drop your idea — I\'ll find the right factory.</h2>' +
-            '<p class="board-empty-sub">Upload a spec, paste a chat link, or just describe what you want to build. Use the prompt below.</p>' +
-          '</div>';
+          ‘<div class="board-empty">’ +
+            ‘<h2 class="board-empty-title">Drop your idea — I\’ll find the right factory.</h2>’ +
+            ‘<p class="board-empty-sub">Tell Supi what you need. Upload a spec, paste a chat link, or just describe it in words.</p>’ +
+          ‘</div>’;
       }
-      attachBoardPromptHandlers();
-      return;
+    } else {
+      activeBoardProjectId = projectId;
+      let project = null, files = [], conversations = [];
+      try {
+        const [pj, fl, hist] = await Promise.all([
+          apiCall("/api/projects/" + encodeURIComponent(projectId)),
+          apiCall("/api/projects/" + encodeURIComponent(projectId) + "/files"),
+          apiCall("/api/chat/history?project_id=" + encodeURIComponent(projectId)).catch(() => ({ messages: [] })),
+        ]);
+        project = pj?.project || pj;
+        files = (fl?.files) || [];
+        conversations = (hist?.messages) || [];
+      } catch (e) {
+        if (content) content.innerHTML = ‘<div class="board-empty"><p>Could not load your project.</p></div>’;
+        return;
+      }
+      buildBoard(project || {}, files, conversations);
+      attachCompanyCardHandlers(content);
     }
 
-    activeBoardProjectId = projectId;
-
-    let project = null, files = [], conversations = [];
-    try {
-      const [pj, fl, hist] = await Promise.all([
-        apiCall("/api/projects/" + encodeURIComponent(projectId)),
-        apiCall("/api/projects/" + encodeURIComponent(projectId) + "/files"),
-        apiCall("/api/chat/history?project_id=" + encodeURIComponent(projectId)).catch(() => ({ messages: [] })),
-      ]);
-      project = pj?.project || pj;
-      files = (fl?.files) || [];
-      conversations = (hist?.messages) || [];
-    } catch (e) {
-      if (content) content.innerHTML = '<div class="board-empty"><p>Could not load your project.</p></div>';
-      return;
-    }
-
-    buildBoard(project || {}, files, conversations);
-    attachBoardPromptHandlers();
-    attachCompanyCardHandlers(content);
+    initBoardRail();
+    initBoardPan();
+    initBoardSupiPanel();
   }
 
   function buildBoard(project, files, conversations) {
@@ -1924,302 +1926,330 @@
 
     const knowledgeCards = [];
     for (const f of files) {
-      knowledgeCards.push({
-        kind: "file",
-        title: f.filename || "File",
-        sub: f.bytes ? formatBytes(f.bytes) : "",
-        url: f.signed_url || "",
-      });
+      knowledgeCards.push({ kind: "file", title: f.filename || "File", sub: f.bytes ? formatBytes(f.bytes) : "", url: f.signed_url || "" });
     }
     if (project.brief_source_url) {
-      knowledgeCards.push({
-        kind: "link",
-        title: "Imported brief",
-        sub: project.brief_source_type ? String(project.brief_source_type) : "share link",
-        url: project.brief_source_url,
-      });
+      knowledgeCards.push({ kind: "link", title: "Imported brief", sub: project.brief_source_type || "share link", url: project.brief_source_url });
     }
     for (const c of conversations) {
-      const md = c.metadata || {};
-      if (md && md.kind === "idea") {
-        knowledgeCards.push({
-          kind: "idea",
-          title: "Idea",
-          sub: (c.content || "").slice(0, 120),
-          url: "",
-        });
+      if (c.metadata && c.metadata.kind === "idea") {
+        knowledgeCards.push({ kind: "idea", title: "Idea", sub: (c.content || "").slice(0, 120), url: "" });
       }
     }
 
     const knowledgeHtml = knowledgeCards.length
-      ? '<div class="board-knowledge-row">' +
-        knowledgeCards
-          .map((k) => {
-            const icon =
-              k.kind === "file" ? "📎" :
-              k.kind === "link" ? "🔗" :
-              "💡";
-            const inner =
-              '<div class="board-card-icon">' + icon + '</div>' +
-              '<div class="board-card-body">' +
-                '<div class="board-card-title">' + escapeHtml(k.title) + '</div>' +
-                (k.sub ? '<div class="board-card-sub">' + escapeHtml(k.sub) + '</div>' : '') +
-              '</div>';
-            return k.url
-              ? '<a class="board-card board-card--' + k.kind + '" href="' + escapeAttr(k.url) + '" target="_blank" rel="noopener">' + inner + '</a>'
-              : '<div class="board-card board-card--' + k.kind + '">' + inner + '</div>';
-          })
-          .join("") +
-        '</div>'
-      : '';
+      ? ‘<div class="board-knowledge-row">’ +
+        knowledgeCards.map((k) => {
+          const icon = k.kind === "file" ? "📎" : k.kind === "link" ? "🔗" : "💡";
+          const inner = ‘<div class="board-card-icon">’ + icon + ‘</div><div class="board-card-body"><div class="board-card-title">’ + escapeHtml(k.title) + ‘</div>’ + (k.sub ? ‘<div class="board-card-sub">’ + escapeHtml(k.sub) + ‘</div>’ : ‘’) + ‘</div>’;
+          return k.url
+            ? ‘<a class="board-card board-card--’ + k.kind + ‘" href="’ + escapeAttr(k.url) + ‘" target="_blank" rel="noopener">’ + inner + ‘</a>’
+            : ‘<div class="board-card board-card--’ + k.kind + ‘">’ + inner + ‘</div>’;
+        }).join("") + ‘</div>’
+      : ‘’;
 
+    // Timeline: line only between adjacent nodes (not before the first)
     const timelineHtml =
-      '<div class="board-timeline">' +
-        '<div class="board-timeline-line" aria-hidden="true"></div>' +
-        stages
-          .map((s) => {
-            const cls = s.n < stage ? "done" : s.n === stage ? "active" : "todo";
-            return (
-              '<div class="board-stage board-stage--' + cls + '" data-stage="' + s.n + '">' +
-                '<div class="board-stage-dot">' + s.n + '</div>' +
-                '<div class="board-stage-label">' + escapeHtml(s.label) + '</div>' +
-                '<div class="board-stage-companies">' +
-                  matchesByStage[s.n]
-                    .map((m) => {
-                      const f = m.factories || {};
-                      const name = f.name || "Factory";
-                      const initial = name.charAt(0).toUpperCase();
-                      const status = String(m.status || "pending").replace(/_/g, " ");
-                      const contact = f.contact_info || {};
-                      const wa = normalizeWhatsappNumber(f.whatsapp_id || contact.whatsapp || "");
-                      const waLink = wa ? "https://wa.me/" + wa : "";
-                      const wechat = contact.wechat || contact.wechat_id || "";
-                      const canMessage = m.status === "active" || m.status === "intro_sent" || m.status === "in_production" || m.status === "completed";
-                      const actions = canMessage
-                        ? '<div class="board-company-actions">' +
-                            '<button type="button" class="board-mini-btn company-msg-btn" data-match-id="' + escapeAttr(m.id) + '">Message</button>' +
-                            (waLink ? '<a class="board-mini-btn" href="' + escapeAttr(waLink) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
-                            (wechat ? '<button type="button" class="board-mini-btn company-wc-btn" data-wechat="' + escapeAttr(wechat) + '">WeChat</button>' : '') +
-                          '</div>'
-                        : '';
-                      return (
-                        '<div class="board-company" data-match-id="' + escapeAttr(m.id) + '">' +
-                          '<div class="board-company-row">' +
-                            '<div class="board-company-avatar">' + escapeHtml(initial) + '</div>' +
-                            '<div class="board-company-info">' +
-                              '<div class="board-company-name">' + escapeHtml(name) + '</div>' +
-                              '<div class="board-company-status">' + escapeHtml(status) + '</div>' +
-                            '</div>' +
-                          '</div>' +
-                          actions +
-                          '<div class="company-chat-panel" id="company-chat-' + escapeAttr(m.id) + '" hidden></div>' +
-                        '</div>'
-                      );
-                    })
-                    .join("") +
-                '</div>' +
-              '</div>'
-            );
-          })
-          .join("") +
-      '</div>';
+      ‘<div class="board-timeline">’ +
+        stages.map((s, i) => {
+          const cls = s.n < stage ? "done" : s.n === stage ? "active" : "todo";
+          const isLast = i === stages.length - 1;
+          const connCls = s.n < stage ? "done" : s.n === stage ? "active" : "todo";
+          return (
+            ‘<div class="board-stage board-stage--’ + cls + ‘" data-stage="’ + s.n + ‘">’ +
+              ‘<div class="board-stage-node">’ +
+                ‘<div class="board-stage-dot"></div>’ +
+                (!isLast ? ‘<div class="board-stage-conn board-stage-conn--’ + connCls + ‘"><div class="board-stage-conn-fill"></div></div>’ : ‘’) +
+              ‘</div>’ +
+              ‘<div class="board-stage-label">’ + escapeHtml(s.label) + ‘</div>’ +
+              ‘<div class="board-stage-companies">’ +
+                matchesByStage[s.n].map((m) => {
+                  const f = m.factories || {};
+                  const name = f.name || "Factory";
+                  const initial = name.charAt(0).toUpperCase();
+                  const status = String(m.status || "pending").replace(/_/g, " ");
+                  const contact = f.contact_info || {};
+                  const wa = normalizeWhatsappNumber(f.whatsapp_id || contact.whatsapp || "");
+                  const waLink = wa ? "https://wa.me/" + wa : "";
+                  const wechat = contact.wechat || contact.wechat_id || "";
+                  const canMessage = ["active","intro_sent","in_production","completed"].includes(m.status);
+                  const actions = canMessage
+                    ? ‘<div class="board-company-actions">’ +
+                        ‘<button type="button" class="board-mini-btn company-msg-btn" data-match-id="’ + escapeAttr(m.id) + ‘">Message</button>’ +
+                        (waLink ? ‘<a class="board-mini-btn board-mini-btn--wa" href="’ + escapeAttr(waLink) + ‘" target="_blank" rel="noopener">WhatsApp</a>’ : ‘’) +
+                        (wechat ? ‘<button type="button" class="board-mini-btn company-wc-btn" data-wechat="’ + escapeAttr(wechat) + ‘">WeChat</button>’ : ‘’) +
+                      ‘</div>’
+                    : ‘’;
+                  return (
+                    ‘<div class="board-company" data-match-id="’ + escapeAttr(m.id) + ‘">’ +
+                      ‘<div class="board-company-row">’ +
+                        ‘<div class="board-company-avatar">’ + escapeHtml(initial) + ‘</div>’ +
+                        ‘<div class="board-company-info">’ +
+                          ‘<div class="board-company-name">’ + escapeHtml(name) + ‘</div>’ +
+                          ‘<div class="board-company-status">’ + escapeHtml(status) + ‘</div>’ +
+                        ‘</div>’ +
+                      ‘</div>’ +
+                      actions +
+                      ‘<div class="company-chat-panel" id="company-chat-’ + escapeAttr(m.id) + ‘" hidden></div>’ +
+                    ‘</div>’
+                  );
+                }).join("") +
+              ‘</div>’ +
+            ‘</div>’
+          );
+        }).join("") +
+      ‘</div>’;
 
-    const titleHtml = project.title
-      ? '<div class="board-title">' + escapeHtml(project.title) + '</div>'
-      : '';
-
+    const titleHtml = project.title ? ‘<div class="board-title">’ + escapeHtml(project.title) + ‘</div>’ : ‘’;
     content.innerHTML = titleHtml + knowledgeHtml + timelineHtml;
   }
 
-  function setBoardFlash(text, isErr) {
-    const flash = $("board-prompt-flash");
-    if (!flash) return;
-    if (!text) { flash.hidden = true; flash.textContent = ""; return; }
-    flash.hidden = false;
-    flash.textContent = text;
-    flash.style.color = isErr ? "#d93025" : "";
+  /* ── Board rail (settings + logout) ── */
+  let boardRailInited = false;
+  function initBoardRail() {
+    if (boardRailInited) return;
+    boardRailInited = true;
+    $("board-rail-settings")?.addEventListener("click", () => setView("settings"));
+    $("board-rail-logout")?.addEventListener("click", () => handleSignOut());
   }
 
-  let boardPromptWired = false;
-  function attachBoardPromptHandlers() {
-    if (boardPromptWired) return;
-    boardPromptWired = true;
-    const input = $("board-prompt-input");
-    const send = $("board-prompt-send");
-    const chipIdea = $("board-chip-idea");
-    const chipSource = $("board-chip-source");
-    const fileInput = $("board-file-input");
+  /* ── Canvas free pan (Figma-style click+drag) ── */
+  let boardPanInited = false;
+  function initBoardPan() {
+    if (boardPanInited) return;
+    boardPanInited = true;
+    const canvas = $("board-canvas");
+    const vp = $("board-canvas-viewport");
+    if (!canvas || !vp) return;
 
-    if (input && send) {
-      input.addEventListener("input", () => {
-        input.style.height = "auto";
-        input.style.height = Math.min(input.scrollHeight, 180) + "px";
-        send.disabled = !input.value.trim();
+    canvas.addEventListener("mousedown", (e) => {
+      // Only pan on left-click on the canvas background / viewport itself
+      if (e.button !== 0) return;
+      if (e.target.closest("a,button,textarea,input,.board-company,.board-card")) return;
+      boardCanvasPan.dragging = true;
+      boardCanvasPan.startX = e.clientX;
+      boardCanvasPan.startY = e.clientY;
+      boardCanvasPan.originX = boardCanvasPan.x;
+      boardCanvasPan.originY = boardCanvasPan.y;
+      canvas.classList.add("board-canvas--panning");
+      e.preventDefault();
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!boardCanvasPan.dragging) return;
+      boardCanvasPan.x = boardCanvasPan.originX + (e.clientX - boardCanvasPan.startX);
+      boardCanvasPan.y = boardCanvasPan.originY + (e.clientY - boardCanvasPan.startY);
+      vp.style.transform = "translate(" + boardCanvasPan.x + "px," + boardCanvasPan.y + "px)";
+    });
+    window.addEventListener("mouseup", () => {
+      if (!boardCanvasPan.dragging) return;
+      boardCanvasPan.dragging = false;
+      canvas.classList.remove("board-canvas--panning");
+    });
+  }
+
+  /* ── Supi panel (always-on right panel) ── */
+  function initBoardSupiPanel() {
+    if (boardSupiInited) return;
+    boardSupiInited = true;
+
+    const msgs = $("board-supi-messages");
+    const inp = $("board-supi-input");
+    const snd = $("board-supi-send");
+    const closeBtn = $("board-supi-close");
+    const reopenBtn = $("board-supi-reopen");
+    const panel = $("board-supi-panel");
+    const fileInput = $("board-supi-file");
+
+    if (inp && snd) {
+      inp.addEventListener("input", () => {
+        inp.style.height = "auto";
+        inp.style.height = Math.min(inp.scrollHeight, 160) + "px";
+        snd.disabled = !inp.value.trim();
       });
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          if (!send.disabled) saveBoardIdea();
-        }
-      });
-      send.addEventListener("click", saveBoardIdea);
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!snd.disabled) sendBoardSupiMessage(); } });
+      snd.addEventListener("click", sendBoardSupiMessage);
     }
-    if (chipIdea) chipIdea.addEventListener("click", saveBoardIdea);
-    if (chipSource) chipSource.addEventListener("click", runBoardSource);
+
+    closeBtn?.addEventListener("click", () => {
+      if (panel) panel.hidden = true;
+      if (reopenBtn) reopenBtn.hidden = false;
+    });
+    reopenBtn?.addEventListener("click", () => {
+      if (panel) panel.hidden = false;
+      if (reopenBtn) reopenBtn.hidden = true;
+    });
+
     if (fileInput) {
       fileInput.addEventListener("change", async (ev) => {
         const t = ev.target;
         const raw = t && t.files && t.files.length ? Array.prototype.slice.call(t.files, 0) : [];
         t.value = "";
         if (!raw.length) return;
+        if (!(await ensureSession())) return;
         if (!activeBoardProjectId) {
-          setBoardFlash("Create a project first by saving an idea or pasting a chat link.", true);
+          appendSupiBubble(msgs, "assistant", "Start a project first — tell me what you need built!");
           return;
         }
-        if (!(await ensureSession())) return;
-        setBoardFlash("Uploading…", false);
+        appendSupiBubble(msgs, "system", "Uploading " + raw.length + " file(s)…");
         const up = await uploadFilesToProject(activeBoardProjectId, raw);
-        if (up.err) { setBoardFlash(up.err, true); return; }
-        try {
-          await apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/reingest-files", { method: "POST", body: "{}" });
-        } catch (_) {}
-        setBoardFlash("File added.", false);
+        if (up.err) { appendSupiBubble(msgs, "system", "Upload failed: " + up.err); return; }
+        try { await apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/reingest-files", { method: "POST", body: "{}" }); } catch (_) {}
+        appendSupiBubble(msgs, "assistant", "Got it — I’ve attached " + raw.map((f) => f.name).join(", ") + " to your project. I’ll factor this into the supplier search.");
         loadBoard();
       });
     }
 
-    document.querySelectorAll("#board-rail .board-rail-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const k = btn.getAttribute("data-rail");
-        if (k === "settings") setView("settings");
-        else if (k === "supi") openBoardSupi();
-        else if (k === "home") closeBoardSlideover();
-      });
-    });
-    $("board-slideover-close")?.addEventListener("click", closeBoardSlideover);
-  }
-
-  async function saveBoardIdea() {
-    const input = $("board-prompt-input");
-    const text = ((input && input.value) || "").trim();
-    if (!text) return;
-    if (!(await ensureSession())) return;
-
-    if (!activeBoardProjectId) {
-      // No project yet — bootstrap one quietly using the idea as description.
-      setBoardFlash("Creating project…", false);
-      try {
-        const r = await apiCall("/api/projects/bootstrap", { method: "POST", body: "{}" });
-        activeBoardProjectId = r?.project?.id || null;
-        if (!activeBoardProjectId) throw new Error("Bootstrap failed");
-      } catch (e) {
-        setBoardFlash(e.message || "Could not start a project.", true);
-        return;
-      }
-    }
-
-    try {
-      await apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/idea", {
-        method: "POST",
-        body: JSON.stringify({ text }),
-      });
-      if (input) { input.value = ""; input.style.height = "auto"; }
-      const send = $("board-prompt-send"); if (send) send.disabled = true;
-      setBoardFlash("Idea saved.", false);
-      loadBoard();
-    } catch (e) {
-      setBoardFlash((e && e.message) || "Could not save idea.", true);
-    }
-  }
-
-  async function runBoardSource() {
-    if (!(await ensureSession())) return;
-    if (!activeBoardProjectId) {
-      setBoardFlash("Save an idea or upload a spec first so I have something to search for.", true);
-      return;
-    }
-    setBoardFlash("Searching for suppliers…", false);
-    try {
-      const r = await apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", {
-        method: "POST",
-        body: JSON.stringify({ force: false }),
-      });
-      const used = (r && r.result) || {};
-      let msg = "Sourcing started.";
-      if (used.reused_existing) msg = "Already searching — " + used.reused_existing + " candidate(s) pending review.";
-      else if (used.used_web_search) msg = "Web search complete — " + (used.candidate_count || 0) + " candidate(s) sent for review.";
-      else msg = "Platform match — " + (used.candidate_count || 0) + " candidate(s) sent for review.";
-      setBoardFlash(msg, false);
-    } catch (e) {
-      setBoardFlash((e && e.message) || "Sourcing failed.", true);
-    }
-  }
-
-  function openBoardSupi() {
-    const slide = $("board-slideover");
-    const body = $("board-slideover-body");
-    const title = $("board-slideover-title");
-    if (!slide || !body) return;
-    if (title) title.textContent = "Supi";
-    slide.hidden = false;
-    body.innerHTML =
-      '<div class="board-supi-messages" id="board-supi-messages"><div class="chat-status">Loading…</div></div>' +
-      '<div class="board-supi-composer">' +
-        '<textarea class="composer-input board-supi-input" id="board-supi-input" rows="1" placeholder="Message Supi…"></textarea>' +
-        '<button type="button" class="btn-primary btn-sm" id="board-supi-send">Send</button>' +
-      '</div>';
-    const msgs = $("board-supi-messages");
-    const inp = $("board-supi-input");
-    const snd = $("board-supi-send");
-
+    // Load history then show scripted opening if thread is empty
     (async () => {
+      if (!msgs) return;
+      msgs.innerHTML = ‘<div class="chat-status">Loading…</div>’;
       try {
         const data = await apiCall("/api/chat/history?supi_thread=1");
         msgs.innerHTML = "";
-        const list = data.messages || [];
-        if (!list.length) {
-          appendChatLine(msgs, "assistant", "Got any questions about your project or the platform? I’m here to help.", { supi: true });
+        const list = (data.messages || []).filter((m) => m.role === "user" || m.role === "assistant");
+        if (list.length) {
+          boardSupiState = "normal";
+          list.forEach((m) => appendSupiBubble(msgs, m.role, m.content));
+          // Show any approved matches as contact cards
+          showMatchContactsInSupi(msgs);
         } else {
-          list.forEach((m) => appendChatLine(msgs, m.role, m.content, m.metadata));
+          // First visit — scripted opening
+          boardSupiState = "initial";
+          setTimeout(() => {
+            appendSupiBubble(msgs, "assistant", "I’ll now start searching for suppliers 🔍 Do you want to add any other information about your project before I begin?");
+            msgs.scrollTop = msgs.scrollHeight;
+          }, 600);
         }
         msgs.scrollTop = msgs.scrollHeight;
       } catch (_) {
-        msgs.innerHTML = '<div class="chat-status">Could not load messages.</div>';
+        if (msgs) msgs.innerHTML = ‘<div class="chat-status">Could not load messages.</div>’;
       }
     })();
-
-    const sendNow = async () => {
-      const text = ((inp && inp.value) || "").trim();
-      if (!text) return;
-      inp.value = "";
-      const div = document.createElement("div");
-      div.className = "chat-bubble chat-bubble--user";
-      div.textContent = text;
-      msgs.appendChild(div);
-      msgs.scrollTop = msgs.scrollHeight;
-      try {
-        const data = await apiCall("/api/chat", {
-          method: "POST",
-          body: JSON.stringify({ message: text, supi_thread: true }),
-        });
-        if (data && data.reply) {
-          appendChatLine(msgs, "assistant", data.reply, { ...(data.metadata || {}), supi: true });
-          msgs.scrollTop = msgs.scrollHeight;
-        }
-      } catch (_) {
-        const err = document.createElement("div");
-        err.className = "chat-status";
-        err.textContent = "Failed to send.";
-        msgs.appendChild(err);
-      }
-    };
-    if (snd) snd.addEventListener("click", sendNow);
-    if (inp) inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendNow(); } });
   }
 
-  function closeBoardSlideover() {
-    const slide = $("board-slideover");
-    if (slide) slide.hidden = true;
+  function appendSupiBubble(container, role, text) {
+    if (!container) return;
+    const div = document.createElement("div");
+    if (role === "system") {
+      div.className = "board-supi-system";
+      div.textContent = text;
+    } else {
+      div.className = "chat-bubble chat-bubble--" + (role === "user" ? "user" : "assistant");
+      div.textContent = text;
+    }
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function showMatchContactsInSupi(msgs) {
+    if (!msgs || !activeBoardProjectId) return;
+    apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId)).then((r) => {
+      const project = r && (r.project || r);
+      const matches = Array.isArray(project && project.matches) ? project.matches : [];
+      const active = matches.filter((m) => ["active","intro_sent","in_production","completed"].includes(m.status));
+      if (!active.length) return;
+      const div = document.createElement("div");
+      div.className = "board-supi-contacts";
+      div.innerHTML = ‘<div class="board-supi-contacts-label">Matched factories</div>’ +
+        active.map((m) => {
+          const f = m.factories || {};
+          const name = f.name || "Factory";
+          const loc = f.location || "";
+          const contact = f.contact_info || {};
+          const wa = normalizeWhatsappNumber(f.whatsapp_id || contact.whatsapp || "");
+          const waLink = wa ? "https://wa.me/" + wa : "";
+          const wechat = contact.wechat || contact.wechat_id || "";
+          return ‘<div class="board-supi-contact-card">’ +
+            ‘<div class="board-supi-contact-name">’ + escapeHtml(name) + (loc ? ‘ · ‘ + escapeHtml(loc) : ‘’) + ‘</div>’ +
+            ‘<div class="board-supi-contact-actions">’ +
+              (waLink ? ‘<a class="board-mini-btn board-mini-btn--wa" href="’ + escapeAttr(waLink) + ‘" target="_blank" rel="noopener">💬 WhatsApp</a>’ : ‘’) +
+              (wechat ? ‘<button type="button" class="board-mini-btn company-wc-btn" data-wechat="’ + escapeAttr(wechat) + ‘">WeChat</button>’ : ‘’) +
+            ‘</div>’ +
+          ‘</div>’;
+        }).join("") +
+      ‘’;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      // Wire WeChat buttons
+      div.querySelectorAll(".company-wc-btn").forEach((b) => b.addEventListener("click", () => showWechatPopover(b, b.dataset.wechat || "")));
+    }).catch(() => {});
+  }
+
+  async function sendBoardSupiMessage() {
+    const msgs = $("board-supi-messages");
+    const inp = $("board-supi-input");
+    const snd = $("board-supi-send");
+    if (!inp) return;
+    const text = inp.value.trim();
+    if (!text) return;
+    if (!(await ensureSession())) return;
+    inp.value = ""; inp.style.height = "auto"; if (snd) snd.disabled = true;
+    appendSupiBubble(msgs, "user", text);
+
+    // Scripted opening flow
+    if (boardSupiState === "initial") {
+      boardSupiState = "replied";
+      const lower = text.toLowerCase();
+      const adding = lower.includes("yes") || lower.includes("yeah") || lower.includes("sure") || lower.length > 20;
+      if (adding) {
+        setTimeout(() => {
+          appendSupiBubble(msgs, "assistant", "Perfect — go ahead and share any extra details. Once you’re done, just let me know and I’ll kick off the search.");
+          boardSupiState = "adding";
+        }, 700);
+      } else {
+        setTimeout(() => {
+          appendSupiBubble(msgs, "assistant", "Okay, I’ll start now! I’ll come back in 3–5 hours with my first results. You can in the meantime advance your project and I’ll update all details to the supplier. 🚀");
+          setTimeout(() => {
+            appendSupiBubble(msgs, "assistant", "I’ll give them all the information about your project so you just have to make the last call with them. 🤝");
+            boardSupiState = "normal";
+          }, 1800);
+        }, 700);
+        // Fire sourcing in background
+        if (activeBoardProjectId) {
+          apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", { method: "POST", body: JSON.stringify({ force: false }) }).catch(() => {});
+        }
+      }
+      return;
+    }
+
+    if (boardSupiState === "adding") {
+      // User added more info — save as idea and check if done
+      if (activeBoardProjectId) {
+        apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/idea", { method: "POST", body: JSON.stringify({ text }) }).catch(() => {});
+      }
+      const done = text.toLowerCase().includes("done") || text.toLowerCase().includes("start") || text.toLowerCase().includes("go") || text.toLowerCase().includes("okay") || text.toLowerCase().includes("ok");
+      if (done) {
+        setTimeout(() => {
+          appendSupiBubble(msgs, "assistant", "Perfect — I’ll start the search now! I’ll come back in 3–5 hours with my first results. You can in the meantime advance your project and I’ll update all details to the supplier. 🚀");
+          setTimeout(() => {
+            appendSupiBubble(msgs, "assistant", "I’ll give them all the information about your project so you just have to make the last call with them. 🤝");
+            boardSupiState = "normal";
+          }, 1800);
+        }, 700);
+        if (activeBoardProjectId) {
+          apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", { method: "POST", body: JSON.stringify({ force: false }) }).catch(() => {});
+        }
+      } else {
+        setTimeout(() => {
+          appendSupiBubble(msgs, "assistant", "Got it! Anything else to add? Just say \"done\" or \"start\" when you’re ready and I’ll begin the search.");
+        }, 700);
+      }
+      return;
+    }
+
+    // Normal mode — real API
+    const thinking = document.createElement("div");
+    thinking.className = "board-supi-system board-supi-thinking";
+    thinking.textContent = "Supi is thinking…";
+    if (msgs) msgs.appendChild(thinking);
+    try {
+      const data = await apiCall("/api/chat", { method: "POST", body: JSON.stringify({ message: text, supi_thread: true }) });
+      thinking.remove();
+      if (data && data.reply) appendSupiBubble(msgs, "assistant", data.reply);
+    } catch (_) {
+      thinking.remove();
+      appendSupiBubble(msgs, "system", "Could not reach Supi. Please try again.");
+    }
   }
 
   async function loadProjectDetail(id) {
