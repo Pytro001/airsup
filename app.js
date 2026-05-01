@@ -799,14 +799,16 @@
   function updateAuthUI() {
     const inOnboarding = currentView === "onboarding";
     const loggedIn = !!currentUser;
-    // Buyers use rail for settings/logout — hide header avatar on all their views
-    const buyerView = userRole === "startup" && (currentView === "board" || currentView === "settings");
+    const isBuyer = userRole === "startup";
     const account = $("header-account");
-    if (account) account.hidden = !loggedIn || inOnboarding || buyerView;
+    if (account) account.hidden = !loggedIn || inOnboarding || isBuyer;
     const avatarEl = $("avatar-letter");
     if (loggedIn && avatarEl) avatarEl.textContent = (currentUser.displayName || "?").charAt(0).toUpperCase();
     const nav = $("header-nav");
     if (nav) nav.style.display = (loggedIn && !inOnboarding) ? "" : "none";
+    // Hide header entirely for buyers (they use the board rail)
+    const header = $("site-header");
+    if (header) header.hidden = isBuyer && loggedIn && !inOnboarding;
   }
 
   function buildNav() {
@@ -1425,6 +1427,7 @@
         <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
       </div>`;
     root.innerHTML = `<div class="settings-section">
+      <div class="settings-field settings-field--row"><label class="settings-label">Appearance</label><button type="button" class="btn-outline btn-sm" id="settings-theme-toggle">Switch to light mode</button></div>
       <div class="settings-field"><label class="settings-label">Display name</label><input type="text" id="settings-displayName" class="settings-input" value="${escapeAttr(v.displayName)}" /></div>
       <div class="settings-field"><label class="settings-label">Company</label><input type="text" id="settings-company" class="settings-input" value="${escapeAttr(v.company)}" /></div>
       ${settingsPhoneRowHtml("Phone / WhatsApp", "settings-phone-cc", "settings-phone-local", v.phone)}
@@ -1443,6 +1446,20 @@
     });
     var settingsLoc = $("settings-location");
     if (settingsLoc) wireLocationAutocomplete(settingsLoc);
+    const themeBtn = $("settings-theme-toggle");
+    if (themeBtn) {
+      const syncThemeBtn = () => {
+        const isDark = document.documentElement.dataset.theme === "dark";
+        themeBtn.textContent = isDark ? "Switch to light mode" : "Switch to dark mode";
+      };
+      syncThemeBtn();
+      themeBtn.addEventListener("click", () => {
+        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem("airsupTheme", next); } catch (_) {}
+        syncThemeBtn();
+      });
+    }
     $("settings-save")?.addEventListener("click", saveSettings);
     $("settings-save-signin")?.addEventListener("click", saveSettingsSignIn);
     if (!onAdminPath) {
@@ -1737,7 +1754,7 @@
     var step = Number(project.pipeline_step);
     if (!Number.isFinite(step) || step < 1) step = 1;
     if (step > 3) step = 3;
-    var labels = ["Project", "Contact", "Sample"];
+    var labels = ["Project", "Contact", "Connected"];
     var parts = [];
     for (var i = 1; i <= 3; i++) {
       var cls = "pipeline-node";
@@ -1916,7 +1933,7 @@
     const stages = [
       { n: 1, label: "Project" },
       { n: 2, label: "Contact" },
-      { n: 3, label: "Sample" },
+      { n: 3, label: "Connected" },
     ];
 
     const matchesByStage = { 1: [], 2: [], 3: [] };
@@ -1952,7 +1969,7 @@
         }).join("") + '</div>'
       : '';
 
-    // Timeline: line only between adjacent nodes (not before the first)
+    // Timeline: anchor column (dot + label + companies) then connector line
     const timelineHtml =
       '<div class="board-timeline">' +
         stages.map((s, i) => {
@@ -1961,12 +1978,10 @@
           const connCls = s.n < stage ? "done" : s.n === stage ? "active" : "todo";
           return (
             '<div class="board-stage board-stage--' + cls + '" data-stage="' + s.n + '">' +
-              '<div class="board-stage-node">' +
+              '<div class="board-stage-anchor">' +
                 '<div class="board-stage-dot"></div>' +
-                (!isLast ? '<div class="board-stage-conn board-stage-conn--' + connCls + '"><div class="board-stage-conn-fill"></div></div>' : '') +
-              '</div>' +
-              '<div class="board-stage-label">' + escapeHtml(s.label) + '</div>' +
-              '<div class="board-stage-companies">' +
+                '<div class="board-stage-label">' + escapeHtml(s.label) + '</div>' +
+                '<div class="board-stage-companies">' +
                 matchesByStage[s.n].map((m) => {
                   const f = m.factories || {};
                   const name = f.name || "Factory";
@@ -1998,7 +2013,9 @@
                     '</div>'
                   );
                 }).join("") +
+                '</div>' +
               '</div>' +
+              (!isLast ? '<div class="board-stage-conn board-stage-conn--' + connCls + '"><div class="board-stage-conn-fill"></div></div>' : '') +
             '</div>'
           );
         }).join("") +
@@ -2008,11 +2025,12 @@
     content.innerHTML = titleHtml + knowledgeHtml + timelineHtml;
   }
 
-  /* ── Board rail (settings + logout) ── */
+  /* ── Board rail (logo + settings + logout) ── */
   let boardRailInited = false;
   function initBoardRail() {
     if (boardRailInited) return;
     boardRailInited = true;
+    $("board-rail-logo")?.addEventListener("click", () => setView("board"));
     $("board-rail-settings")?.addEventListener("click", () => setView("settings"));
     $("board-rail-logout")?.addEventListener("click", () => handleSignOut());
   }
@@ -2036,7 +2054,7 @@
       canvas.classList.add("board-canvas--panning");
       e.preventDefault();
     });
-    const PAN_MAX = 600;
+    const PAN_MAX = 150;
     window.addEventListener("mousemove", (e) => {
       if (!boardCanvasPan.dragging) return;
       boardCanvasPan.x = Math.max(-PAN_MAX, Math.min(PAN_MAX, boardCanvasPan.originX + (e.clientX - boardCanvasPan.startX)));
@@ -2101,8 +2119,8 @@
       const rect = canvas.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;
-      const factor = e.deltaY < 0 ? 1.08 : 0.93;
-      const newScale = Math.max(0.25, Math.min(3, boardCanvasPan.scale * factor));
+      const factor = e.deltaY < 0 ? 1.04 : 0.97;
+      const newScale = Math.max(0.8, Math.min(1.3, boardCanvasPan.scale * factor));
       // Adjust pan so zoom is centred on cursor
       boardCanvasPan.x = cx - (cx - boardCanvasPan.x) * (newScale / boardCanvasPan.scale);
       boardCanvasPan.y = cy - (cy - boardCanvasPan.y) * (newScale / boardCanvasPan.scale);
@@ -2111,7 +2129,7 @@
     }, { passive: false });
   }
 
-  /* ── Supi panel (always-on right panel) ── */
+  /* ── Supi panel (floating draggable window) ── */
   function initBoardSupiPanel() {
     if (boardSupiInited) return;
     boardSupiInited = true;
@@ -2119,8 +2137,6 @@
     const msgs = $("board-supi-messages");
     const inp = $("board-supi-input");
     const snd = $("board-supi-send");
-    const closeBtn = $("board-supi-close");
-    const tabBtn = $("board-supi-tab");
     const panel = $("board-supi-panel");
     const fileInput = $("board-supi-file");
 
@@ -2134,14 +2150,30 @@
       snd.addEventListener("click", sendBoardSupiMessage);
     }
 
-    closeBtn?.addEventListener("click", () => {
-      if (panel) panel.classList.add("board-supi-panel--closed");
-      if (tabBtn) tabBtn.classList.remove("board-supi-tab--hidden");
-    });
-    tabBtn?.addEventListener("click", () => {
-      if (panel) panel.classList.remove("board-supi-panel--closed");
-      if (tabBtn) tabBtn.classList.add("board-supi-tab--hidden");
-    });
+    // Drag-to-move — mousedown on header bar
+    const dragHandle = $("board-supi-drag");
+    if (dragHandle && panel) {
+      let dragStart = null;
+      let panelOrigin = null;
+      dragHandle.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        dragStart = { x: e.clientX, y: e.clientY };
+        const parentRect = panel.offsetParent ? panel.offsetParent.getBoundingClientRect() : { top: 0, left: 0 };
+        const rect = panel.getBoundingClientRect();
+        panelOrigin = { top: rect.top - parentRect.top, left: rect.left - parentRect.left };
+        e.preventDefault();
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!dragStart) return;
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+        panel.style.top = (panelOrigin.top + dy) + "px";
+        panel.style.left = (panelOrigin.left + dx) + "px";
+        panel.style.right = "auto";
+        panel.style.bottom = "auto";
+      });
+      window.addEventListener("mouseup", () => { dragStart = null; });
+    }
 
     if (fileInput) {
       fileInput.addEventListener("change", async (ev) => {
@@ -3378,6 +3410,22 @@
   async function loadSupplierDashboard() {
     if (!supabaseClient || !currentUser) return;
     setFormFlash("supplier-dash-flash", "", false);
+    // Wire theme toggle button on supplier dashboard
+    const supplierThemeBtn = $("supplier-theme-btn");
+    if (supplierThemeBtn && !supplierThemeBtn.dataset.wired) {
+      supplierThemeBtn.dataset.wired = "1";
+      const sync = () => {
+        const isDark = document.documentElement.dataset.theme === "dark";
+        supplierThemeBtn.title = isDark ? "Switch to light mode" : "Switch to dark mode";
+      };
+      sync();
+      supplierThemeBtn.addEventListener("click", () => {
+        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem("airsupTheme", next); } catch (_) {}
+        sync();
+      });
+    }
     const stats = $("supplier-stats");
     const briefs = $("supplier-briefs");
     const active = $("supplier-active");
@@ -3709,12 +3757,12 @@
           .map((f) => '<option value="' + escapeAttr(String(f.id)) + '">' + escapeHtml(f.name || "#" + f.id) + "</option>")
           .join("");
         right.innerHTML =
-          '<p class="admin-ws-h">Steps (Project \u2192 Contact \u2192 Sample)</p>' +
+          '<p class="admin-ws-h">Steps (Project \u2192 Contact \u2192 Connected)</p>' +
           '<div class="admin-step-btns">' +
           [1, 2, 3]
             .map(
               (n) => {
-                const lab = n === 1 ? "Project" : n === 2 ? "Contact" : "Sample";
+                const lab = n === 1 ? "Project" : n === 2 ? "Contact" : "Connected";
                 return (
                   '<button type="button" class="btn-outline btn-sm admin-step-btn" data-step="' +
                   n +
