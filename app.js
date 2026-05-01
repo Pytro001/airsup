@@ -2036,10 +2036,11 @@
       canvas.classList.add("board-canvas--panning");
       e.preventDefault();
     });
+    const PAN_MAX = 600;
     window.addEventListener("mousemove", (e) => {
       if (!boardCanvasPan.dragging) return;
-      boardCanvasPan.x = boardCanvasPan.originX + (e.clientX - boardCanvasPan.startX);
-      boardCanvasPan.y = boardCanvasPan.originY + (e.clientY - boardCanvasPan.startY);
+      boardCanvasPan.x = Math.max(-PAN_MAX, Math.min(PAN_MAX, boardCanvasPan.originX + (e.clientX - boardCanvasPan.startX)));
+      boardCanvasPan.y = Math.max(-PAN_MAX, Math.min(PAN_MAX, boardCanvasPan.originY + (e.clientY - boardCanvasPan.startY)));
       applyBoardTransform();
     });
     window.addEventListener("mouseup", () => {
@@ -2047,28 +2048,36 @@
       boardCanvasPan.dragging = false;
       canvas.classList.remove("board-canvas--panning");
     });
-    // Proximity dot glow (SuperGrok style)
+    // Proximity dot glow — subtle, smooth (lerped mouse)
     const dotCanvas = document.getElementById("board-dot-canvas");
     if (dotCanvas) {
-      const GRID = 22, RADIUS = 80, MAX_R = 4;
-      let mouseX = -999, mouseY = -999;
+      const GRID = 22, RADIUS = 70, MAX_R = 2.2;
+      let targetX = -999, targetY = -999, lerpX = -999, lerpY = -999;
       const ctx = dotCanvas.getContext("2d");
       const resize = () => { dotCanvas.width = canvas.offsetWidth; dotCanvas.height = canvas.offsetHeight; };
       resize();
       new ResizeObserver(resize).observe(canvas);
       const isDark = () => document.documentElement.dataset.theme === "dark";
       const render = () => {
+        // Smooth lerp toward real mouse (speed 0.14)
+        if (targetX > -900) {
+          lerpX += (targetX - lerpX) * 0.14;
+          lerpY += (targetY - lerpY) * 0.14;
+        } else {
+          lerpX += (-999 - lerpX) * 0.14;
+          lerpY += (-999 - lerpY) * 0.14;
+        }
         const w = dotCanvas.width, h = dotCanvas.height;
         ctx.clearRect(0, 0, w, h);
-        const startX = GRID - (GRID % GRID), startY = GRID - (GRID % GRID);
         const color = isDark() ? "255,255,255" : "0,0,0";
         for (let x = GRID / 2; x < w; x += GRID) {
           for (let y = GRID / 2; y < h; y += GRID) {
-            const dist = Math.sqrt((x - mouseX) ** 2 + (y - mouseY) ** 2);
+            const dist = Math.sqrt((x - lerpX) ** 2 + (y - lerpY) ** 2);
             if (dist > RADIUS) continue;
             const t = 1 - dist / RADIUS;
-            const r = 1 + (MAX_R - 1) * t * t;
-            const alpha = 0.08 + 0.55 * t * t;
+            const ease = t * t;          // quadratic — gentle falloff
+            const r = 1 + (MAX_R - 1) * ease;
+            const alpha = 0.06 + 0.28 * ease;   // max ~0.34, very subtle
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(" + color + "," + alpha + ")";
@@ -2079,10 +2088,10 @@
       };
       canvas.addEventListener("mousemove", (e) => {
         const rect = canvas.getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
+        targetX = e.clientX - rect.left;
+        targetY = e.clientY - rect.top;
       });
-      canvas.addEventListener("mouseleave", () => { mouseX = -999; mouseY = -999; });
+      canvas.addEventListener("mouseleave", () => { targetX = -999; targetY = -999; });
       render();
     }
 
@@ -2126,12 +2135,12 @@
     }
 
     closeBtn?.addEventListener("click", () => {
-      if (panel) panel.hidden = true;
-      if (tabBtn) tabBtn.hidden = false;
+      if (panel) panel.classList.add("board-supi-panel--closed");
+      if (tabBtn) tabBtn.classList.remove("board-supi-tab--hidden");
     });
     tabBtn?.addEventListener("click", () => {
-      if (panel) panel.hidden = false;
-      if (tabBtn) tabBtn.hidden = true;
+      if (panel) panel.classList.remove("board-supi-panel--closed");
+      if (tabBtn) tabBtn.classList.add("board-supi-tab--hidden");
     });
 
     if (fileInput) {
@@ -2262,15 +2271,21 @@
       return;
     }
 
-    // Normal mode — real Supi API
+    // Normal mode — real Supi AI (board_supi bypasses supi_manual gate)
     const thinking = document.createElement("div");
     thinking.className = "board-supi-system board-supi-thinking";
     thinking.textContent = "Supi is thinking...";
     if (msgs) { msgs.appendChild(thinking); msgs.scrollTop = msgs.scrollHeight; }
     try {
-      const data = await apiCall("/api/chat", { method: "POST", body: JSON.stringify({ message: text, supi_thread: true }) });
+      const body = { message: text, board_supi: true };
+      if (activeBoardProjectId) body.project_id = activeBoardProjectId;
+      const data = await apiCall("/api/chat", { method: "POST", body: JSON.stringify(body) });
       thinking.remove();
-      if (data && data.reply) appendSupiBubble(msgs, "assistant", data.reply);
+      if (data && data.reply) {
+        appendSupiBubble(msgs, "assistant", data.reply);
+      } else if (data && data.pending_human) {
+        appendSupiBubble(msgs, "system", "Message saved — Supi will reply soon.");
+      }
     } catch (_) {
       thinking.remove();
       appendSupiBubble(msgs, "system", "Could not reach Supi. Please try again.");

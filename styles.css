@@ -1611,6 +1611,10 @@ a.board-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md);
 .board-supi-contact-name { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
 .board-supi-contact-actions { display: flex; flex-wrap: wrap; gap: 4px; }
 
+/* Supi panel close/open via class */
+.board-supi-panel--closed { display: none !important; }
+.board-supi-tab--hidden { display: none !important; }
+
 /* Supi tab — thin right-edge button when panel is closed */
 .board-supi-tab {
   position: absolute; right: 0; top: 50%; transform: translateY(-50%);
@@ -1620,6 +1624,7 @@ a.board-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md);
   border-radius: 8px 0 0 8px; cursor: pointer; color: var(--text-muted);
   box-shadow: var(--shadow-sm); transition: color 0.15s, background 0.15s;
 }
+.board-supi-tab { display: none; }    /* hidden by default — shown via JS class removal */
 .board-supi-tab:hover { color: var(--text); background: var(--primary-light); }
 
 /* Interactive dot grid — JS drives --mx/--my via custom props for proximity glow */

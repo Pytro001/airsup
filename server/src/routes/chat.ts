@@ -89,10 +89,11 @@ chatRouter.post("/init", requireAuth, async (req: AuthRequest, res: Response) =>
 
 chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
   const userId = req.userId!;
-  const { message, project_id, supi_thread } = req.body as {
+  const { message, project_id, supi_thread, board_supi } = req.body as {
     message?: string;
     project_id?: string;
     supi_thread?: boolean;
+    board_supi?: boolean;
   };
 
   if (!message?.trim()) {
@@ -159,7 +160,8 @@ chatRouter.post("/", requireAuth, async (req: AuthRequest, res: Response) => {
       content: message.trim(),
     });
 
-    if (projectCoordination === "supi_manual") {
+    // board_supi: true bypasses the supi_manual gate so the AI always responds in the board chat
+    if (projectCoordination === "supi_manual" && board_supi !== true) {
       res.json({ reply: null, pending_human: true, options: null, action: null });
       return;
     }
