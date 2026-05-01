@@ -7,6 +7,7 @@ import { mergeSearchCriteriaFromSources } from "../lib/search-criteria.js";
 import { runJobPollOnce } from "../jobs/poll.js";
 import { ingestRegisteredProjectFile, ingestRawTextIntoProject, reingestPendingProjectFiles } from "../lib/project-brief-ingest.js";
 import { fetchChatShare, UnsupportedShareError, detectProvider } from "../lib/chat-share.js";
+import { runSourcingForProject } from "../agents/sourcing.js";
 import { seedSupiWelcome } from "../lib/supi-seed.js";
 import { insertProjectWithPipelineColumnsFallback } from "../lib/projects-pipeline-fallback.js";
 import { isMissingProjectsPipelineColumnError } from "../lib/soft-delete-errors.js";
@@ -363,4 +364,78 @@ projectsRouter.get("/:id", requireAuth, async (req: AuthRequest, res: Response) 
     return;
   }
   res.json({ project: data });
+});
+
+/**
+ * Save a free-text idea attached to a project.
+ * Stored as a `conversations` row with role='user' and metadata.kind='idea'.
+ * The buyer's board renders these as "knowledge" cards above the timeline.
+ */
+projectsRouter.post("/:id/idea", requireAuth, async (req: AuthRequest, res: Response) => {
+  const projectId = req.params.id;
+  const userId = req.userId!;
+  const text = String((req.body as { text?: unknown })?.text ?? "").trim();
+  if (!text) {
+    res.status(400).json({ error: "text is required" });
+    return;
+  }
+
+  const { data: project, error: pErr } = await supabaseAdmin
+    .from("projects")
+    .select("id, user_id")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  if (pErr || !project || project.user_id !== userId) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+
+  const { data: row, error: iErr } = await supabaseAdmin
+    .from("conversations")
+    .insert({
+      user_id: userId,
+      project_id: projectId,
+      role: "user",
+      content: text.slice(0, 4000),
+      metadata: { kind: "idea" },
+    })
+    .select("id, content, created_at, metadata")
+    .single();
+
+  if (iErr || !row) {
+    res.status(500).json({ error: iErr?.message || "Failed to save idea" });
+    return;
+  }
+  res.json({ idea: row });
+});
+
+/**
+ * Buyer-triggered sourcing run for their own project.
+ * Reuses the same platform-first → JD/Canton Fair Claude search pipeline
+ * as the admin endpoint. Candidates remain in `pending` status — admin still
+ * approves before they become real matches.
+ */
+projectsRouter.post("/:id/source", requireAuth, async (req: AuthRequest, res: Response) => {
+  const projectId = req.params.id;
+  const userId = req.userId!;
+  const force = !!(req.body as { force?: boolean })?.force;
+
+  const { data: project, error: pErr } = await supabaseAdmin
+    .from("projects")
+    .select("id, user_id")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  if (pErr || !project || project.user_id !== userId) {
+    res.status(404).json({ error: "Project not found" });
+    return;
+  }
+
+  try {
+    const result = await runSourcingForProject(projectId, { force });
+    res.json({ result });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Sourcing failed" });
+  }
 });

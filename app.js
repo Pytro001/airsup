@@ -815,9 +815,7 @@
     if (userRole === "supplier") {
       nav.innerHTML = '<button type="button" class="nav-link active" data-view="supplier-dashboard">Dashboard</button><button type="button" class="nav-link" data-view="supplier-profile">Factory profile</button>';
     } else {
-      nav.innerHTML =
-        '<button type="button" class="nav-link active" data-view="projects">Projects</button>' +
-        (CHAT_ENABLED ? '<button type="button" class="nav-link" data-view="chat">Chat</button>' : "");
+      nav.innerHTML = CHAT_ENABLED ? '<button type="button" class="nav-link" data-view="chat">Chat</button>' : "";
     }
     nav.querySelectorAll(".nav-link").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -849,7 +847,7 @@
       if (profile?.headline === "supplier") {
         userRole = "supplier"; buildNav(); setView("supplier-dashboard");
       } else if (profile?.company || profile?.headline) {
-        userRole = "startup"; buildNav(); setView("projects");
+        userRole = "startup"; buildNav(); setView("board");
       } else {
         // Logged in but onboarding not complete — stay in onboarding flow
         setView("onboarding");
@@ -887,6 +885,7 @@
     updateAuthUI();
 
     if (name === "chat" && CHAT_ENABLED) loadChatHistory();
+    if (name === "board") loadBoard();
     if (name === "projects") {
       loadProjects();
       if (userRole !== "supplier") void refreshConnectionsNavBadge();
@@ -1003,8 +1002,7 @@
           }
           if (result.importedProjectId) {
             latestProjectId = result.importedProjectId;
-            setView("projects");
-            await loadProjectDetail(result.importedProjectId);
+            setView("board");
             return;
           }
           {
@@ -1851,6 +1849,377 @@
       }).join("");
       container.querySelectorAll(".project-card").forEach((c) => c.addEventListener("click", () => { if (c.dataset.id) loadProjectDetail(c.dataset.id); }));
     } catch (_) { container.innerHTML = '<div class="projects-empty">Could not load projects.</div>'; }
+  }
+
+  /* ══════════════════════════════════════
+     BOARD (buyer canvas)
+     ══════════════════════════════════════ */
+  let activeBoardProjectId = null;
+
+  async function loadBoard() {
+    const content = $("board-canvas-content");
+    if (content) content.innerHTML = '<div class="board-loading">Loading…</div>';
+
+    let projectId = null;
+    try {
+      const latest = await apiCall("/api/projects/latest");
+      projectId = latest?.project?.id || null;
+    } catch (_) { /* ignore */ }
+
+    if (!projectId) {
+      activeBoardProjectId = null;
+      if (content) {
+        content.innerHTML =
+          '<div class="board-empty">' +
+            '<h2 class="board-empty-title">Drop your idea — I\'ll find the right factory.</h2>' +
+            '<p class="board-empty-sub">Upload a spec, paste a chat link, or just describe what you want to build. Use the prompt below.</p>' +
+          '</div>';
+      }
+      attachBoardPromptHandlers();
+      return;
+    }
+
+    activeBoardProjectId = projectId;
+
+    let project = null, files = [], conversations = [];
+    try {
+      const [pj, fl, hist] = await Promise.all([
+        apiCall("/api/projects/" + encodeURIComponent(projectId)),
+        apiCall("/api/projects/" + encodeURIComponent(projectId) + "/files"),
+        apiCall("/api/chat/history?project_id=" + encodeURIComponent(projectId)).catch(() => ({ messages: [] })),
+      ]);
+      project = pj?.project || pj;
+      files = (fl?.files) || [];
+      conversations = (hist?.messages) || [];
+    } catch (e) {
+      if (content) content.innerHTML = '<div class="board-empty"><p>Could not load your project.</p></div>';
+      return;
+    }
+
+    buildBoard(project || {}, files, conversations);
+    attachBoardPromptHandlers();
+    attachCompanyCardHandlers(content);
+  }
+
+  function buildBoard(project, files, conversations) {
+    const content = $("board-canvas-content");
+    if (!content) return;
+
+    const matches = Array.isArray(project.matches) ? project.matches : [];
+    const stage = Math.max(1, Math.min(3, Number(project.pipeline_step) || 1));
+    const stages = [
+      { n: 1, label: "Project" },
+      { n: 2, label: "Contact" },
+      { n: 3, label: "Sample" },
+    ];
+
+    const matchesByStage = { 1: [], 2: [], 3: [] };
+    for (const m of matches) {
+      const st = String(m.status || "pending");
+      let lane = 1;
+      if (st === "active" || st === "intro_sent") lane = 2;
+      else if (st === "in_production" || st === "completed") lane = 3;
+      matchesByStage[lane].push(m);
+    }
+
+    const knowledgeCards = [];
+    for (const f of files) {
+      knowledgeCards.push({
+        kind: "file",
+        title: f.filename || "File",
+        sub: f.bytes ? formatBytes(f.bytes) : "",
+        url: f.signed_url || "",
+      });
+    }
+    if (project.brief_source_url) {
+      knowledgeCards.push({
+        kind: "link",
+        title: "Imported brief",
+        sub: project.brief_source_type ? String(project.brief_source_type) : "share link",
+        url: project.brief_source_url,
+      });
+    }
+    for (const c of conversations) {
+      const md = c.metadata || {};
+      if (md && md.kind === "idea") {
+        knowledgeCards.push({
+          kind: "idea",
+          title: "Idea",
+          sub: (c.content || "").slice(0, 120),
+          url: "",
+        });
+      }
+    }
+
+    const knowledgeHtml = knowledgeCards.length
+      ? '<div class="board-knowledge-row">' +
+        knowledgeCards
+          .map((k) => {
+            const icon =
+              k.kind === "file" ? "📎" :
+              k.kind === "link" ? "🔗" :
+              "💡";
+            const inner =
+              '<div class="board-card-icon">' + icon + '</div>' +
+              '<div class="board-card-body">' +
+                '<div class="board-card-title">' + escapeHtml(k.title) + '</div>' +
+                (k.sub ? '<div class="board-card-sub">' + escapeHtml(k.sub) + '</div>' : '') +
+              '</div>';
+            return k.url
+              ? '<a class="board-card board-card--' + k.kind + '" href="' + escapeAttr(k.url) + '" target="_blank" rel="noopener">' + inner + '</a>'
+              : '<div class="board-card board-card--' + k.kind + '">' + inner + '</div>';
+          })
+          .join("") +
+        '</div>'
+      : '';
+
+    const timelineHtml =
+      '<div class="board-timeline">' +
+        '<div class="board-timeline-line" aria-hidden="true"></div>' +
+        stages
+          .map((s) => {
+            const cls = s.n < stage ? "done" : s.n === stage ? "active" : "todo";
+            return (
+              '<div class="board-stage board-stage--' + cls + '" data-stage="' + s.n + '">' +
+                '<div class="board-stage-dot">' + s.n + '</div>' +
+                '<div class="board-stage-label">' + escapeHtml(s.label) + '</div>' +
+                '<div class="board-stage-companies">' +
+                  matchesByStage[s.n]
+                    .map((m) => {
+                      const f = m.factories || {};
+                      const name = f.name || "Factory";
+                      const initial = name.charAt(0).toUpperCase();
+                      const status = String(m.status || "pending").replace(/_/g, " ");
+                      const contact = f.contact_info || {};
+                      const wa = normalizeWhatsappNumber(f.whatsapp_id || contact.whatsapp || "");
+                      const waLink = wa ? "https://wa.me/" + wa : "";
+                      const wechat = contact.wechat || contact.wechat_id || "";
+                      const canMessage = m.status === "active" || m.status === "intro_sent" || m.status === "in_production" || m.status === "completed";
+                      const actions = canMessage
+                        ? '<div class="board-company-actions">' +
+                            '<button type="button" class="board-mini-btn company-msg-btn" data-match-id="' + escapeAttr(m.id) + '">Message</button>' +
+                            (waLink ? '<a class="board-mini-btn" href="' + escapeAttr(waLink) + '" target="_blank" rel="noopener">WhatsApp</a>' : '') +
+                            (wechat ? '<button type="button" class="board-mini-btn company-wc-btn" data-wechat="' + escapeAttr(wechat) + '">WeChat</button>' : '') +
+                          '</div>'
+                        : '';
+                      return (
+                        '<div class="board-company" data-match-id="' + escapeAttr(m.id) + '">' +
+                          '<div class="board-company-row">' +
+                            '<div class="board-company-avatar">' + escapeHtml(initial) + '</div>' +
+                            '<div class="board-company-info">' +
+                              '<div class="board-company-name">' + escapeHtml(name) + '</div>' +
+                              '<div class="board-company-status">' + escapeHtml(status) + '</div>' +
+                            '</div>' +
+                          '</div>' +
+                          actions +
+                          '<div class="company-chat-panel" id="company-chat-' + escapeAttr(m.id) + '" hidden></div>' +
+                        '</div>'
+                      );
+                    })
+                    .join("") +
+                '</div>' +
+              '</div>'
+            );
+          })
+          .join("") +
+      '</div>';
+
+    const titleHtml = project.title
+      ? '<div class="board-title">' + escapeHtml(project.title) + '</div>'
+      : '';
+
+    content.innerHTML = titleHtml + knowledgeHtml + timelineHtml;
+  }
+
+  function setBoardFlash(text, isErr) {
+    const flash = $("board-prompt-flash");
+    if (!flash) return;
+    if (!text) { flash.hidden = true; flash.textContent = ""; return; }
+    flash.hidden = false;
+    flash.textContent = text;
+    flash.style.color = isErr ? "#d93025" : "";
+  }
+
+  let boardPromptWired = false;
+  function attachBoardPromptHandlers() {
+    if (boardPromptWired) return;
+    boardPromptWired = true;
+    const input = $("board-prompt-input");
+    const send = $("board-prompt-send");
+    const chipIdea = $("board-chip-idea");
+    const chipSource = $("board-chip-source");
+    const fileInput = $("board-file-input");
+
+    if (input && send) {
+      input.addEventListener("input", () => {
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 180) + "px";
+        send.disabled = !input.value.trim();
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (!send.disabled) saveBoardIdea();
+        }
+      });
+      send.addEventListener("click", saveBoardIdea);
+    }
+    if (chipIdea) chipIdea.addEventListener("click", saveBoardIdea);
+    if (chipSource) chipSource.addEventListener("click", runBoardSource);
+    if (fileInput) {
+      fileInput.addEventListener("change", async (ev) => {
+        const t = ev.target;
+        const raw = t && t.files && t.files.length ? Array.prototype.slice.call(t.files, 0) : [];
+        t.value = "";
+        if (!raw.length) return;
+        if (!activeBoardProjectId) {
+          setBoardFlash("Create a project first by saving an idea or pasting a chat link.", true);
+          return;
+        }
+        if (!(await ensureSession())) return;
+        setBoardFlash("Uploading…", false);
+        const up = await uploadFilesToProject(activeBoardProjectId, raw);
+        if (up.err) { setBoardFlash(up.err, true); return; }
+        try {
+          await apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/reingest-files", { method: "POST", body: "{}" });
+        } catch (_) {}
+        setBoardFlash("File added.", false);
+        loadBoard();
+      });
+    }
+
+    document.querySelectorAll("#board-rail .board-rail-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const k = btn.getAttribute("data-rail");
+        if (k === "settings") setView("settings");
+        else if (k === "supi") openBoardSupi();
+        else if (k === "home") closeBoardSlideover();
+      });
+    });
+    $("board-slideover-close")?.addEventListener("click", closeBoardSlideover);
+  }
+
+  async function saveBoardIdea() {
+    const input = $("board-prompt-input");
+    const text = ((input && input.value) || "").trim();
+    if (!text) return;
+    if (!(await ensureSession())) return;
+
+    if (!activeBoardProjectId) {
+      // No project yet — bootstrap one quietly using the idea as description.
+      setBoardFlash("Creating project…", false);
+      try {
+        const r = await apiCall("/api/projects/bootstrap", { method: "POST", body: "{}" });
+        activeBoardProjectId = r?.project?.id || null;
+        if (!activeBoardProjectId) throw new Error("Bootstrap failed");
+      } catch (e) {
+        setBoardFlash(e.message || "Could not start a project.", true);
+        return;
+      }
+    }
+
+    try {
+      await apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/idea", {
+        method: "POST",
+        body: JSON.stringify({ text }),
+      });
+      if (input) { input.value = ""; input.style.height = "auto"; }
+      const send = $("board-prompt-send"); if (send) send.disabled = true;
+      setBoardFlash("Idea saved.", false);
+      loadBoard();
+    } catch (e) {
+      setBoardFlash((e && e.message) || "Could not save idea.", true);
+    }
+  }
+
+  async function runBoardSource() {
+    if (!(await ensureSession())) return;
+    if (!activeBoardProjectId) {
+      setBoardFlash("Save an idea or upload a spec first so I have something to search for.", true);
+      return;
+    }
+    setBoardFlash("Searching for suppliers…", false);
+    try {
+      const r = await apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", {
+        method: "POST",
+        body: JSON.stringify({ force: false }),
+      });
+      const used = (r && r.result) || {};
+      let msg = "Sourcing started.";
+      if (used.reused_existing) msg = "Already searching — " + used.reused_existing + " candidate(s) pending review.";
+      else if (used.used_web_search) msg = "Web search complete — " + (used.candidate_count || 0) + " candidate(s) sent for review.";
+      else msg = "Platform match — " + (used.candidate_count || 0) + " candidate(s) sent for review.";
+      setBoardFlash(msg, false);
+    } catch (e) {
+      setBoardFlash((e && e.message) || "Sourcing failed.", true);
+    }
+  }
+
+  function openBoardSupi() {
+    const slide = $("board-slideover");
+    const body = $("board-slideover-body");
+    const title = $("board-slideover-title");
+    if (!slide || !body) return;
+    if (title) title.textContent = "Supi";
+    slide.hidden = false;
+    body.innerHTML =
+      '<div class="board-supi-messages" id="board-supi-messages"><div class="chat-status">Loading…</div></div>' +
+      '<div class="board-supi-composer">' +
+        '<textarea class="composer-input board-supi-input" id="board-supi-input" rows="1" placeholder="Message Supi…"></textarea>' +
+        '<button type="button" class="btn-primary btn-sm" id="board-supi-send">Send</button>' +
+      '</div>';
+    const msgs = $("board-supi-messages");
+    const inp = $("board-supi-input");
+    const snd = $("board-supi-send");
+
+    (async () => {
+      try {
+        const data = await apiCall("/api/chat/history?supi_thread=1");
+        msgs.innerHTML = "";
+        const list = data.messages || [];
+        if (!list.length) {
+          appendChatLine(msgs, "assistant", "Got any questions about your project or the platform? I’m here to help.", { supi: true });
+        } else {
+          list.forEach((m) => appendChatLine(msgs, m.role, m.content, m.metadata));
+        }
+        msgs.scrollTop = msgs.scrollHeight;
+      } catch (_) {
+        msgs.innerHTML = '<div class="chat-status">Could not load messages.</div>';
+      }
+    })();
+
+    const sendNow = async () => {
+      const text = ((inp && inp.value) || "").trim();
+      if (!text) return;
+      inp.value = "";
+      const div = document.createElement("div");
+      div.className = "chat-bubble chat-bubble--user";
+      div.textContent = text;
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      try {
+        const data = await apiCall("/api/chat", {
+          method: "POST",
+          body: JSON.stringify({ message: text, supi_thread: true }),
+        });
+        if (data && data.reply) {
+          appendChatLine(msgs, "assistant", data.reply, { ...(data.metadata || {}), supi: true });
+          msgs.scrollTop = msgs.scrollHeight;
+        }
+      } catch (_) {
+        const err = document.createElement("div");
+        err.className = "chat-status";
+        err.textContent = "Failed to send.";
+        msgs.appendChild(err);
+      }
+    };
+    if (snd) snd.addEventListener("click", sendNow);
+    if (inp) inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendNow(); } });
+  }
+
+  function closeBoardSlideover() {
+    const slide = $("board-slideover");
+    if (slide) slide.hidden = true;
   }
 
   async function loadProjectDetail(id) {
@@ -3381,6 +3750,15 @@
                   '<button type="button" class="btn-outline btn-sm admin-sourcing-reject" data-cand-id="' + escapeAttr(c.id) + '">Reject</button>' +
                   "</div>"
                 : "";
+            const raw = (c.raw && typeof c.raw === "object") ? c.raw : {};
+            const waNum = normalizeWhatsappNumber(raw.whatsapp || "");
+            const waLink = waNum ? "https://wa.me/" + waNum : "";
+            const phone = raw.phone || "";
+            const wechat = raw.wechat || "";
+            const contactHtml =
+              (waLink ? '<a class="admin-sourcing-wa" href="' + escapeAttr(waLink) + '" target="_blank" rel="noopener">💬 WhatsApp ' + escapeHtml(raw.whatsapp) + '</a>' : '') +
+              (!waLink && phone ? '<span class="admin-sourcing-phone">📞 ' + escapeHtml(phone) + '</span>' : '') +
+              (wechat ? '<span class="admin-sourcing-wechat">WeChat: ' + escapeHtml(wechat) + '</span>' : '');
             return (
               '<div class="admin-sourcing-card">' +
                 '<div class="admin-sourcing-row">' +
@@ -3390,6 +3768,7 @@
                 "</div>" +
                 (c.supplier_location ? '<div class="admin-sourcing-loc">' + escapeHtml(c.supplier_location) + "</div>" : "") +
                 (c.reasoning ? '<div class="admin-sourcing-reason">' + escapeHtml(c.reasoning) + "</div>" : "") +
+                (contactHtml ? '<div class="admin-sourcing-contact">' + contactHtml + "</div>" : "") +
                 linkHtml +
                 actions +
               "</div>"
@@ -3902,7 +4281,7 @@
       return;
     }
     // Fully onboarded → go to their dashboard
-    setView(userRole === "supplier" ? "supplier-dashboard" : "projects");
+    setView(userRole === "supplier" ? "supplier-dashboard" : "board");
   });
   $("user-menu-trigger")?.addEventListener("click", () => { const dd = $("user-menu-dropdown"); if (dd) dd.hidden = !dd.hidden; });
   document.addEventListener("click", (e) => { const dd = $("user-menu-dropdown"); if (dd && !dd.hidden && !e.target.closest("#user-menu-trigger") && !e.target.closest("#user-menu-dropdown")) dd.hidden = true; });

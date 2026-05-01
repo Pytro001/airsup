@@ -35,6 +35,9 @@ type WebHit = {
   supplier_url: string;
   supplier_location?: string;
   reasoning: string;
+  whatsapp?: string;
+  phone?: string;
+  wechat?: string;
 };
 
 const PLATFORM_LIMIT = 8;
@@ -118,10 +121,20 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
     "You are a manufacturing sourcing scout. You find Chinese factories that can produce a buyer's spec. " +
     "You ONLY search on JD.com and CantonFair (cantonfair.org.cn / cantonfair.net). " +
     "After searching, return up to 6 distinct supplier candidates. " +
-    "For each, include: source (jd or cantonfair), supplier_name, supplier_url (the listing or company page), " +
-    "supplier_location (city/province if visible), and reasoning (1-2 sentences explaining why this supplier fits the buyer's spec). " +
-    "Do NOT invent URLs. If you cannot find suppliers, return an empty array.\n\n" +
-    "Respond ONLY as a JSON array of objects with keys: source, supplier_name, supplier_url, supplier_location, reasoning. No prose.";
+    "For each supplier, visit their listing or company page and extract ALL of the following if visible:\n" +
+    "  - source: 'jd' or 'cantonfair'\n" +
+    "  - supplier_name: company name\n" +
+    "  - supplier_url: the listing or company page URL\n" +
+    "  - supplier_location: city/province\n" +
+    "  - reasoning: 1-2 sentences explaining why this supplier fits the buyer spec\n" +
+    "  - whatsapp: WhatsApp number in international format (e.g. +8613812345678) if listed on the page\n" +
+    "  - phone: phone number in international format if listed and no WhatsApp\n" +
+    "  - wechat: WeChat ID if listed\n\n" +
+    "JD.com store pages often show contact numbers under '联系方式' or '客服'. " +
+    "CantonFair exhibitor pages typically list WhatsApp/phone in the contact section. " +
+    "Always try to find a contact number — it dramatically increases the buyer's ability to reach the factory. " +
+    "Do NOT invent URLs or contact numbers. Omit fields you cannot confirm. If you cannot find any suppliers, return an empty array.\n\n" +
+    "Respond ONLY as a JSON array of objects. No prose.";
 
   const user =
     `Project: ${project.title || "(untitled)"}\n` +
@@ -135,13 +148,13 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
     const webSearchTool = {
       type: "web_search_20250305",
       name: "web_search",
-      max_uses: 5,
+      max_uses: 12,
       allowed_domains: ["jd.com", "cantonfair.org.cn", "cantonfair.net"],
     } as unknown;
 
     const response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 4000,
+      max_tokens: 6000,
       system,
       tools: [webSearchTool] as Parameters<typeof anthropic.messages.create>[0]["tools"],
       messages: [{ role: "user", content: user }],
@@ -168,12 +181,20 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
       const name = String(r.supplier_name || "").trim();
       const url = String(r.supplier_url || "").trim();
       if (!name || !url) continue;
+
+      const whatsapp = typeof r.whatsapp === "string" ? r.whatsapp.replace(/[^\d+]/g, "").slice(0, 20) : undefined;
+      const phone = typeof r.phone === "string" ? r.phone.replace(/[^\d+\- ()]/g, "").slice(0, 30) : undefined;
+      const wechat = typeof r.wechat === "string" ? r.wechat.trim().slice(0, 80) : undefined;
+
       out.push({
         source,
         supplier_name: name.slice(0, 200),
         supplier_url: url.slice(0, 600),
         supplier_location: typeof r.supplier_location === "string" ? r.supplier_location.slice(0, 120) : undefined,
         reasoning: typeof r.reasoning === "string" ? r.reasoning.slice(0, 800) : "",
+        whatsapp: whatsapp || undefined,
+        phone: phone || undefined,
+        wechat: wechat || undefined,
       });
     }
     return out;
@@ -262,7 +283,11 @@ export async function runSourcingForProject(projectId: string, opts: { force?: b
     supplier_name: h.supplier_name,
     supplier_location: h.supplier_location || null,
     reasoning: h.reasoning,
-    raw: {},
+    raw: {
+      ...(h.whatsapp ? { whatsapp: h.whatsapp } : {}),
+      ...(h.phone ? { phone: h.phone } : {}),
+      ...(h.wechat ? { wechat: h.wechat } : {}),
+    },
     status: "pending" as const,
   }));
 
@@ -298,6 +323,7 @@ export async function approveSourcingCandidate(candidateId: string): Promise<{ m
   let factoryId = cand.factory_id as number | null;
 
   if (!factoryId) {
+    const rawData = (cand.raw && typeof cand.raw === "object") ? cand.raw as Record<string, unknown> : {};
     const inserted = await supabaseAdmin
       .from("factories")
       .insert({
@@ -305,7 +331,14 @@ export async function approveSourcingCandidate(candidateId: string): Promise<{ m
         location: cand.supplier_location || "",
         category: "",
         capabilities: {},
-        contact_info: { source: cand.source, source_url: cand.supplier_url },
+        contact_info: {
+          source: cand.source,
+          source_url: cand.supplier_url,
+          ...(rawData.whatsapp ? { whatsapp: rawData.whatsapp } : {}),
+          ...(rawData.phone ? { phone: rawData.phone } : {}),
+          ...(rawData.wechat ? { wechat: rawData.wechat } : {}),
+        },
+        ...(rawData.whatsapp ? { whatsapp_id: rawData.whatsapp } : {}),
         active: false,
       })
       .select("id")
