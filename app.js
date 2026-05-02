@@ -806,9 +806,9 @@
     if (loggedIn && avatarEl) avatarEl.textContent = (currentUser.displayName || "?").charAt(0).toUpperCase();
     const nav = $("header-nav");
     if (nav) nav.style.display = (loggedIn && !inOnboarding) ? "" : "none";
-    // Hide header entirely for buyers (they use the board rail)
+    // Hide header on the board only (buyers use the rail there); show it on all other views so logo is reachable
     const header = $("site-header");
-    if (header) header.hidden = isBuyer && loggedIn && !inOnboarding;
+    if (header) header.hidden = isBuyer && loggedIn && !inOnboarding && currentView === "board";
   }
 
   function buildNav() {
