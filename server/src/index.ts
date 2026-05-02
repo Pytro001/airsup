@@ -16,6 +16,7 @@ import { factoriesRouter } from "./routes/factories.js";
 import { profileRouter } from "./routes/profile.js";
 import { intakeImportRouter } from "./routes/intake-import.js";
 import { placesRouter } from "./routes/places.js";
+import { notifyRouter } from "./routes/notify.js";
 import { startWorker } from "./jobs/worker.js";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/factories", factoriesRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/intake", intakeImportRouter);
+app.use("/api/notify", notifyRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 

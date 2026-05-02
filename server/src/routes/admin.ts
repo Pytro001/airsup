@@ -18,6 +18,7 @@ type ProfileForAdmin = {
   headline: string | null;
   role: string | null;
   location: string | null;
+  phone: string | null;
   created_at: string;
   deleted_at?: string | null;
 };
@@ -125,13 +126,13 @@ adminRouter.get("/overview", async (_req, res: Response) => {
     {
       const r1 = await supabaseAdmin
         .from("profiles")
-        .select("id, display_name, company, headline, role, location, created_at, deleted_at")
+        .select("id, display_name, company, headline, role, location, phone, created_at, deleted_at")
         .order("created_at", { ascending: false })
         .limit(500);
       if (r1.error) {
         const r2 = await supabaseAdmin
           .from("profiles")
-          .select("id, display_name, company, headline, role, location, created_at")
+          .select("id, display_name, company, headline, role, location, phone, created_at")
           .order("created_at", { ascending: false })
           .limit(500);
         if (r2.error) {
@@ -223,6 +224,7 @@ adminRouter.get("/overview", async (_req, res: Response) => {
           company: companyByUser.get(p.id)?.name || p.company || "",
           company_description: companyByUser.get(p.id)?.description || "",
           location: p.location || companyByUser.get(p.id)?.location || "",
+          phone: p.phone || "",
           created_at: p.created_at,
           project_count: myProjects.length,
           project_titles: myProjects.map((pr) => pr.title).slice(0, 6),

@@ -401,7 +401,7 @@
     </div>
 
     <div class="lp-login" id="lp-login-section" style="display:none;">
-      <p class="lp-login-label" style="margin-bottom:6px;">Login phone number</p>
+      <p class="lp-login-label" style="margin-bottom:6px;">Admin login</p>
       <div class="lp-login-row lp-phone-row">
         <select class="lp-email-input lp-phone-cc" id="lp-phone-cc" aria-label="Country code"></select>
         <input type="text" class="lp-email-input lp-phone-local" id="lp-phone-local" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" placeholder="Digits only" />
@@ -559,34 +559,17 @@
         : "";
       const pin   = passwordInput.value;
       if (!phone || phone.replace(/[^0-9]/g, "").length < 7) { showMsg("Enter a valid phone number with country code.", true); return; }
-      if (!pin || pin.length < 6) { showMsg("Password must be at least 6 characters.", true); return; }
+      if (!pin || pin.length < 6) { showMsg("This login is for admins only. Enter your admin password.", true); return; }
       if (!sb) { showMsg("Not configured.", true); return; }
       sendBtn.disabled = true;
       sendBtn.textContent = "Signing in…";
       const fakeEmail = phoneToFakeEmail(phone);
 
-      // Try sign in first
       const { data: siData, error: siErr } = await sb.auth.signInWithPassword({ email: fakeEmail, password: pin });
       if (!siErr && siData?.session) { window.location.href = "/workspace"; return; }
 
-      // If wrong credentials (user exists but wrong password)
-      const notFound = siErr?.message?.toLowerCase().includes("invalid") || siErr?.message?.toLowerCase().includes("credentials");
-      if (!notFound) {
-        sendBtn.disabled = false; sendBtn.textContent = "Login";
-        showMsg(formatPhoneLoginAuthError(siErr) || "Login failed.", true); return;
-      }
-
-      // Try sign up (new user)
-      const { data: suData, error: suErr } = await sb.auth.signUp({ email: fakeEmail, password: pin, options: { data: { phone } } });
-      if (suErr) {
-        sendBtn.disabled = false; sendBtn.textContent = "Login";
-        showMsg(formatPhoneLoginAuthError(suErr) || "Could not create account.", true); return;
-      }
-      if (suData?.session) { window.location.href = "/workspace"; return; }
-
-      // signUp succeeded but email confirmation is ON — instruct to disable it
       sendBtn.disabled = false; sendBtn.textContent = "Login";
-      showMsg("Almost there! Disable 'Email confirmations' in Supabase Auth settings, then try again.", true);
+      showMsg(formatPhoneLoginAuthError(siErr) || "Login failed.", true);
     }
 
     sendBtn.addEventListener("click", doLogin);

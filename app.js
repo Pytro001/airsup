@@ -907,6 +907,22 @@
       closeAdminWorkspace();
       loadAdminOverview();
     }
+    if (name === "thankyou") loadThankyou();
+  }
+
+  function loadThankyou() {
+    const isSupplier = userRole === "supplier";
+    const root = $("thankyou-root");
+    if (!root) return;
+    root.innerHTML = `
+      <div class="thankyou-card">
+        <img src="assets/brand/logo-air-sup.png" alt="Airsup" class="thankyou-logo" />
+        <h1 class="thankyou-title">${isSupplier ? "You’re all set." : "We’re on it."}</h1>
+        <p class="thankyou-sub">${isSupplier
+          ? "Supi will reach out on WhatsApp when we have a project match for you. No need to check back — we’ll come to you."
+          : "Supi is already searching for the best factories. You’ll get a WhatsApp message with first contacts in 2–5 hours."}</p>
+        <p class="thankyou-hint">You can close this tab.</p>
+      </div>`;
   }
 
   /* ══════════════════════════════════════
@@ -924,7 +940,6 @@
         { key: "fullName", label: "Full name", required: true },
         { key: "phone", label: "Phone / WhatsApp", type: "phone", required: true },
       ] },
-    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Set a password to log in on the home page with the phone number you entered in the last step. You can change it later in Settings." },
   ];
 
   const SUPPLIER_STEPS = [
@@ -946,7 +961,6 @@
       fields: [
         { key: "whatsapp1", label: "Phone / WhatsApp", type: "phone", required: true },
       ] },
-    { id: "signin", type: "pin", title: "Set your home-page sign-in", sub: "Set a password to log in on the home page with the phone number you entered in the last step. You can change it later in Settings." },
   ];
 
   function getSteps() { return onboardData.role === "supplier" ? SUPPLIER_STEPS : STARTUP_STEPS; }
@@ -999,34 +1013,24 @@
         const goBtn = $("onboard-go");
         var prev = goBtn && goBtn.textContent;
         try {
-          if (goBtn) { goBtn.disabled = true; goBtn.textContent = isSupplier ? "Loading\u2026" : "Preparing your project\u2026"; }
+          if (goBtn) { goBtn.disabled = true; goBtn.textContent = "Saving\u2026"; }
           const result = await saveOnboardingToSupabase() || {};
           userRole = isSupplier ? "supplier" : "startup";
           buildNav();
-          if (isSupplier) {
-            setView("supplier-dashboard");
-            return;
+          // Auto-register phone+UUID password so user can log back in via landing page
+          const autoPhone = isSupplier ? (onboardData.whatsapp1 || onboardData.phone || "").trim() : (onboardData.phone || "").trim();
+          if (autoPhone) {
+            const autoPass = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+            await applyPhonePinSignIn(autoPhone, autoPass, autoPass).catch(() => {});
           }
-          if (result.importedProjectId) {
-            latestProjectId = result.importedProjectId;
-            setView("board");
-            return;
+          // Send welcome WhatsApp
+          const waPhone = isSupplier ? (onboardData.whatsapp1 || onboardData.phone || "").trim() : (onboardData.phone || "").trim();
+          const waName = (onboardData.fullName || onboardData.companyName || "").trim();
+          if (waPhone) {
+            apiCall("/api/notify/welcome", { method: "POST", body: JSON.stringify({ phone: waPhone, name: waName, role: isSupplier ? "supplier" : "customer" }) }).catch(() => {});
           }
-          {
-            const steps = getSteps();
-            var bi2 = -1;
-            for (var sj = 0; sj < steps.length; sj++) {
-              if (steps[sj].id === "brief") {
-                bi2 = sj;
-                break;
-              }
-            }
-            if (bi2 >= 0) {
-              onboardData._briefReturnHint = "Context needed. Add a link, paste, or a file.";
-              onboardStep = bi2 + 1;
-              renderOnboardStep();
-            }
-          }
+          if (result.importedProjectId) latestProjectId = result.importedProjectId;
+          setView("thankyou");
         } catch (err) {
           {
             const steps = getSteps();
@@ -1051,77 +1055,6 @@
     }
 
     const step = steps[stepIdx];
-    if (step.type === "pin") {
-      const isSupplier = onboardData.role === "supplier";
-      var phoneRowHtml = "";
-      var pinH =
-        '<div class="onboard-question"><h1 class="onboard-title">' +
-        step.title +
-        "</h1>" +
-        (step.sub ? '<p class="onboard-sub">' + step.sub + "</p>" : "") +
-        '<div class="onboard-form">' +
-        phoneRowHtml +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin">Password (min. 6 characters)</label>' +
-        '<div class="password-input-wrap">' +
-        '<input class="onboard-input" type="password" id="onboard-pin" minlength="6" maxlength="64" autocomplete="new-password" required />' +
-        passwordToggleButtonHtml("onboard-pin") +
-        "</div></div>" +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-pin2">Confirm password</label>' +
-        '<div class="password-input-wrap">' +
-        '<input class="onboard-input" type="password" id="onboard-pin2" minlength="6" maxlength="64" autocomplete="new-password" required />' +
-        passwordToggleButtonHtml("onboard-pin2") +
-        "</div></div>" +
-        "</div>" +
-        '<p class="onboard-field-error" id="onboard-pin-error" role="status" hidden></p>' +
-        '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
-        '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
-      stage.innerHTML = pinH;
-      var pinErrClear = function () { setOnboardLineError("onboard-pin-error", ""); };
-      ["onboard-pin", "onboard-pin2"].forEach(function (iid) {
-        document.getElementById(iid)?.addEventListener("input", pinErrClear);
-      });
-      $("onboard-next")?.addEventListener("click", async function () {
-        if (!(await ensureSession())) return;
-        setOnboardLineError("onboard-pin-error", "");
-        var a = isSupplier
-          ? (onboardData.whatsapp1 || "").trim()
-          : (onboardData.phone || "").trim();
-        if (!a) {
-          setOnboardLineError("onboard-pin-error", "Add your phone number in the previous step, or go back to enter it.");
-          return;
-        }
-        const b = ($("onboard-pin") && ($("onboard-pin").value)) || "";
-        const c = ($("onboard-pin2") && ($("onboard-pin2").value)) || "";
-        const nextBtn = $("onboard-next");
-        var prevT = nextBtn && nextBtn.textContent;
-        try {
-          if (nextBtn) { nextBtn.disabled = true; if (nextBtn) nextBtn.textContent = "Saving\u2026"; }
-          const r = await applyPhonePinSignIn(a, b, c);
-          if (r.error) {
-            setOnboardLineError("onboard-pin-error", r.error);
-            return;
-          }
-          if (isSupplier) {
-            onboardData.phone = (a || "").trim();
-          }
-          onboardStep++;
-          renderOnboardStep();
-        } finally {
-          if (nextBtn) { nextBtn.disabled = false; if (prevT) nextBtn.textContent = prevT; }
-        }
-      });
-      $("onboard-back")?.addEventListener("click", function () {
-        onboardStep--;
-        renderOnboardStep();
-      });
-      setTimeout(
-        function () {
-          $("onboard-pin") && ($("onboard-pin").focus());
-        },
-        100
-      );
-      return;
-    }
     if (step.type === "brief") {
       var nf = onboardingProjectFiles.length;
       var fileBtnLabel =
@@ -3989,7 +3922,8 @@
 
     const renderCustomerCard = (c) => {
       const title = escapeHtml(c.company || c.display_name || "Unnamed customer");
-      const sub = [c.location, c.display_name && c.display_name !== c.company ? c.display_name : ""].filter(Boolean).join(" · ");
+      const namePart = c.display_name && c.display_name !== c.company ? escapeHtml(c.display_name) : "";
+      const sub = [c.location, namePart].filter(Boolean).join(" · ");
       const desc = c.company_description ? String(c.company_description).slice(0, 220) : (c.project_titles || []).slice(0, 2).join(" · ");
       const badge = c.connected
         ? `<span class="project-card-badge badge--accepted">Connected</span>`
@@ -4007,10 +3941,12 @@
               )
               .join("")}</div>`
           : "";
+      const phoneHtml = c.phone ? `<div class="admin-contact-phone"><a href="https://wa.me/${encodeURIComponent(c.phone.replace(/[^0-9]/g, ""))}" target="_blank" rel="noopener" class="admin-wa-link">&#128241; ${escapeHtml(c.phone)}</a></div>` : "";
       return `<div class="project-card" style="position:relative;">
         <button class="admin-delete-btn" data-type="customer" data-id="${escapeAttr(c.id)}" title="Move to bin">&#128465;</button>
         <div class="project-card-title">${title}</div>
-        ${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}
+        ${sub ? `<div class="project-card-sub">${sub}</div>` : ""}
+        ${phoneHtml}
         <div class="project-card-desc">${escapeHtml(desc || "No description")}</div>
         ${chips}
         <div class="project-card-meta">${badge}${meta}</div>
