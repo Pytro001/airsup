@@ -1360,6 +1360,12 @@ html[data-theme="dark"] .composer-inner:focus-within {
   overflow-y: auto;
 }
 .admin-ws-buyer { font-size: 14px; font-weight: 600; margin: 0 0 12px; color: var(--text); }
+.admin-customer-card {}
+.admin-info-row { display: flex; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--border-light); font-size: 13px; }
+.admin-info-row:last-child { border-bottom: none; }
+.admin-info-label { flex: 0 0 74px; color: var(--text-muted); font-size: 12px; padding-top: 1px; }
+.admin-info-val { flex: 1; color: var(--text); word-break: break-word; }
+.project-brief-text { white-space: pre-wrap; font-size: 13px; color: var(--text-muted); line-height: 1.5; max-height: 200px; overflow-y: auto; }
 .admin-ws-messages {
   min-height: 200px;
   max-height: 55vh;

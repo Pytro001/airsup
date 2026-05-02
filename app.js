@@ -3575,20 +3575,46 @@
 
       if (head) head.textContent = (data.project && data.project.title) ? String(data.project.title).slice(0, 80) : "Project";
 
-      const buyerPhone = (data.buyer_profile && data.buyer_profile.phone) ? data.buyer_profile.phone : "";
-      const buyerLine = data.buyer_profile
-        ? "<p class=\"admin-ws-buyer\">" +
-          escapeHtml(data.buyer_profile.display_name || "") +
-          (data.company && data.company.name ? " · " + escapeHtml(data.company.name) : "") +
-          (buyerPhone ? " · <a href=\"https://wa.me/" + encodeURIComponent(buyerPhone.replace(/[^0-9]/g,"")) + "\" target=\"_blank\" rel=\"noopener\" class=\"admin-wa-link\">" + escapeHtml(buyerPhone) + "</a>" : "") +
-          "</p>"
+      const bp = data.buyer_profile || {};
+      const buyerPhone = bp.phone || "";
+      const waDigits = buyerPhone.replace(/[^0-9]/g, "");
+      const waLink = waDigits
+        ? "<a href=\"https://wa.me/" + encodeURIComponent(waDigits) + "\" target=\"_blank\" rel=\"noopener\" class=\"admin-wa-link\">" + escapeHtml(buyerPhone) + "</a>"
+        : "";
+      const createdAt = bp.created_at ? new Date(bp.created_at).toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" }) : "";
+
+      function infoRow(label, val) {
+        if (!val) return "";
+        return "<div class=\"admin-info-row\"><span class=\"admin-info-label\">" + escapeHtml(label) + "</span><span class=\"admin-info-val\">" + val + "</span></div>";
+      }
+
+      const customerCard =
+        "<section class=\"project-detail-section admin-customer-card\">" +
+        "<h3 class=\"project-detail-h\">Customer</h3>" +
+        infoRow("Name", escapeHtml(bp.display_name || "")) +
+        infoRow("Company", escapeHtml((data.company && data.company.name) || bp.company || "")) +
+        infoRow("Location", escapeHtml(bp.location || "")) +
+        infoRow("WhatsApp", waLink) +
+        infoRow("Signed up", escapeHtml(createdAt)) +
+        "</section>";
+
+      const proj = data.project || {};
+      const briefDesc = (proj.description && String(proj.description).trim()) ? String(proj.description).trim() : "";
+      const briefUrl = proj.brief_source_url ? String(proj.brief_source_url).trim() : "";
+      const briefCard = (briefDesc || briefUrl)
+        ? "<section class=\"project-detail-section\">" +
+          "<h3 class=\"project-detail-h\">Brief</h3>" +
+          (briefUrl ? "<p class=\"project-detail-p\"><a href=\"" + escapeAttr(briefUrl) + "\" target=\"_blank\" rel=\"noopener\">" + escapeHtml(briefUrl.replace(/^https?:\/\//, "").slice(0, 60)) + "</a></p>" : "") +
+          (briefDesc ? "<p class=\"project-detail-p project-brief-text\">" + escapeHtml(briefDesc) + "</p>" : "") +
+          "</section>"
         : "";
 
       if (left) {
         left.innerHTML =
-          (buyerLine || "") +
-          buildRequirementsSection(data.project.requirements || {}) +
-          buildAiSummarySection(data.project.ai_summary || {}, data.project.requirements || {}) +
+          customerCard +
+          briefCard +
+          buildRequirementsSection(proj.requirements || {}) +
+          buildAiSummarySection(proj.ai_summary || {}, proj.requirements || {}) +
           buildMatchesSection(data.matches || []) +
           buildFilesSection(data.files || []);
       }
