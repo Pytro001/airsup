@@ -392,24 +392,6 @@
       </a>
     </div>
 
-    <div class="lp-login" id="lp-login-section" style="display:none;">
-      <p class="lp-login-label" style="margin-bottom:6px;">Admin login</p>
-      <div class="lp-login-row lp-phone-row">
-        <select class="lp-email-input lp-phone-cc" id="lp-phone-cc" aria-label="Country code"></select>
-        <input type="text" class="lp-email-input lp-phone-local" id="lp-phone-local" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" placeholder="Digits only" />
-      </div>
-      <div class="lp-login-row lp-password-row" style="margin-top:8px;">
-        <div class="lp-password-wrap password-input-wrap">
-          <input type="password" class="lp-email-input" id="lp-password" placeholder="Password (6+)" minlength="6" maxlength="64" autocomplete="current-password" />
-          <button type="button" class="btn-password-toggle" data-password-for="lp-password" aria-label="Show password" aria-pressed="false" tabindex="0">
-            <span class="btn-password-toggle__show" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
-            <span class="btn-password-toggle__hide" hidden aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 3-4.5M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
-          </button>
-        </div>
-        <button type="button" class="lp-email-btn" id="lp-send-btn">Login</button>
-      </div>
-      <p class="lp-login-msg" id="lp-login-msg"></p>
-    </div>
   </main>
 
   </div>
@@ -427,91 +409,8 @@
     </div>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="config.js"></script>
-  <script src="assets/phone-dial.js"></script>
-  <script src="assets/password-toggles.js"></script>
   <script>
     document.getElementById("lp-year").textContent = new Date().getFullYear();
-
-    const cfg = window.AIRSUP_CONFIG || {};
-    const sb = cfg.supabaseUrl && cfg.supabaseAnonKey
-      ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            storage: window.localStorage,
-            detectSessionInUrl: true,
-          },
-        })
-      : null;
-
-    // No auto-redirect — buyers and suppliers use WhatsApp, not the web app.
-
-    // Login section hidden — no toggle (admin uses /admin path directly)
-
-    // Phone + password login (digits + country code → fake email).
-    const phoneCc = document.getElementById("lp-phone-cc");
-    const phoneLocal = document.getElementById("lp-phone-local");
-    if (phoneCc && window.AIRSUP_PHONE) {
-      phoneCc.innerHTML = window.AIRSUP_PHONE.dialCodeOptionsHtml("49");
-    }
-    window.AIRSUP_PHONE?.wirePhoneLocalInput(phoneLocal);
-    const passwordInput = document.getElementById("lp-password");
-    const sendBtn    = document.getElementById("lp-send-btn");
-    const msgEl      = document.getElementById("lp-login-msg");
-
-    function showMsg(text, isError) {
-      msgEl.textContent = text;
-      msgEl.style.display = "block";
-      msgEl.className = "lp-login-msg" + (isError ? " lp-login-msg--error" : "");
-    }
-
-    /**
-     * Phone login still goes through Supabase "email" auth with a technical address
-     * (digits@login.airsup). If the Email provider is disabled, Supabase returns errors about
-     * email even though the user entered only a number.
-     */
-    function formatPhoneLoginAuthError(err) {
-      var m = (err && err.message) || "Login failed.";
-      var low = m.toLowerCase();
-      if (
-        low.indexOf("email") !== -1 &&
-        (low.indexOf("disabled") !== -1 || low.indexOf("not enabled") !== -1 || low.indexOf("provider") !== -1)
-      ) {
-        return "Phone sign-in must have Authentication \u2192 Providers \u2192 Email enabled in the Supabase dashboard. The app only asks for your number; internally it uses a technical address (your digits @ login.airsup) with a password, not a real inbox. After enabling Email, try again. Turn off \u201cConfirm email\u201d if you use email confirmation.";
-      }
-      return m;
-    }
-
-    function phoneToFakeEmail(phone) {
-      // Strip everything except digits and leading +
-      const digits = phone.replace(/[^0-9]/g, "");
-      return digits + "@login.airsup";
-    }
-
-    async function doLogin() {
-      const phone = window.AIRSUP_PHONE
-        ? window.AIRSUP_PHONE.mergeDialAndNational(phoneCc && phoneCc.value, phoneLocal && phoneLocal.value)
-        : "";
-      const pin   = passwordInput.value;
-      if (!phone || phone.replace(/[^0-9]/g, "").length < 7) { showMsg("Enter a valid phone number with country code.", true); return; }
-      if (!pin || pin.length < 6) { showMsg("This login is for admins only. Enter your admin password.", true); return; }
-      if (!sb) { showMsg("Not configured.", true); return; }
-      sendBtn.disabled = true;
-      sendBtn.textContent = "Signing in…";
-      const fakeEmail = phoneToFakeEmail(phone);
-
-      const { data: siData, error: siErr } = await sb.auth.signInWithPassword({ email: fakeEmail, password: pin });
-      if (!siErr && siData?.session) { window.location.href = "/workspace"; return; }
-
-      sendBtn.disabled = false; sendBtn.textContent = "Login";
-      showMsg(formatPhoneLoginAuthError(siErr) || "Login failed.", true);
-    }
-
-    sendBtn.addEventListener("click", doLogin);
-    phoneLocal?.addEventListener("keydown", (e) => { if (e.key === "Enter") passwordInput.focus(); });
-    passwordInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
 
     // Cursor-tracking eyes with smooth lerp (lazy follow)
     // Target offset is computed instantly from mouse position, but the
