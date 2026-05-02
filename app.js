@@ -800,12 +800,17 @@
     const inOnboarding = currentView === "onboarding";
     const loggedIn = !!currentUser;
     const isBuyer = userRole === "startup";
+    const isSupplier = userRole === "supplier";
+    // Buyers and suppliers use icon buttons — hide avatar dropdown for both
     const account = $("header-account");
-    if (account) account.hidden = !loggedIn || inOnboarding || isBuyer;
+    if (account) account.hidden = !loggedIn || inOnboarding || isBuyer || isSupplier;
     const avatarEl = $("avatar-letter");
     if (loggedIn && avatarEl) avatarEl.textContent = (currentUser.displayName || "?").charAt(0).toUpperCase();
     const nav = $("header-nav");
     if (nav) nav.style.display = (loggedIn && !inOnboarding) ? "" : "none";
+    // Supplier gets icon buttons (settings + logout) in the header
+    const supplierIcons = $("header-supplier-icons");
+    if (supplierIcons) supplierIcons.hidden = !(isSupplier && loggedIn && !inOnboarding);
     // Hide header on the board only (buyers use the rail there); show it on all other views so logo is reachable
     const header = $("site-header");
     if (header) header.hidden = isBuyer && loggedIn && !inOnboarding && currentView === "board";
@@ -2043,29 +2048,7 @@
     const canvas = $("board-canvas");
     if (!canvas) return;
 
-    canvas.addEventListener("mousedown", (e) => {
-      if (e.button !== 0) return;
-      if (e.target.closest("a,button,textarea,input,.board-company,.board-card,.board-supi-inline")) return;
-      boardCanvasPan.dragging = true;
-      boardCanvasPan.startX = e.clientX;
-      boardCanvasPan.startY = e.clientY;
-      boardCanvasPan.originX = boardCanvasPan.x;
-      boardCanvasPan.originY = boardCanvasPan.y;
-      canvas.classList.add("board-canvas--panning");
-      e.preventDefault();
-    });
-    const PAN_MAX = 400;
-    window.addEventListener("mousemove", (e) => {
-      if (!boardCanvasPan.dragging) return;
-      boardCanvasPan.x = Math.max(-PAN_MAX, Math.min(PAN_MAX, boardCanvasPan.originX + (e.clientX - boardCanvasPan.startX)));
-      boardCanvasPan.y = Math.max(-PAN_MAX, Math.min(PAN_MAX, boardCanvasPan.originY + (e.clientY - boardCanvasPan.startY)));
-      applyBoardTransform();
-    });
-    window.addEventListener("mouseup", () => {
-      if (!boardCanvasPan.dragging) return;
-      boardCanvasPan.dragging = false;
-      canvas.classList.remove("board-canvas--panning");
-    });
+    // Pan drag disabled — board is static (zoom only via scroll)
     // Proximity dot glow — subtle, smooth (lerped mouse)
     const dotCanvas = document.getElementById("board-dot-canvas");
     if (dotCanvas) {
@@ -4394,6 +4377,9 @@
   });
   connInput?.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendConnectionMessage(); } });
   connSend?.addEventListener("click", sendConnectionMessage);
+
+  $("header-supplier-icons-settings")?.addEventListener("click", () => setView("settings"));
+  $("header-supplier-icons-logout")?.addEventListener("click", () => handleSignOut());
 
   /* ── Init ── */
   updateAuthUI();

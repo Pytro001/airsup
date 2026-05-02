@@ -140,6 +140,13 @@ html[data-theme="dark"] .site-logo img {
   box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
 }
 .header-right { position: relative; }
+.header-icon-btns { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.header-icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 9px;
+  border: none; background: transparent;
+  color: var(--text-muted); cursor: pointer;
+}
 .avatar-btn {
   width: 30px; height: 30px; border-radius: 50%;
   background: var(--primary); color: var(--on-primary);
@@ -1461,8 +1468,7 @@ html[data-theme="dark"] .composer-inner:focus-within {
   transition: background 0.15s, color 0.15s;
   margin-bottom: 4px;
 }
-.board-rail-btn:hover { background: var(--primary-light); color: var(--text); }
-.board-rail-btn--logout:hover { background: var(--danger-bg); color: var(--danger); }
+/* No hover effects on rail buttons — just clickable */
 
 /* Main canvas — freely pannable */
 .board-canvas {
