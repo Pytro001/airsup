@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Response } from "express";
 import { runJobPollOnce } from "../jobs/poll.js";
 import { cleanupStaleAnonymousUsers } from "../jobs/cleanup-anonymous.js";
+import { supabaseAdmin } from "../services/supabase.js";
 
 export const internalRouter = Router();
 
@@ -36,10 +37,46 @@ function authorizeCron(req: { headers: { authorization?: string } }): boolean {
   return auth === `Bearer ${secret}`;
 }
 
+/**
+ * Hard-delete rows from `profiles` and `factories` that have been in the bin
+ * (soft-deleted) for more than 24 hours.
+ */
+async function purgeBin(): Promise<{ profiles: number; factories: number }> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const [profilesRes, factoriesRes] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .delete()
+      .not("deleted_at", "is", null)
+      .lt("deleted_at", cutoff)
+      .select("id"),
+    supabaseAdmin
+      .from("factories")
+      .delete()
+      .not("deleted_at", "is", null)
+      .lt("deleted_at", cutoff)
+      .select("id"),
+  ]);
+
+  if (profilesRes.error) {
+    console.error("[internal/purge-bin] profiles delete error:", profilesRes.error);
+  }
+  if (factoriesRes.error) {
+    console.error("[internal/purge-bin] factories delete error:", factoriesRes.error);
+  }
+
+  return {
+    profiles: profilesRes.data?.length ?? 0,
+    factories: factoriesRes.data?.length ?? 0,
+  };
+}
+
 async function runJobs(_req: unknown, res: Response): Promise<void> {
   try {
     await runJobPollOnce();
-    res.json({ ok: true });
+    const purged = await purgeBin();
+    res.json({ ok: true, purged });
   } catch (err) {
     console.error("[internal/jobs]", err);
     res.status(500).json({ error: err instanceof Error ? err.message : "Job run failed" });
@@ -86,4 +123,18 @@ internalRouter.post("/cleanup-anonymous", (req, res) => {
     return;
   }
   void runCleanupAnonymous(req, res);
+});
+
+internalRouter.post("/purge-bin", async (req, res) => {
+  if (!authorizeCron(req)) {
+    res.status(401).json({ error: "Unauthorized. Set CRON_SECRET and use Bearer token" });
+    return;
+  }
+  try {
+    const result = await purgeBin();
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error("[internal/purge-bin]", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Purge failed" });
+  }
 });

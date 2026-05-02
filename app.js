@@ -808,12 +808,10 @@
     if (loggedIn && avatarEl) avatarEl.textContent = (currentUser.displayName || "?").charAt(0).toUpperCase();
     const nav = $("header-nav");
     if (nav) nav.style.display = (loggedIn && !inOnboarding) ? "" : "none";
-    // Supplier gets icon buttons (settings + logout) in the header
-    const supplierIcons = $("header-supplier-icons");
-    if (supplierIcons) supplierIcons.hidden = !(isSupplier && loggedIn && !inOnboarding);
-    // Hide header on the board only (buyers use the rail there); show it on all other views so logo is reachable
+    const onThankyou = currentView === "thankyou";
+    // Hide header on board (buyers use rail) and thankyou page
     const header = $("site-header");
-    if (header) header.hidden = isBuyer && loggedIn && !inOnboarding && currentView === "board";
+    if (header) header.hidden = onThankyou || (isBuyer && loggedIn && !inOnboarding && currentView === "board");
   }
 
   function buildNav() {
@@ -923,7 +921,7 @@
     if (!root) return;
     root.innerHTML = `
       <div class="thankyou-card">
-        <div class="thankyou-supi-avatar">S</div>
+        <img src="assets/brand/logo-air-sup.png" alt="Supi" class="thankyou-supi-img" />
         <h1 class="thankyou-title">Supi is on it.</h1>
         <p class="thankyou-sub">Supi will now start his research and contact you on WhatsApp in the next hours.</p>
       </div>`;
@@ -998,12 +996,10 @@
       const isSupplier = onboardData.role === "supplier";
       stage.innerHTML = `
         <div class="onboard-question">
-          <h1 class="onboard-title">${isSupplier ? "Your factory is live." : "You\u2019re all set."}</h1>
-          <p class="onboard-sub">${isSupplier
-            ? "Our AI will start sending you project briefs that match your capabilities. You\u2019ll work directly with buyers, no sales needed."
-            : "We start now contacting the best factories based on your project requirements."}</p>
+          <h1 class="onboard-title">Almost there.</h1>
+          <p class="onboard-sub">Supi will start his research and contact you on WhatsApp in the next hours.</p>
           <div class="onboard-actions">
-            <button type="button" class="btn-primary btn-lg" id="onboard-go">${isSupplier ? "Go to dashboard" : "See your project"}</button>
+            <button type="button" class="btn-primary btn-lg" id="onboard-go">Start contacting</button>
           </div>
         </div>`;
       $("onboard-go")?.addEventListener("click", async () => {
@@ -1011,7 +1007,7 @@
         const goBtn = $("onboard-go");
         var prev = goBtn && goBtn.textContent;
         try {
-          if (goBtn) { goBtn.disabled = true; goBtn.textContent = "Saving\u2026"; }
+          if (goBtn) { goBtn.disabled = true; goBtn.textContent = "Starting\u2026"; }
           const result = await saveOnboardingToSupabase() || {};
           userRole = isSupplier ? "supplier" : "startup";
           buildNav();
@@ -1967,8 +1963,6 @@
     if (boardRailInited) return;
     boardRailInited = true;
     $("board-rail-logo")?.addEventListener("click", () => { window.location.href = "/"; });
-    $("board-rail-settings")?.addEventListener("click", () => setView("settings"));
-    $("board-rail-logout")?.addEventListener("click", () => handleSignOut());
   }
 
   /* ── Canvas free pan (Figma-style click+drag) ── */
@@ -4306,8 +4300,6 @@
   connInput?.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendConnectionMessage(); } });
   connSend?.addEventListener("click", sendConnectionMessage);
 
-  $("header-supplier-icons-settings")?.addEventListener("click", () => setView("settings"));
-  $("header-supplier-icons-logout")?.addEventListener("click", () => handleSignOut());
 
   /* ── Init ── */
   updateAuthUI();

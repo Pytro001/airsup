@@ -1,6 +1,8 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import { randomUUID } from "crypto";
 import { supabaseAdmin } from "../services/supabase.js";
+import { safeFileSegment } from "../lib/project-files.js";
 import {
   isMissingDeletedAtColumnError,
   postgrestErrorText,
@@ -706,3 +708,150 @@ adminRouter.delete("/bin/factories/:id", async (req: Request, res: Response) => 
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ ok: true });
 });
+
+/**
+ * Admin file upload: POST /api/admin/projects/:id/upload
+ * Accepts multipart/form-data with a single `file` field.
+ * Stores the file in Supabase Storage under {user_id}/{project_id}/{uuid}_{safe_filename}
+ * and inserts a row in project_files with source = "admin".
+ *
+ * No external multipart library — parses the raw body buffer manually.
+ */
+adminRouter.post(
+  "/projects/:id/upload",
+  // Collect the raw multipart body into req.body as a Buffer.
+  (req, res, next) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => {
+      (req as Request & { rawBody: Buffer }).rawBody = Buffer.concat(chunks);
+      next();
+    });
+    req.on("error", (err) => {
+      console.error("[admin/upload] stream error", err);
+      res.status(400).json({ error: "Failed to read request body" });
+    });
+  },
+  async (req: Request, res: Response) => {
+    const projectId = req.params.id;
+
+    // 1. Look up the project to get user_id.
+    const { data: project, error: pe } = await supabaseAdmin
+      .from("projects")
+      .select("id, user_id")
+      .eq("id", projectId)
+      .maybeSingle();
+    if (pe || !project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    // 2. Parse the multipart body.
+    const rawBody: Buffer = (req as Request & { rawBody?: Buffer }).rawBody ?? Buffer.alloc(0);
+    const contentType = req.headers["content-type"] ?? "";
+    const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^\s;]+))/i);
+    if (!boundaryMatch) {
+      res.status(400).json({ error: "Missing multipart boundary" });
+      return;
+    }
+    const boundary = boundaryMatch[1] ?? boundaryMatch[2];
+
+    // Split the body on the boundary delimiter.
+    const delimiter = Buffer.from(`\r\n--${boundary}`);
+    const firstDelimiter = Buffer.from(`--${boundary}`);
+
+    // Find parts by splitting on boundary markers.
+    let fileBuffer: Buffer | null = null;
+    let filename = "upload";
+    let contentTypeOfFile = "application/octet-stream";
+
+    // Walk through parts manually.
+    let searchStart = 0;
+    // Skip leading "--boundary\r\n"
+    const firstBound = Buffer.from(`--${boundary}\r\n`);
+    if (rawBody.slice(0, firstBound.length).equals(firstBound)) {
+      searchStart = firstBound.length;
+    }
+
+    while (searchStart < rawBody.length) {
+      // Find the end of part headers (blank line \r\n\r\n).
+      const headerEnd = indexOf(rawBody, Buffer.from("\r\n\r\n"), searchStart);
+      if (headerEnd === -1) break;
+      const headerStr = rawBody.slice(searchStart, headerEnd).toString("utf8");
+      const bodyStart = headerEnd + 4;
+
+      // Find the next boundary.
+      const nextBound = indexOf(rawBody, delimiter, bodyStart);
+      const partBodyEnd = nextBound === -1 ? rawBody.length : nextBound;
+      const partBody = rawBody.slice(bodyStart, partBodyEnd);
+
+      // Parse Content-Disposition to get field name and filename.
+      const dispMatch = headerStr.match(/Content-Disposition:[^\r\n]*name="([^"]+)"/i);
+      const fieldName = dispMatch ? dispMatch[1] : "";
+      const fnMatch = headerStr.match(/Content-Disposition:[^\r\n]*filename="([^"]+)"/i);
+      const ctMatch = headerStr.match(/Content-Type:\s*([^\r\n]+)/i);
+
+      if (fieldName === "file" && fnMatch) {
+        filename = fnMatch[1];
+        contentTypeOfFile = ctMatch ? ctMatch[1].trim() : "application/octet-stream";
+        fileBuffer = partBody;
+        break;
+      }
+
+      if (nextBound === -1) break;
+      // Advance past delimiter + \r\n
+      searchStart = nextBound + delimiter.length + 2;
+      if (searchStart >= rawBody.length) break;
+    }
+
+    if (!fileBuffer || fileBuffer.length === 0) {
+      res.status(400).json({ error: "No file field found in multipart body" });
+      return;
+    }
+
+    // 3. Build storage path and upload.
+    const safeFilename = safeFileSegment(filename);
+    const storagePath = `${project.user_id}/${project.id}/${randomUUID()}_${safeFilename}`;
+
+    const { error: uploadErr } = await supabaseAdmin.storage
+      .from("project-files")
+      .upload(storagePath, fileBuffer, { contentType: contentTypeOfFile, upsert: false });
+
+    if (uploadErr) {
+      console.error("[admin/upload] storage upload error:", uploadErr);
+      res.status(500).json({ error: uploadErr.message });
+      return;
+    }
+
+    // 4. Insert project_files row.
+    const { error: insErr } = await supabaseAdmin.from("project_files").insert({
+      user_id: project.user_id,
+      project_id: project.id,
+      storage_path: storagePath,
+      filename,
+      mime_type: contentTypeOfFile,
+      bytes: fileBuffer.length,
+      source: "admin",
+    });
+
+    if (insErr) {
+      console.error("[admin/upload] project_files insert error:", insErr);
+      res.status(500).json({ error: insErr.message });
+      return;
+    }
+
+    res.json({ ok: true, filename, storage_path: storagePath });
+  }
+);
+
+/** indexOf helper: find needle in haystack starting at offset. */
+function indexOf(haystack: Buffer, needle: Buffer, offset = 0): number {
+  for (let i = offset; i <= haystack.length - needle.length; i++) {
+    let found = true;
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) { found = false; break; }
+    }
+    if (found) return i;
+  }
+  return -1;
+}
