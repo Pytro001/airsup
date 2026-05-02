@@ -2183,12 +2183,20 @@
           // Show any approved matches as contact cards
           showMatchContactsInSupi(msgs);
         } else {
-          // First visit — scripted opening
-          boardSupiState = "initial";
+          // First visit — auto-send both opening messages, no user prompt needed
+          boardSupiState = "normal";
           setTimeout(() => {
-            appendSupiBubble(msgs, "assistant", "I'll now start searching for suppliers 🔍 Do you want to add any other information about your project before I begin?");
+            appendSupiBubble(msgs, "assistant", "I'm starting my search for the right suppliers now. Feel free to upload more files or add any details to your project in the meantime — I'll pass everything on to the factories so when you connect with them on WhatsApp, they already know your full brief.");
             msgs.scrollTop = msgs.scrollHeight;
+            setTimeout(() => {
+              appendSupiBubble(msgs, "assistant", "I'll be back with the first contacts in 2–5 hours.");
+              msgs.scrollTop = msgs.scrollHeight;
+            }, 1600);
           }, 600);
+          // Kick off sourcing in background
+          if (activeBoardProjectId) {
+            apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", { method: "POST", body: JSON.stringify({ force: false }) }).catch(() => {});
+          }
         }
         msgs.scrollTop = msgs.scrollHeight;
       } catch (_) {
@@ -2255,27 +2263,6 @@
     if (!(await ensureSession())) return;
     inp.value = ""; inp.style.height = "auto"; if (snd) snd.disabled = true;
     appendSupiBubble(msgs, "user", text);
-
-    // Scripted opening: any reply to the first message triggers search-start messages
-    if (boardSupiState === "initial") {
-      boardSupiState = "normal";
-      // Save anything the user typed as an idea if it looks like info (not just "no"/"ok")
-      const isJustAck = /^(no|nope|nah|ok|okay|sure|yes|yeah|start|go|fine|good)$/i.test(text.trim());
-      if (!isJustAck && activeBoardProjectId) {
-        apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/idea", { method: "POST", body: JSON.stringify({ text }) }).catch(() => {});
-      }
-      setTimeout(() => {
-        appendSupiBubble(msgs, "assistant", "Okay, I start now my search. I will come back in 3-5h with my first results. You can in the meantime also advance your project and I will update all details to the supplier.");
-        setTimeout(() => {
-          appendSupiBubble(msgs, "assistant", "I will give them all informations about your project so that you just have to make the last call with them.");
-        }, 1800);
-      }, 700);
-      // Kick off sourcing in background
-      if (activeBoardProjectId) {
-        apiCall("/api/projects/" + encodeURIComponent(activeBoardProjectId) + "/source", { method: "POST", body: JSON.stringify({ force: false }) }).catch(() => {});
-      }
-      return;
-    }
 
     // Normal mode — real Supi AI (board_supi bypasses supi_manual gate)
     const thinking = document.createElement("div");
