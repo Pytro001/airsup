@@ -102,27 +102,26 @@
           <canvas id="board-dot-canvas" aria-hidden="true"></canvas>
           <div class="board-canvas-viewport" id="board-canvas-viewport">
             <div class="board-canvas-content" id="board-canvas-content"></div>
-          </div>
-          <!-- Floating Supi chat window — draggable by header, no close button -->
-          <div class="board-supi-panel" id="board-supi-panel">
-            <div class="board-supi-header" id="board-supi-drag">
-              <div class="board-supi-header-left">
-                <div class="board-supi-avatar">S</div>
-                <span class="board-supi-title">Supi</span>
-                <span class="board-supi-status" id="board-supi-status"></span>
+            <!-- Supi chat — inline on the board, pans/zooms with the canvas -->
+            <div class="board-supi-inline" id="board-supi-panel">
+              <div class="board-supi-header">
+                <div class="board-supi-header-left">
+                  <div class="board-supi-avatar">S</div>
+                  <span class="board-supi-title">Supi</span>
+                  <span class="board-supi-status" id="board-supi-status"></span>
+                </div>
               </div>
-              <svg class="board-supi-drag-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="19" r="1" fill="currentColor"/><circle cx="15" cy="5" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="19" r="1" fill="currentColor"/></svg>
-            </div>
-            <div class="board-supi-messages" id="board-supi-messages"></div>
-            <div class="board-supi-composer">
-              <label class="board-supi-attach" aria-label="Attach file">
-                <input type="file" id="board-supi-file" hidden multiple accept=".pdf,.png,.jpg,.jpeg,.step,.stp,.stl,.dxf,.dwg,.ai,.eps,.svg" />
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-              </label>
-              <textarea class="board-supi-input" id="board-supi-input" rows="1" placeholder="Message Supi…" autocomplete="off"></textarea>
-              <button type="button" class="board-supi-send" id="board-supi-send" aria-label="Send" disabled>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-              </button>
+              <div class="board-supi-messages" id="board-supi-messages"></div>
+              <div class="board-supi-composer">
+                <label class="board-supi-attach" aria-label="Attach file">
+                  <input type="file" id="board-supi-file" hidden multiple accept=".pdf,.png,.jpg,.jpeg,.step,.stp,.stl,.dxf,.dwg,.ai,.eps,.svg" />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                </label>
+                <textarea class="board-supi-input" id="board-supi-input" rows="1" placeholder="Message Supi…" autocomplete="off"></textarea>
+                <button type="button" class="board-supi-send" id="board-supi-send" aria-label="Send" disabled>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -253,6 +252,6 @@
   <script src="config.js"></script>
   <script src="assets/phone-dial.js"></script>
   <script src="assets/password-toggles.js"></script>
-  <script src="app.js?v=20260502d"></script>
+  <script src="app.js?v=20260502e"></script>
 </body>
 </html>

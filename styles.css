@@ -1484,6 +1484,9 @@ html[data-theme="dark"] .composer-inner:focus-within {
   top: 28px;
   left: 28px;
   will-change: transform;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 .board-canvas-content {
   display: flex;
@@ -1564,28 +1567,26 @@ a.board-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md);
 .board-mini-btn--wa:hover { background: #25d36610; border-color: #25d366; }
 .company-chat-panel { margin-top: 8px; }
 
-/* Supi floating chat window — draggable, no close button */
-.board-supi-panel {
-  position: absolute;
-  top: 32px;
-  right: 24px;
-  width: 300px;
-  height: 400px;
+/* Supi inline section — lives on the canvas like the timeline */
+.board-supi-inline {
+  width: 560px;
+  min-width: 320px;
   display: flex;
   flex-direction: column;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  z-index: 20;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.board-supi-inline .board-supi-messages {
+  height: 300px;
+  overflow-y: auto;
 }
 .board-supi-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 12px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-  cursor: grab; user-select: none;
+  padding: 10px 14px 9px; border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-.board-supi-header:active { cursor: grabbing; }
-.board-supi-drag-icon { color: var(--text-soft); flex-shrink: 0; }
 .board-supi-header-left { display: flex; align-items: center; gap: 8px; }
 .board-supi-avatar {
   width: 28px; height: 28px; border-radius: 50%; background: var(--primary);
@@ -1640,21 +1641,6 @@ a.board-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md);
 .board-supi-contact-name { font-size: 12px; font-weight: 600; margin-bottom: 6px; }
 .board-supi-contact-actions { display: flex; flex-wrap: wrap; gap: 4px; }
 
-/* Supi panel close/open via class */
-.board-supi-panel--closed { display: none !important; }
-.board-supi-tab--hidden { display: none !important; }
-
-/* Supi tab — thin right-edge button when panel is closed */
-.board-supi-tab {
-  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-  width: 22px; height: 56px; z-index: 20;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--bg); border: 1px solid var(--border); border-right: none;
-  border-radius: 8px 0 0 8px; cursor: pointer; color: var(--text-muted);
-  box-shadow: var(--shadow-sm); transition: color 0.15s, background 0.15s;
-}
-.board-supi-tab { display: none; }    /* hidden by default — shown via JS class removal */
-.board-supi-tab:hover { color: var(--text); background: var(--primary-light); }
 
 /* Interactive dot grid — JS drives --mx/--my via custom props for proximity glow */
 .board-canvas-bg {
@@ -1669,7 +1655,7 @@ a.board-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md);
 }
 
 @media (max-width: 720px) {
-  .board-supi-panel { width: calc(100vw - 64px); right: 4px; height: 80%; top: 10%; }
+  .board-supi-inline { width: 320px; }
   .board-canvas-viewport { top: 16px; left: 12px; }
   .board-rail { width: 48px; }
 }

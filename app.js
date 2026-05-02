@@ -2045,7 +2045,7 @@
 
     canvas.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
-      if (e.target.closest("a,button,textarea,input,.board-company,.board-card")) return;
+      if (e.target.closest("a,button,textarea,input,.board-company,.board-card,.board-supi-inline")) return;
       boardCanvasPan.dragging = true;
       boardCanvasPan.startX = e.clientX;
       boardCanvasPan.startY = e.clientY;
@@ -2054,7 +2054,7 @@
       canvas.classList.add("board-canvas--panning");
       e.preventDefault();
     });
-    const PAN_MAX = 150;
+    const PAN_MAX = 400;
     window.addEventListener("mousemove", (e) => {
       if (!boardCanvasPan.dragging) return;
       boardCanvasPan.x = Math.max(-PAN_MAX, Math.min(PAN_MAX, boardCanvasPan.originX + (e.clientX - boardCanvasPan.startX)));
@@ -2129,7 +2129,7 @@
     }, { passive: false });
   }
 
-  /* ── Supi panel (floating draggable window) ── */
+  /* ── Supi panel (inline on board canvas) ── */
   function initBoardSupiPanel() {
     if (boardSupiInited) return;
     boardSupiInited = true;
@@ -2137,7 +2137,6 @@
     const msgs = $("board-supi-messages");
     const inp = $("board-supi-input");
     const snd = $("board-supi-send");
-    const panel = $("board-supi-panel");
     const fileInput = $("board-supi-file");
 
     if (inp && snd) {
@@ -2148,31 +2147,6 @@
       });
       inp.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!snd.disabled) sendBoardSupiMessage(); } });
       snd.addEventListener("click", sendBoardSupiMessage);
-    }
-
-    // Drag-to-move — mousedown on header bar
-    const dragHandle = $("board-supi-drag");
-    if (dragHandle && panel) {
-      let dragStart = null;
-      let panelOrigin = null;
-      dragHandle.addEventListener("mousedown", (e) => {
-        if (e.button !== 0) return;
-        dragStart = { x: e.clientX, y: e.clientY };
-        const parentRect = panel.offsetParent ? panel.offsetParent.getBoundingClientRect() : { top: 0, left: 0 };
-        const rect = panel.getBoundingClientRect();
-        panelOrigin = { top: rect.top - parentRect.top, left: rect.left - parentRect.left };
-        e.preventDefault();
-      });
-      window.addEventListener("mousemove", (e) => {
-        if (!dragStart) return;
-        const dx = e.clientX - dragStart.x;
-        const dy = e.clientY - dragStart.y;
-        panel.style.top = (panelOrigin.top + dy) + "px";
-        panel.style.left = (panelOrigin.left + dx) + "px";
-        panel.style.right = "auto";
-        panel.style.bottom = "auto";
-      });
-      window.addEventListener("mouseup", () => { dragStart = null; });
     }
 
     if (fileInput) {
