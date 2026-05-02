@@ -184,23 +184,19 @@
       margin-bottom: 40px;
     }
 
-    /* Primary CTA button */
+    /* Primary CTA button — plain text, no background */
     .lp-start-link {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 16px 48px;
-      border: 2px solid var(--text);
-      background: var(--text);
-      color: var(--bg);
+      padding: 8px 0;
+      background: none;
+      border: none;
       text-decoration: none;
-      border-radius: 100px;
-      transition: transform 0.15s ease, opacity 0.15s;
+      color: var(--text);
+      transition: opacity 0.15s;
     }
-    .lp-start-link:hover {
-      transform: scale(1.04);
-      opacity: 0.88;
-    }
+    .lp-start-link:hover { opacity: 0.6; }
     .lp-start-link:focus-visible {
       outline: 2px solid var(--text);
       outline-offset: 6px;
@@ -211,7 +207,6 @@
       letter-spacing: 0.12em;
     }
     @media (max-width: 480px) {
-      .lp-start-link { padding: 14px 36px; }
       .lp-start-text { font-size: 1rem; }
     }
 
@@ -451,54 +446,7 @@
         })
       : null;
 
-    // Auto-redirect signed-in visitors straight to /workspace, but only
-    // if they have fully completed onboarding (a real profile exists).
-    // Users who have a session but no profile should stay on the landing
-    // page and be prompted to sign up again.
-    document.body.style.visibility = "hidden";
-    var revealTimer = setTimeout(function () { document.body.style.visibility = ""; }, 1800);
-
-    async function checkAndRedirect() {
-      if (!sb) return false;
-      try {
-        const { data: sessionData } = await sb.auth.getSession();
-        const session = sessionData?.session;
-        if (!session) return false;
-
-        // Check if onboarding is done: profile must have a company OR a headline
-        // (suppliers store "supplier" in headline; customers store their company name)
-        const { data: profile } = await sb
-          .from("profiles")
-          .select("company, headline")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        const isComplete = profile && (profile.company || profile.headline);
-        if (isComplete) {
-          window.location.replace("/workspace");
-          return true;
-        }
-        return false;
-      } catch (e) { return false; }
-    }
-
-    (async () => {
-      const redirecting = await checkAndRedirect();
-      if (!redirecting) {
-        clearTimeout(revealTimer);
-        document.body.style.visibility = "";
-
-        if (sb) {
-          // If the user signs in while on this page (successful login), check again
-          sb.auth.onAuthStateChange(async (event) => {
-            if (event === "SIGNED_IN") {
-              await checkAndRedirect();
-              document.body.style.visibility = "";
-            }
-          });
-        }
-      }
-    })();
+    // No auto-redirect — buyers and suppliers use WhatsApp, not the web app.
 
     // Login section hidden — no toggle (admin uses /admin path directly)
 
