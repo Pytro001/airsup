@@ -2628,6 +2628,24 @@
     );
   }
 
+  function buildFilesSection(files) {
+    if (!files || !files.length) return "";
+    var rows = files.map(function(f) {
+      var link = f.signed_url
+        ? '<a href="' + escapeAttr(f.signed_url) + '" target="_blank" rel="noopener">' + escapeHtml(f.filename || "file") + '</a>'
+        : escapeHtml(f.filename || "file");
+      var size = f.bytes ? ' <span class="admin-file-size">(' + (f.bytes < 1048576 ? (f.bytes / 1024).toFixed(0) + ' KB' : (f.bytes / 1048576).toFixed(1) + ' MB') + ')</span>' : '';
+      return '<div class="admin-file-row">' + link + size + '</div>';
+    }).join("");
+    return '<section class="project-detail-section"><h3 class="project-detail-h">Files</h3>' + rows +
+      '<div class="admin-upload-row" style="margin-top:10px;">' +
+      '<input type="file" id="admin-ws-upload-input" class="admin-upload-input" multiple accept=".pdf,.png,.jpg,.jpeg,.step,.stp,.stl,.dxf,.dwg,.ai,.eps,.svg,.doc,.docx,.xls,.xlsx,.csv,.txt" />' +
+      '<button type="button" class="btn-primary btn-sm" id="admin-ws-upload-btn">Upload</button>' +
+      '</div>' +
+      '<p id="admin-ws-upload-flash" class="form-message" role="status" hidden style="margin-top:6px;"></p>' +
+      '</section>';
+  }
+
   function buildBriefSection(project) {
     var src = project.brief_source_type;
     var url = project.brief_source_url;
@@ -3546,10 +3564,8 @@
     }
     const head = $("admin-workspace-heading");
     const left = $("admin-ws-left");
-    const mid = $("admin-ws-messages");
     const right = $("admin-ws-right");
-    if (mid) mid.innerHTML = '<div class="projects-empty">Loading\u2026</div>';
-    if (left) left.innerHTML = "";
+    if (left) left.innerHTML = '<div class="projects-empty">Loading…</div>';
     if (right) right.innerHTML = "";
 
     try {
@@ -3559,10 +3575,12 @@
 
       if (head) head.textContent = (data.project && data.project.title) ? String(data.project.title).slice(0, 80) : "Project";
 
+      const buyerPhone = (data.buyer_profile && data.buyer_profile.phone) ? data.buyer_profile.phone : "";
       const buyerLine = data.buyer_profile
         ? "<p class=\"admin-ws-buyer\">" +
           escapeHtml(data.buyer_profile.display_name || "") +
           (data.company && data.company.name ? " · " + escapeHtml(data.company.name) : "") +
+          (buyerPhone ? " · <a href=\"https://wa.me/" + encodeURIComponent(buyerPhone.replace(/[^0-9]/g,"")) + "\" target=\"_blank\" rel=\"noopener\" class=\"admin-wa-link\">" + escapeHtml(buyerPhone) + "</a>" : "") +
           "</p>"
         : "";
 
@@ -3571,52 +3589,9 @@
           (buyerLine || "") +
           buildRequirementsSection(data.project.requirements || {}) +
           buildAiSummarySection(data.project.ai_summary || {}, data.project.requirements || {}) +
-          buildMatchesSection(data.matches || []);
+          buildMatchesSection(data.matches || []) +
+          buildFilesSection(data.files || []);
       }
-
-      if (mid) {
-        mid.innerHTML = "";
-        (data.conversations || []).forEach((m) => {
-          appendChatLine(mid, m.role, m.content, m.metadata);
-        });
-        mid.scrollTop = mid.scrollHeight;
-      }
-
-      const sendSupi = async () => {
-        const inp = $("admin-ws-input");
-        const txt = (inp && inp.value || "").trim();
-        if (!txt) return;
-        try {
-          const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/messages`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ body: txt }),
-          });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j?.error || "Failed");
-          if (inp) inp.value = "";
-          if (mid && j.message) appendChatLine(mid, j.message.role, j.message.content, j.message.metadata);
-          if (mid) mid.scrollTop = mid.scrollHeight;
-        } catch (err) {
-          console.error(err);
-        }
-      };
-
-      const rebindSupiComposer = () => {
-        ["admin-ws-send", "admin-ws-input"].forEach((id) => {
-          const el = $(id);
-          if (!el || !el.parentNode) return;
-          const nu = el.cloneNode(true);
-          el.parentNode.replaceChild(nu, el);
-        });
-        $("admin-ws-send")?.addEventListener("click", () => void sendSupi());
-        $("admin-ws-input")?.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            void sendSupi();
-          }
-        });
-      };
 
       if (right) {
         const st = Number(data.project.pipeline_step);
@@ -3864,9 +3839,42 @@
         });
       }
 
-      rebindSupiComposer();
+      // File upload for this project
+      const uploadInput = $("admin-ws-upload-input");
+      const uploadBtn = $("admin-ws-upload-btn");
+      const uploadFlash = $("admin-ws-upload-flash");
+      if (uploadBtn && uploadInput) {
+        uploadBtn.onclick = async () => {
+          const files = uploadInput.files;
+          if (!files || !files.length) return;
+          uploadBtn.disabled = true;
+          uploadBtn.textContent = "Uploading…";
+          if (uploadFlash) { uploadFlash.hidden = false; uploadFlash.textContent = ""; uploadFlash.style.color = ""; }
+          let uploaded = 0;
+          for (const file of Array.from(files)) {
+            const fd = new FormData();
+            fd.append("file", file);
+            try {
+              const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/upload`, { method: "POST", body: fd });
+              const j = await r.json();
+              if (!r.ok) throw new Error(j?.error || "Upload failed");
+              uploaded++;
+            } catch (err) {
+              if (uploadFlash) { uploadFlash.hidden = false; uploadFlash.textContent = "Error: " + (err.message || "upload failed"); uploadFlash.style.color = "#d93025"; }
+              break;
+            }
+          }
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = "Upload";
+          uploadInput.value = "";
+          if (uploaded > 0) {
+            if (uploadFlash) { uploadFlash.hidden = false; uploadFlash.textContent = uploaded + " file" + (uploaded > 1 ? "s" : "") + " uploaded."; uploadFlash.style.color = ""; }
+            void openAdminProjectWorkspace(projectId, customerId || "");
+          }
+        };
+      }
     } catch (e) {
-      if (mid) mid.innerHTML = '<div class="projects-empty">' + escapeHtml(e.message || "Error") + "</div>";
+      if (left) left.innerHTML = '<div class="projects-empty">' + escapeHtml(e.message || "Error") + "</div>";
     }
   }
 

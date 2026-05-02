@@ -184,35 +184,35 @@
       margin-bottom: 40px;
     }
 
-    /* Primary CTA: play only, no pill background */
+    /* Primary CTA button */
     .lp-start-link {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0;
-      border: none;
-      background: none;
+      padding: 16px 48px;
+      border: 2px solid var(--text);
+      background: var(--text);
+      color: var(--bg);
       text-decoration: none;
-      color: var(--text);
-      border-radius: 50%;
-      line-height: 0;
+      border-radius: 100px;
       transition: transform 0.15s ease, opacity 0.15s;
     }
     .lp-start-link:hover {
-      transform: scale(1.08);
-      opacity: 0.92;
+      transform: scale(1.04);
+      opacity: 0.88;
     }
     .lp-start-link:focus-visible {
       outline: 2px solid var(--text);
       outline-offset: 6px;
     }
-    .lp-start-play {
-      width: 80px;
-      height: 80px;
-      display: block;
+    .lp-start-text {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
     }
     @media (max-width: 480px) {
-      .lp-start-play { width: 72px; height: 72px; }
+      .lp-start-link { padding: 14px 36px; }
+      .lp-start-text { font-size: 1rem; }
     }
 
     /* ── Login ── */
@@ -389,13 +389,11 @@
       </svg>
     </div>
 
-    <h1 class="lp-headline">From idea to product,<br>in one conversation.</h1>
+    <h1 class="lp-headline">From idea to production,<br>in one conversation.</h1>
 
     <div class="lp-start-wrap">
       <a href="/start" class="lp-start-link" aria-label="Start">
-        <svg class="lp-start-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
-          <path d="M8 5v14l11-7z" />
-        </svg>
+        <span class="lp-start-text">START</span>
       </a>
     </div>
 
