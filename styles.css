@@ -1669,10 +1669,15 @@ a.board-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md);
 /* Thank-you page */
 .thankyou-root { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 32px; }
 .thankyou-card { text-align: center; max-width: 460px; }
-.thankyou-logo { width: 48px; height: 48px; object-fit: contain; margin-bottom: 24px; }
-.thankyou-title { font-size: 2rem; font-weight: 700; margin: 0 0 16px; }
-.thankyou-sub { font-size: 1rem; color: var(--text-muted); line-height: 1.6; margin: 0 0 24px; }
-.thankyou-hint { font-size: 0.85rem; color: var(--text-muted); opacity: 0.6; margin: 0; }
+.thankyou-supi-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; color: #fff;
+  margin: 0 auto 28px; box-shadow: 0 4px 24px rgba(108, 92, 231, 0.35);
+}
+.thankyou-title { font-size: 2.2rem; font-weight: 700; margin: 0 0 16px; }
+.thankyou-sub { font-size: 1rem; color: var(--text-muted); line-height: 1.65; margin: 0; max-width: 380px; margin: 0 auto; }
 
 /* Admin — contact phone / WhatsApp link */
 .admin-contact-phone { font-size: 12px; margin: 4px 0 6px; }

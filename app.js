@@ -848,20 +848,28 @@
       window.history.replaceState(null, "", window.location.pathname);
     }
     const { data } = await supabaseClient.auth.getSession();
+    const isAdmin = window.location.pathname.replace(/\/+$/, "") === "/admin";
     if (data?.session?.user) {
       await syncUserProfileFromAuth(data.session.user);
+      if (isAdmin) {
+        // Admin path handles its own gate — don't redirect
+        return;
+      }
       const { data: profile } = await supabaseClient.from("profiles").select("company, headline").eq("id", currentUser.id).maybeSingle();
       if (profile?.headline === "supplier") {
-        userRole = "supplier"; buildNav(); setView("supplier-dashboard");
+        // Supplier already onboarded — redirect to landing page (no web dashboard)
+        window.location.href = "/";
+        return;
       } else if (profile?.company || profile?.headline) {
-        userRole = "startup"; buildNav(); setView("board");
+        // Buyer already onboarded — redirect to landing page (no web dashboard)
+        window.location.href = "/";
+        return;
       } else {
         // Logged in but onboarding not complete — stay in onboarding flow
         setView("onboarding");
       }
     } else {
-      // No session — redirect to landing page (admin path keeps its own gate)
-      const isAdmin = window.location.pathname.replace(/\/+$/, "") === "/admin";
+      // No session — redirect to landing page
       if (!isAdmin) {
         window.location.href = "/";
       }
@@ -911,17 +919,13 @@
   }
 
   function loadThankyou() {
-    const isSupplier = userRole === "supplier";
     const root = $("thankyou-root");
     if (!root) return;
     root.innerHTML = `
       <div class="thankyou-card">
-        <img src="assets/brand/logo-air-sup.png" alt="Airsup" class="thankyou-logo" />
-        <h1 class="thankyou-title">${isSupplier ? "You’re all set." : "We’re on it."}</h1>
-        <p class="thankyou-sub">${isSupplier
-          ? "Supi will reach out on WhatsApp when we have a project match for you. No need to check back — we’ll come to you."
-          : "Supi is already searching for the best factories. You’ll get a WhatsApp message with first contacts in 2–5 hours."}</p>
-        <p class="thankyou-hint">You can close this tab.</p>
+        <div class="thankyou-supi-avatar">S</div>
+        <h1 class="thankyou-title">Supi is on it.</h1>
+        <p class="thankyou-sub">Supi will now start his research and contact you on WhatsApp in the next hours.</p>
       </div>`;
   }
 
@@ -929,23 +933,21 @@
      ONBOARDING
      ══════════════════════════════════════ */
   const STARTUP_STEPS = [
-    { id: "company", type: "form", title: "Tell us about your company.", sub: "Use ChatGPT, Claude, or Grok for the deep brainstorm, then hand the brief to us here. We run factory search and contact for you.",
+    { id: "company", type: "form", title: "Tell us about your project.", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
+        { key: "fullName", label: "Full name", required: true },
+        { key: "phone", label: "Phone / WhatsApp", type: "phone", required: true },
         { key: "companyName", label: "Company name", required: true },
         { key: "location", label: "Location" },
       ] },
     { id: "brief", type: "brief", title: "Bring your brief from ChatGPT, Claude, or Grok", sub: "We turn it into your manufacturing project and find the best suppliers for you." },
-    { id: "contact", type: "form", title: "How can we reach you?", sub: "Your info is stored securely and only shared when we find a real match.",
-      fields: [
-        { key: "fullName", label: "Full name", required: true },
-        { key: "phone", label: "Phone / WhatsApp", type: "phone", required: true },
-      ] },
   ];
 
   const SUPPLIER_STEPS = [
     { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers hate talking to sales. Our AI briefs your designers and engineers directly. Less overhead, faster iterations.",
       fields: [
         { key: "companyName", label: "Company name", required: true },
+        { key: "whatsapp1", label: "Phone / WhatsApp", type: "phone", required: true },
         { key: "location", label: "Location", required: true },
         { key: "website", label: "Website", type: "url" },
         { key: "specialization", label: "What do you manufacture?", required: true },
@@ -956,10 +958,6 @@
         { key: "priceRange", label: "Project price range" },
         { key: "moqMin", label: "Minimal order quantity", type: "digits" },
         { key: "moqMax", label: "Maximal order quantity", type: "digits" },
-      ] },
-    { id: "contact", type: "form", title: "How can buyers reach you?", sub: "Pick a country code, then digits only. Your info is stored securely.",
-      fields: [
-        { key: "whatsapp1", label: "Phone / WhatsApp", type: "phone", required: true },
       ] },
   ];
 
@@ -1968,7 +1966,7 @@
   function initBoardRail() {
     if (boardRailInited) return;
     boardRailInited = true;
-    $("board-rail-logo")?.addEventListener("click", () => setView("board"));
+    $("board-rail-logo")?.addEventListener("click", () => { window.location.href = "/"; });
     $("board-rail-settings")?.addEventListener("click", () => setView("settings"));
     $("board-rail-logout")?.addEventListener("click", () => handleSignOut());
   }
@@ -4273,13 +4271,7 @@
       }
       return;
     }
-    // Not logged in or still in onboarding → go to landing page
-    if (!currentUser || currentView === "onboarding") {
-      window.location.href = "/";
-      return;
-    }
-    // Fully onboarded → go to their dashboard
-    setView(userRole === "supplier" ? "supplier-dashboard" : "board");
+    window.location.href = "/";
   });
   $("user-menu-trigger")?.addEventListener("click", () => { const dd = $("user-menu-dropdown"); if (dd) dd.hidden = !dd.hidden; });
   document.addEventListener("click", (e) => { const dd = $("user-menu-dropdown"); if (dd && !dd.hidden && !e.target.closest("#user-menu-trigger") && !e.target.closest("#user-menu-dropdown")) dd.hidden = true; });

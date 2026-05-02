@@ -351,7 +351,6 @@
   <header class="lp-header">
     <div class="lp-brand" aria-hidden="true"></div>
     <div class="lp-header-right">
-      <button type="button" class="lp-login-link" id="lp-login-toggle">Login</button>
       <button type="button" class="lp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
     </div>
   </header>
@@ -503,15 +502,7 @@
       }
     })();
 
-    // Toggle login section
-    const loginToggle = document.getElementById("lp-login-toggle");
-    const loginSection = document.getElementById("lp-login-section");
-    loginToggle.addEventListener("click", () => {
-      const visible = loginSection.style.display !== "none";
-      loginSection.style.display = visible ? "none" : "block";
-      loginToggle.textContent = visible ? "Login" : "Close";
-      if (!visible) document.getElementById("lp-phone-local")?.focus();
-    });
+    // Login section hidden — no toggle (admin uses /admin path directly)
 
     // Phone + password login (digits + country code → fake email).
     const phoneCc = document.getElementById("lp-phone-cc");
