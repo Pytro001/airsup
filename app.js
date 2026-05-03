@@ -919,10 +919,12 @@
   function loadThankyou() {
     const root = $("thankyou-root");
     if (!root) return;
+    const isSupplier = onboardData.role === "supplier";
     root.innerHTML = `
       <div class="thankyou-card">
         <img src="assets/brand/logo-air-sup.png" alt="Supi" class="thankyou-supi-img" />
         <h1 class="thankyou-title">Supi is on it.</h1>
+        ${isSupplier ? '<p class="thankyou-sub">Supi will reach out as soon as a customer wants to manufacture with you.</p>' : ""}
       </div>`;
   }
 
