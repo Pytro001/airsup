@@ -1006,7 +1006,7 @@
         const goBtn = $("onboard-go");
         var prev = goBtn && goBtn.textContent;
         try {
-          if (goBtn) { goBtn.disabled = true; }
+          if (goBtn) { goBtn.disabled = true; goBtn.textContent = "Informing Supi…"; }
           const result = await saveOnboardingToSupabase() || {};
           userRole = isSupplier ? "supplier" : "startup";
           buildNav();
