@@ -996,10 +996,10 @@
       const isSupplier = onboardData.role === "supplier";
       stage.innerHTML = `
         <div class="onboard-question">
-          <h1 class="onboard-title">Almost there.</h1>
-          <p class="onboard-sub">Supi will start his research and contact you on WhatsApp in the next hours.</p>
+          <h1 class="onboard-title">Launch!</h1>
+          <p class="onboard-sub">By clicking on Launch, Supi will start contacting suppliers and get back to you on WhatsApp within the next hours.</p>
           <div class="onboard-actions">
-            <button type="button" class="btn-primary btn-lg" id="onboard-go">Start contacting</button>
+            <button type="button" class="btn-primary btn-lg" id="onboard-go">Launch my project</button>
           </div>
         </div>`;
       $("onboard-go")?.addEventListener("click", async () => {
