@@ -923,7 +923,6 @@
       <div class="thankyou-card">
         <img src="assets/brand/logo-air-sup.png" alt="Supi" class="thankyou-supi-img" />
         <h1 class="thankyou-title">Supi is on it.</h1>
-        <p class="thankyou-sub">Supi will now start his research and contact you on WhatsApp in the next hours.</p>
       </div>`;
   }
 
@@ -997,7 +996,7 @@
       stage.innerHTML = `
         <div class="onboard-question">
           <h1 class="onboard-title">Launch!</h1>
-          <p class="onboard-sub">By clicking on Launch, Supi will start contacting suppliers and get back to you on WhatsApp within the next hours.</p>
+          <p class="onboard-sub">By clicking on Launch, Supi will start contacting suppliers and get back to you on WhatsApp<br>within the next hours.</p>
           <div class="onboard-actions">
             <button type="button" class="btn-primary btn-lg" id="onboard-go">Launch my project</button>
           </div>
@@ -1007,7 +1006,7 @@
         const goBtn = $("onboard-go");
         var prev = goBtn && goBtn.textContent;
         try {
-          if (goBtn) { goBtn.disabled = true; goBtn.textContent = "Starting\u2026"; }
+          if (goBtn) { goBtn.disabled = true; }
           const result = await saveOnboardingToSupabase() || {};
           userRole = isSupplier ? "supplier" : "startup";
           buildNav();
@@ -4352,6 +4351,9 @@
     const nav = $("header-nav");
     if (nav) nav.style.display = "none";
     showAdminGate();
+  } else if (window.location.pathname.replace(/\/+$/, "") === "/onboard") {
+    // Show onboarding form immediately — no need to wait for session bootstrap
+    initAuthState();
   } else {
     ensureSession().then(() => initAuthState());
   }
