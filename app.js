@@ -846,29 +846,28 @@
       window.history.replaceState(null, "", window.location.pathname);
     }
     const { data } = await supabaseClient.auth.getSession();
-    const isAdmin = window.location.pathname.replace(/\/+$/, "") === "/admin";
+    const pathname = window.location.pathname.replace(/\/+$/, "");
+    const isAdmin = pathname === "/admin";
+    const isOnboard = pathname === "/onboard";
     if (data?.session?.user) {
       await syncUserProfileFromAuth(data.session.user);
       if (isAdmin) {
-        // Admin path handles its own gate — don't redirect
         return;
       }
       const { data: profile } = await supabaseClient.from("profiles").select("company, headline").eq("id", currentUser.id).maybeSingle();
-      if (profile?.headline === "supplier") {
-        // Supplier already onboarded — redirect to landing page (no web dashboard)
-        window.location.href = "/";
-        return;
-      } else if (profile?.company || profile?.headline) {
-        // Buyer already onboarded — redirect to landing page (no web dashboard)
+      if (profile?.headline === "supplier" || profile?.company || profile?.headline) {
         window.location.href = "/";
         return;
       } else {
-        // Logged in but onboarding not complete — stay in onboarding flow
         setView("onboarding");
       }
     } else {
-      // No session — redirect to landing page
-      if (!isAdmin) {
+      if (isAdmin) {
+        // admin handles its own gate
+      } else if (isOnboard) {
+        // No session yet — start onboarding (account created at end of flow)
+        setView("onboarding");
+      } else {
         window.location.href = "/";
       }
     }

@@ -28,6 +28,8 @@
     { "source": "/health", "destination": "/api" },
     { "source": "/admin", "destination": "/_app.html" },
     { "source": "/admin/", "destination": "/_app.html" },
+    { "source": "/onboard", "destination": "/_app.html" },
+    { "source": "/onboard/", "destination": "/_app.html" },
     { "source": "/start", "destination": "/start.html" },
     { "source": "/start/", "destination": "/start.html" },
     { "source": "/landingpage", "destination": "/landingpage.html" },

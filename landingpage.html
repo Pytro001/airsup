@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="assets/brand/logo-air-sup.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
   <script>
     (function () {
       try {
@@ -190,23 +190,29 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 8px 0;
-      background: none;
+      padding: 11px 28px;
+      background: #fff;
       border: none;
+      border-radius: 100px;
       text-decoration: none;
-      color: var(--text);
+      color: #111;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.13);
+      transition: opacity 0.15s;
     }
+    .lp-start-link:hover { opacity: 0.85; }
     .lp-start-link:focus-visible {
-      outline: 2px solid var(--text);
-      outline-offset: 6px;
+      outline: 2px solid #111;
+      outline-offset: 4px;
     }
     .lp-start-text {
-      font-size: 1.4rem;
-      font-weight: 800;
-      letter-spacing: 0.15em;
+      font-family: "Inter", "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 0.92rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      color: #111;
     }
     @media (max-width: 480px) {
-      .lp-start-text { font-size: 1.2rem; }
+      .lp-start-text { font-size: 0.88rem; }
     }
 
     /* ── Login ── */
@@ -387,7 +393,7 @@
 
     <div class="lp-start-wrap">
       <a href="/start" class="lp-start-link" aria-label="Start">
-        <span class="lp-start-text">START</span>
+        <span class="lp-start-text">Launch app</span>
       </a>
     </div>
 
