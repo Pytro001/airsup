@@ -849,6 +849,14 @@
     const pathname = window.location.pathname.replace(/\/+$/, "");
     const isAdmin = pathname === "/admin";
     const isOnboard = pathname === "/onboard";
+
+    // On the onboard path, always show the signup flow regardless of existing session
+    if (isOnboard) {
+      if (data?.session?.user) await syncUserProfileFromAuth(data.session.user);
+      setView("onboarding");
+      return;
+    }
+
     if (data?.session?.user) {
       await syncUserProfileFromAuth(data.session.user);
       if (isAdmin) {
@@ -862,14 +870,7 @@
         setView("onboarding");
       }
     } else {
-      if (isAdmin) {
-        // admin handles its own gate
-      } else if (isOnboard) {
-        // No session yet — start onboarding (account created at end of flow)
-        setView("onboarding");
-      } else {
-        window.location.href = "/";
-      }
+      if (!isAdmin) window.location.href = "/";
     }
   }
 
