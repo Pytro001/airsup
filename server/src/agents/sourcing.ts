@@ -30,7 +30,7 @@ type FactoryRow = {
 };
 
 type WebHit = {
-  source: "jd" | "cantonfair" | "alibaba" | "made-in-china" | "global-sources";
+  source: "jd" | "cantonfair" | "made-in-china" | "global-sources";
   supplier_name: string;
   supplier_url: string;
   supplier_location?: string;
@@ -41,7 +41,8 @@ type WebHit = {
 };
 
 const PLATFORM_LIMIT = 8;
-const WEB_LIMIT = 6;
+const WEB_FETCH_LIMIT = 12; // ask for more so filtering still leaves enough
+const WEB_LIMIT = 6;        // max kept after contact-quality filter
 const MODEL = "claude-sonnet-4-6";
 
 function sanitizeIlikeToken(s: string): string {
@@ -118,25 +119,29 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
   const requirementsBlock = JSON.stringify(project.requirements || {}, null, 2).slice(0, 1500);
 
   const system =
-    "You are a manufacturing sourcing scout. You find Chinese factories that can produce a buyer's spec. " +
-    "Search across JD.com (jd.com), Canton Fair (cantonfair.org.cn / cantonfair.net), Alibaba (alibaba.com), Made-in-China (made-in-china.com), and Global Sources (global-sources.com). " +
-    "Prefer JD.com and CantonFair results; use the other platforms as fallback to ensure you always return results. " +
-    "You MUST return at least 3–6 supplier candidates — do not return an empty array unless the product category is truly impossible to source from China. " +
-    "Try multiple search queries (e.g. product name in English, then add 'manufacturer', 'factory', 'wholesale', 'OEM') until you find results. " +
-    "For each supplier, visit their listing or company page and extract ALL of the following if visible:\n" +
-    "  - source: 'jd', 'cantonfair', 'alibaba', 'made-in-china', or 'global-sources'\n" +
+    "You are a manufacturing sourcing scout. You find high-quality Chinese factories that can produce a buyer's spec. " +
+    "Search JD.com (jd.com), Canton Fair (cantonfair.org.cn / cantonfair.net), Made-in-China (made-in-china.com), and Global Sources (global-sources.com). " +
+    "Prefer JD.com and Canton Fair — they surface more established manufacturers. Use Made-in-China and Global Sources as fallback. " +
+    "\n\nQUALITY BAR: Only include suppliers that meet ALL of these criteria:\n" +
+    "  1. Clearly a manufacturer or factory (not a trading company reseller if avoidable)\n" +
+    "  2. Has a direct contact method visible on the page: WhatsApp number, WeChat ID, or phone number\n" +
+    "  3. Their products match the buyer's spec — do not include generic or loosely related factories\n" +
+    "\nSUPPLIERS WITHOUT A CONTACT (whatsapp, wechat, or phone) MUST BE SKIPPED — do not include them.\n" +
+    "\nFor each qualifying supplier, visit their listing or company page and extract:\n" +
+    "  - source: 'jd', 'cantonfair', 'made-in-china', or 'global-sources'\n" +
     "  - supplier_name: company name\n" +
     "  - supplier_url: the listing or company page URL\n" +
     "  - supplier_location: city/province\n" +
-    "  - reasoning: 1-2 sentences explaining why this supplier fits the buyer spec\n" +
-    "  - whatsapp: WhatsApp number in international format (e.g. +8613812345678) if listed on the page\n" +
-    "  - phone: phone number in international format if listed and no WhatsApp\n" +
-    "  - wechat: WeChat ID if listed\n\n" +
-    "JD.com store pages often show contact numbers under '联系方式' or '客服'. " +
-    "CantonFair exhibitor pages typically list WhatsApp/phone in the contact section. " +
-    "Alibaba supplier pages list Trade Assurance status and response rate — note these in reasoning. " +
-    "Always try to find a contact number — it dramatically increases the buyer's ability to reach the factory. " +
-    "Do NOT invent URLs or contact numbers. Omit fields you cannot confirm.\n\n" +
+    "  - reasoning: 2-3 sentences — why this factory fits the spec AND any quality signals (years in business, certifications, export history)\n" +
+    "  - whatsapp: WhatsApp number in international format (e.g. +8613812345678) — highest priority contact\n" +
+    "  - wechat: WeChat ID if listed — also high priority\n" +
+    "  - phone: phone number in international format — include only if no whatsapp/wechat found\n\n" +
+    "JD.com store pages show contact under '联系方式' or '客服电话'. " +
+    "Canton Fair exhibitor pages list WhatsApp/WeChat in the contact section. " +
+    "Made-in-China and Global Sources supplier profiles show contact details on the company page. " +
+    "Try multiple search queries (product name + 'manufacturer', 'factory', 'OEM', '工厂') to find more results. " +
+    "Return up to 12 candidates that pass the quality bar (they will be filtered server-side). " +
+    "Do NOT invent URLs or contact info. Omit fields you cannot confirm.\n\n" +
     "Respond ONLY as a JSON array of objects. No prose.";
 
   const user =
@@ -156,7 +161,6 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
         "jd.com",
         "cantonfair.org.cn",
         "cantonfair.net",
-        "alibaba.com",
         "made-in-china.com",
         "global-sources.com",
       ],
@@ -181,14 +185,13 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
     const parsed = JSON.parse(text.slice(start, end + 1));
     if (!Array.isArray(parsed)) return [];
 
-    const out: WebHit[] = [];
-    for (const row of parsed.slice(0, WEB_LIMIT)) {
+    const raw: WebHit[] = [];
+    for (const row of parsed.slice(0, WEB_FETCH_LIMIT)) {
       if (!row || typeof row !== "object") continue;
       const r = row as Record<string, unknown>;
       const src = String(r.source || "").toLowerCase();
       const source: WebHit["source"] =
         src.includes("canton") ? "cantonfair"
-        : src.includes("alibaba") ? "alibaba"
         : src.includes("made") ? "made-in-china"
         : src.includes("global") ? "global-sources"
         : "jd";
@@ -200,7 +203,10 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
       const phone = typeof r.phone === "string" ? r.phone.replace(/[^\d+\- ()]/g, "").slice(0, 30) : undefined;
       const wechat = typeof r.wechat === "string" ? r.wechat.trim().slice(0, 80) : undefined;
 
-      out.push({
+      // Drop suppliers with no contact at all.
+      if (!whatsapp && !wechat && !phone) continue;
+
+      raw.push({
         source,
         supplier_name: name.slice(0, 200),
         supplier_url: url.slice(0, 600),
@@ -211,7 +217,12 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
         wechat: wechat || undefined,
       });
     }
-    return out;
+
+    // Sort: whatsapp/wechat first (tier 1), phone-only last (tier 2).
+    const contactTier = (h: WebHit) => (h.whatsapp || h.wechat ? 0 : 1);
+    raw.sort((a, b) => contactTier(a) - contactTier(b));
+
+    return raw.slice(0, WEB_LIMIT);
   } catch (err) {
     console.error("[Airsup] sourcing.searchWebForSuppliers:", err);
     return [];
