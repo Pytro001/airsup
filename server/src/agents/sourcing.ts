@@ -30,7 +30,7 @@ type FactoryRow = {
 };
 
 type WebHit = {
-  source: "jd" | "cantonfair";
+  source: "jd" | "cantonfair" | "alibaba" | "made-in-china" | "global-sources";
   supplier_name: string;
   supplier_url: string;
   supplier_location?: string;
@@ -42,7 +42,7 @@ type WebHit = {
 
 const PLATFORM_LIMIT = 8;
 const WEB_LIMIT = 6;
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-sonnet-4-6";
 
 function sanitizeIlikeToken(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9\- ]/g, "").trim();
@@ -119,10 +119,12 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
 
   const system =
     "You are a manufacturing sourcing scout. You find Chinese factories that can produce a buyer's spec. " +
-    "You ONLY search on JD.com and CantonFair (cantonfair.org.cn / cantonfair.net). " +
-    "After searching, return up to 6 distinct supplier candidates. " +
+    "Search across JD.com (jd.com), Canton Fair (cantonfair.org.cn / cantonfair.net), Alibaba (alibaba.com), Made-in-China (made-in-china.com), and Global Sources (global-sources.com). " +
+    "Prefer JD.com and CantonFair results; use the other platforms as fallback to ensure you always return results. " +
+    "You MUST return at least 3–6 supplier candidates — do not return an empty array unless the product category is truly impossible to source from China. " +
+    "Try multiple search queries (e.g. product name in English, then add 'manufacturer', 'factory', 'wholesale', 'OEM') until you find results. " +
     "For each supplier, visit their listing or company page and extract ALL of the following if visible:\n" +
-    "  - source: 'jd' or 'cantonfair'\n" +
+    "  - source: 'jd', 'cantonfair', 'alibaba', 'made-in-china', or 'global-sources'\n" +
     "  - supplier_name: company name\n" +
     "  - supplier_url: the listing or company page URL\n" +
     "  - supplier_location: city/province\n" +
@@ -132,8 +134,9 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
     "  - wechat: WeChat ID if listed\n\n" +
     "JD.com store pages often show contact numbers under '联系方式' or '客服'. " +
     "CantonFair exhibitor pages typically list WhatsApp/phone in the contact section. " +
+    "Alibaba supplier pages list Trade Assurance status and response rate — note these in reasoning. " +
     "Always try to find a contact number — it dramatically increases the buyer's ability to reach the factory. " +
-    "Do NOT invent URLs or contact numbers. Omit fields you cannot confirm. If you cannot find any suppliers, return an empty array.\n\n" +
+    "Do NOT invent URLs or contact numbers. Omit fields you cannot confirm.\n\n" +
     "Respond ONLY as a JSON array of objects. No prose.";
 
   const user =
@@ -148,8 +151,15 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
     const webSearchTool = {
       type: "web_search_20250305",
       name: "web_search",
-      max_uses: 12,
-      allowed_domains: ["jd.com", "cantonfair.org.cn", "cantonfair.net"],
+      max_uses: 20,
+      allowed_domains: [
+        "jd.com",
+        "cantonfair.org.cn",
+        "cantonfair.net",
+        "alibaba.com",
+        "made-in-china.com",
+        "global-sources.com",
+      ],
     } as unknown;
 
     const response = await anthropic.messages.create({
@@ -176,8 +186,12 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
       if (!row || typeof row !== "object") continue;
       const r = row as Record<string, unknown>;
       const src = String(r.source || "").toLowerCase();
-      const source: "jd" | "cantonfair" =
-        src.includes("canton") ? "cantonfair" : "jd";
+      const source: WebHit["source"] =
+        src.includes("canton") ? "cantonfair"
+        : src.includes("alibaba") ? "alibaba"
+        : src.includes("made") ? "made-in-china"
+        : src.includes("global") ? "global-sources"
+        : "jd";
       const name = String(r.supplier_name || "").trim();
       const url = String(r.supplier_url || "").trim();
       if (!name || !url) continue;
