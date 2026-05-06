@@ -68,8 +68,14 @@
       position: relative;
       z-index: 0;
     }
-    .lp-header,
     .lp-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 56px 24px 88px;
+      text-align: center;
       position: relative;
       z-index: 1;
     }
@@ -102,59 +108,72 @@
       border-radius: 22px;
       display: block;
     }
-    /* Supi: 17° tilt, nudged right; shadow uses page gray #242424 */
-    .lp-hero-face {
+
+    /* Hero: three independent layers (no flex coupling). Title centered on top. */
+    .lp-hero-stack {
+      --hero-shift-x: clamp(88px, 14vw, 132px);
       position: relative;
-      z-index: 2;
-      flex-shrink: 0;
-      transform: translateX(16px) rotate(17deg);
-      transform-origin: center center;
-      filter:
-        drop-shadow(-18px 12px 22px #242424)
-        drop-shadow(-10px 18px 32px rgba(36, 36, 36, 0.85))
-        drop-shadow(-6px 8px 14px rgba(36, 36, 36, 0.65));
-    }
-
-    .lp-hero-row {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      flex-wrap: nowrap;
-      gap: clamp(40px, 9vw, 96px);
+      width: 100%;
+      min-height: 230px;
       margin-bottom: 28px;
-      max-width: min(100%, 58rem);
-      isolation: isolate;
-      padding-inline: 12px;
+      overflow: visible;
     }
 
-    /* ── Main ── */
-    .lp-main {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 56px 24px 88px;
-      text-align: center;
+    /* z=1 — Supi only rotates; shadow is a separate layer */
+    .lp-hero-layer--supi {
+      position: absolute;
+      z-index: 1;
+      left: 50%;
+      top: 50%;
+      transform: translate(calc(-50% + var(--hero-shift-x)), -50%);
+      pointer-events: none;
     }
+    .lp-hero-face-wrap {
+      transform: rotate(15deg);
+      transform-origin: center center;
+    }
+
+    /* z=2 — #242424 blob between title and Supi */
+    .lp-hero-layer--shadow {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      top: 50%;
+      width: 200px;
+      height: 200px;
+      transform: translate(calc(-50% + var(--hero-shift-x)), -50%);
+      border-radius: 44px;
+      background: #242424;
+      filter: blur(26px);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    /* z=3 — headline dead center, above everything */
     .lp-headline {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
       font-size: clamp(22px, 4.5vw, 46px);
       line-height: 1.08;
       letter-spacing: -0.03em;
       font-weight: 300;
       margin: 0;
-      padding: 0;
-      text-align: left;
+      padding: 0 12px;
+      text-align: center;
       color: var(--text);
-      position: relative;
-      z-index: 1;
-      flex: 0 1 auto;
-      max-width: calc(100% - 160px);
+      width: max-content;
+      max-width: min(94vw, 38rem);
       white-space: nowrap;
-      /* Tight halo — avoids painting over Supi to the right */
+      pointer-events: none;
       text-shadow:
-        0 0 18px rgba(36, 36, 36, 0.9),
-        0 2px 14px rgba(36, 36, 36, 0.85),
-        0 1px 6px rgba(0, 0, 0, 0.2);
+        0 0 14px rgba(36, 36, 36, 0.85),
+        0 2px 10px rgba(36, 36, 36, 0.75),
+        0 1px 4px rgba(0, 0, 0, 0.18);
     }
+
     .lp-sub {
       font-size: 17px; color: var(--text-muted); margin-bottom: 44px; max-width: 440px;
     }
@@ -356,15 +375,12 @@
     html[data-theme="dark"] .lp-footer-nav a:hover {
       color: var(--text);
     }
-    @media (max-width: 520px) {
-      .lp-hero-row {
-        flex-direction: column;
-        flex-wrap: wrap;
-        gap: 28px;
+    @media (max-width: 560px) {
+      .lp-hero-stack {
+        --hero-shift-x: clamp(52px, 20vw, 100px);
+        min-height: 260px;
       }
       .lp-headline {
-        text-align: center;
-        max-width: 100%;
         white-space: normal;
       }
     }
@@ -384,9 +400,11 @@
   </header>
 
   <main class="lp-main">
-    <div class="lp-hero-row">
+    <div class="lp-hero-stack">
       <h1 class="lp-headline">Suppliers for Builders</h1>
-      <div class="lp-hero-face" aria-hidden="true">
+      <div class="lp-hero-layer lp-hero-layer--shadow" aria-hidden="true"></div>
+      <div class="lp-hero-layer lp-hero-layer--supi" aria-hidden="true">
+        <div class="lp-hero-face-wrap">
       <!--
         viewBox 200×200 square logo.
         Left eye:  x=23, y=37, w=72, h=76 → center (59, 75)
@@ -416,6 +434,7 @@
         <rect id="lid-l" x="19" y="0" width="80" height="0" fill="#000"/>
         <rect id="lid-r" x="102" y="0" width="80" height="0" fill="#000"/>
       </svg>
+        </div>
       </div>
     </div>
 
