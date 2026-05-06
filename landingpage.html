@@ -341,8 +341,6 @@
       white-space: nowrap;
       overflow-x: auto;
     }
-    .lp-footer-legal { margin-right: 6px; }
-    .lp-footer-legal { flex-shrink: 0; }
     .lp-footer-nav {
       display: flex;
       align-items: center;
@@ -433,7 +431,6 @@
 
   <footer class="lp-footer">
     <div class="lp-footer-inner">
-      <span class="lp-footer-legal">&copy; <span id="lp-year"></span> Airsup</span>
       <nav class="lp-footer-nav" aria-label="Footer">
         <a href="/supi">Supi</a>
         <a href="/support">Support</a>
@@ -445,8 +442,6 @@
   </footer>
 
   <script>
-    document.getElementById("lp-year").textContent = new Date().getFullYear();
-
     // Cursor-tracking eyes with smooth lerp (lazy follow)
     // Target offset is computed instantly from mouse position, but the
     // rendered offset eases toward the target each animation frame.
