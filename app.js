@@ -2004,7 +2004,7 @@
             const t = 1 - dist / RADIUS;
             const ease = t * t;          // quadratic — gentle falloff
             const r = 1 + (MAX_R - 1) * ease;
-            const alpha = 0.06 + 0.28 * ease;   // max ~0.34, very subtle
+            const alpha = 0.08 + 0.30 * ease;   // max ~0.38, subtle; bumped vs bg #242424
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);
             ctx.fillStyle = "rgba(" + color + "," + alpha + ")";
