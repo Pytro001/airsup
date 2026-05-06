@@ -30,6 +30,14 @@ export async function cleanupStaleAnonymousUsers(): Promise<{
   let errors = 0;
   let page = 1;
 
+  // Fetch all user_ids that have at least one project — never delete these.
+  const { data: projectRows } = await supabaseAdmin
+    .from("projects")
+    .select("user_id");
+  const protectedIds = new Set<string>(
+    (projectRows || []).map((r) => r.user_id).filter(Boolean) as string[]
+  );
+
   for (;;) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: PER_PAGE });
     if (error) {
@@ -43,6 +51,7 @@ export async function cleanupStaleAnonymousUsers(): Promise<{
       scanned++;
       const uid = (u as { id?: string }).id;
       if (!uid) continue;
+      if (protectedIds.has(uid)) continue;
 
       const isAnon = (u as { is_anonymous?: boolean }).is_anonymous === true;
       if (!isAnon) continue;

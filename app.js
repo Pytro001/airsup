@@ -122,11 +122,7 @@
       escapeHtml(label) +
       "</label>" +
       '<div class="phone-inline">' +
-      '<select class="onboard-input phone-cc-select" id="' +
-      idBase +
-      '-cc" aria-label="Country code">' +
-      lib.dialCodeOptionsHtml(parts.dial) +
-      "</select>" +
+      lib.ccWidgetHtml(idBase + "-cc", parts.dial, "onboard-input") +
       '<input class="onboard-input phone-local-num" id="' +
       idBase +
       '-local" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" value="' +
@@ -147,11 +143,7 @@
       idBase +
       '-local">Login phone number</label>' +
       '<div class="phone-inline">' +
-      '<select class="onboard-input phone-cc-select" id="' +
-      idBase +
-      '-cc" aria-label="Country code">' +
-      (lib ? lib.dialCodeOptionsHtml(parts.dial) : "") +
-      "</select>" +
+      lib.ccWidgetHtml(idBase + "-cc", parts.dial, "onboard-input") +
       '<input class="onboard-input phone-local-num" id="' +
       idBase +
       '-local" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" value="' +
@@ -176,11 +168,7 @@
       '<div class="settings-field"><label class="settings-label">' +
       escapeHtml(label) +
       '</label><div class="phone-inline">' +
-      '<select class="settings-input phone-cc-select" id="' +
-      escapeAttr(idCc) +
-      '" aria-label="Country code">' +
-      lib.dialCodeOptionsHtml(parts.dial) +
-      "</select>" +
+      lib.ccWidgetHtml(escapeAttr(idCc), parts.dial, "settings-input") +
       '<input type="text" class="settings-input phone-local-num" id="' +
       escapeAttr(idLocal) +
       '" inputmode="numeric" pattern="[0-9]*" autocomplete="tel-national" value="' +
@@ -1006,9 +994,9 @@
       $("onboard-go")?.addEventListener("click", async () => {
         if (!(await ensureSession())) return;
         const goBtn = $("onboard-go");
-        var prev = goBtn && goBtn.textContent;
+        var prev = goBtn && goBtn.innerHTML;
         try {
-          if (goBtn) { goBtn.disabled = true; goBtn.textContent = "Informing Supi…"; }
+          if (goBtn) { goBtn.disabled = true; goBtn.innerHTML = '<span class="btn-spinner"></span>Please wait while I\'m contacting Supi…'; }
           const result = await saveOnboardingToSupabase() || {};
           userRole = isSupplier ? "supplier" : "startup";
           buildNav();
@@ -1043,7 +1031,7 @@
             }
           }
         } finally {
-          if (goBtn) { goBtn.disabled = false; if (prev) goBtn.textContent = prev; }
+          if (goBtn) { goBtn.disabled = false; goBtn.innerHTML = prev || "Launch my project"; }
         }
       });
       return;
@@ -1182,6 +1170,9 @@
     });
     stage.querySelectorAll(".phone-local-num").forEach((inp) => {
       window.AIRSUP_PHONE?.wirePhoneLocalInput(inp);
+    });
+    stage.querySelectorAll(".phone-cc-input").forEach((inp) => {
+      window.AIRSUP_PHONE?.wirePhoneCcWidget(inp);
     });
     stage.querySelectorAll(".onboard-input-phone-tel").forEach((inp) => {
       inp.addEventListener("input", () => {
@@ -1375,6 +1366,9 @@
       </div>${settingsDangerZoneHtml}</div>`;
     root.querySelectorAll(".phone-local-num").forEach((el) => {
       window.AIRSUP_PHONE?.wirePhoneLocalInput(el);
+    });
+    root.querySelectorAll(".phone-cc-input").forEach((el) => {
+      window.AIRSUP_PHONE?.wirePhoneCcWidget(el);
     });
     var settingsLoc = $("settings-location");
     if (settingsLoc) wireLocationAutocomplete(settingsLoc);
@@ -4205,6 +4199,9 @@
       ${fpDangerHtml}</div>`;
     root.querySelectorAll(".phone-local-num").forEach((el) => {
       window.AIRSUP_PHONE?.wirePhoneLocalInput(el);
+    });
+    root.querySelectorAll(".phone-cc-input").forEach((el) => {
+      window.AIRSUP_PHONE?.wirePhoneCcWidget(el);
     });
     root.querySelectorAll(".fp-digits").forEach((inp) => {
       inp.addEventListener("input", () => { inp.value = phoneDigits(inp.value); });

@@ -240,7 +240,8 @@ adminRouter.get("/overview", async (_req, res: Response) => {
             pipeline_step: typeof pr.pipeline_step === "number" ? pr.pipeline_step : 1,
           })),
         };
-      });
+      })
+      .filter((c) => c.project_count > 0);
 
     const factoryList = factories.map((f) => {
       const fMatches = matchesByFactory.get(f.id) || [];

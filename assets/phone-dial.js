@@ -856,9 +856,9 @@
   /** @returns {{ dial: string, national: string }} dial digits only, no + */
   function parseStoredPhoneToParts(stored) {
     var raw = String(stored == null ? "" : stored).trim();
-    if (!raw) return { dial: "49", national: "" };
+    if (!raw) return { dial: "1", national: "" };
     var allDigits = digitsOnly(raw.charAt(0) === "+" ? raw.slice(1) : raw);
-    if (!allDigits) return { dial: "49", national: "" };
+    if (!allDigits) return { dial: "1", national: "" };
     var opts = sortedByCodeLengthDesc();
     for (var i = 0; i < opts.length; i++) {
       var c = opts[i].code;
@@ -866,7 +866,7 @@
         return { dial: c, national: allDigits.slice(c.length) };
       }
     }
-    return { dial: "49", national: allDigits };
+    return { dial: "1", national: allDigits };
   }
 
   function mergeDialAndNational(dial, nationalRaw) {
@@ -912,6 +912,87 @@
     });
   }
 
+  function ccWidgetHtml(id, selectedDial, inputClass) {
+    var cls = inputClass || "onboard-input";
+    var val = "+" + (digitsOnly(selectedDial) || "1");
+    return (
+      '<div class="phone-cc-widget">' +
+      '<input type="text" class="' + cls + ' phone-cc-input" id="' +
+      escapeAttr(id) + '" placeholder="+1" value="' + escapeAttr(val) +
+      '" autocomplete="off" spellcheck="false" maxlength="8"' +
+      ' aria-label="Country code" aria-autocomplete="list" />' +
+      '<ul class="phone-cc-suggestions" role="listbox" hidden></ul>' +
+      '</div>'
+    );
+  }
+
+  function getSuggestionsForQuery(raw) {
+    if (!raw) return [];
+    var q = raw.toLowerCase();
+    var out = [];
+    for (var i = 0; i < PHONE_DIAL_OPTIONS.length && out.length < 3; i++) {
+      var o = PHONE_DIAL_OPTIONS[i];
+      if (o.code === raw || o.code.indexOf(raw) === 0 ||
+          o.label.toLowerCase().indexOf(q) !== -1) {
+        out.push(o);
+      }
+    }
+    return out;
+  }
+
+  function wirePhoneCcWidget(inputEl) {
+    if (!inputEl) return;
+    var parent = inputEl.closest(".phone-cc-widget");
+    if (!parent) return;
+    var list = parent.querySelector(".phone-cc-suggestions");
+    if (!list) return;
+
+    function getLocalInput() {
+      var row = parent.parentElement;
+      return row ? row.querySelector(".phone-local-num") : null;
+    }
+
+    function renderList(opts) {
+      if (!opts.length) { list.hidden = true; list.innerHTML = ""; return; }
+      list.innerHTML = opts.map(function (o) {
+        var country = o.label.split(" · ")[0].split(" — ")[0].trim();
+        return (
+          '<li role="option" tabindex="-1" data-code="' + escapeAttr(o.code) + '">' +
+          "<span class=\"pcc-code\">+" + escapeHtml(o.code) + "</span>" +
+          "<span class=\"pcc-name\">" + escapeHtml(country) + "</span></li>"
+        );
+      }).join("");
+      list.hidden = false;
+    }
+
+    function selectCode(code) {
+      inputEl.value = "+" + code;
+      list.hidden = true;
+      list.innerHTML = "";
+      var local = getLocalInput();
+      if (local) local.focus();
+    }
+
+    inputEl.addEventListener("input", function () {
+      var raw = inputEl.value.replace(/^\+/, "").replace(/\D/g, "");
+      renderList(getSuggestionsForQuery(raw));
+    });
+
+    inputEl.addEventListener("focus", function () {
+      var raw = inputEl.value.replace(/^\+/, "").replace(/\D/g, "") || "1";
+      renderList(getSuggestionsForQuery(raw));
+    });
+
+    inputEl.addEventListener("blur", function () {
+      setTimeout(function () { list.hidden = true; list.innerHTML = ""; }, 200);
+    });
+
+    list.addEventListener("mousedown", function (e) {
+      var li = e.target.closest("[data-code]");
+      if (li) { e.preventDefault(); selectCode(li.getAttribute("data-code")); }
+    });
+  }
+
   global.AIRSUP_PHONE = {
     PHONE_DIAL_OPTIONS: PHONE_DIAL_OPTIONS,
     digitsOnly: digitsOnly,
@@ -919,5 +1000,8 @@
     mergeDialAndNational: mergeDialAndNational,
     dialCodeOptionsHtml: dialCodeOptionsHtml,
     wirePhoneLocalInput: wirePhoneLocalInput,
+    ccWidgetHtml: ccWidgetHtml,
+    getSuggestionsForQuery: getSuggestionsForQuery,
+    wirePhoneCcWidget: wirePhoneCcWidget,
   };
 })(typeof window !== "undefined" ? window : globalThis);
