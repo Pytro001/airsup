@@ -119,37 +119,34 @@
       overflow: visible;
     }
 
-    /* z=1 — Supi behind everything; drop-shadow is the logo's own cast shadow */
+    /* z=1 — Supi behind everything; no CSS filter here so blink never escapes z-ordering */
     .lp-hero-layer--supi {
       position: absolute;
       z-index: 1;
       left: 50%;
-      top: 40%;
+      top: 46%;
       transform: translate(calc(-50% + var(--hero-shift-x)), -50%);
       pointer-events: none;
     }
     .lp-hero-face-wrap {
       transform: rotate(15deg);
       transform-origin: center center;
-      filter:
-        drop-shadow(-4px 28px 26px rgba(0,0,0,0.95))
-        drop-shadow(0px 8px 10px rgba(0,0,0,0.55));
     }
 
-    /* z=2 — background-color blob between Supi and the headline so text reads cleanly */
+    /* z=2 — #242424 blurred blob in front of Supi, behind the headline */
     .lp-hero-layer--shadow {
       display: block;
       position: absolute;
       z-index: 2;
       left: 50%;
-      top: 48%;
+      top: 54%;
       width: 200px;
       height: 160px;
       transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 20px));
       border-radius: 50%;
-      background: var(--page-bg);
+      background: #242424;
       filter: blur(32px);
-      opacity: 0.92;
+      opacity: 0.95;
       pointer-events: none;
     }
 
@@ -391,9 +388,9 @@
         white-space: normal;
         top: 72%;
       }
-      .lp-hero-layer--supi { top: 38%; }
+      .lp-hero-layer--supi { top: 44%; }
       .lp-hero-layer--shadow {
-        top: 46%;
+        top: 52%;
         transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 18px));
       }
     }
