@@ -109,9 +109,9 @@
       display: block;
     }
 
-    /* Hero: three independent layers (no flex coupling). Title centered on top. */
+    /* Hero: three independent layers. z ordering: Supi(1) < shadow-blob(2) < headline(3) */
     .lp-hero-stack {
-      --hero-shift-x: clamp(102px, 16vw, 152px);
+      --hero-shift-x: clamp(160px, 22vw, 220px);
       position: relative;
       width: 100%;
       min-height: 210px;
@@ -119,11 +119,10 @@
       overflow: visible;
     }
 
-    /* z=3 — Supi above headline so blink is never clipped by any other layer.
-       Shadow is a CSS filter on the face-wrap so it's always beneath the logo. */
+    /* z=1 — Supi behind everything; drop-shadow is the logo's own cast shadow */
     .lp-hero-layer--supi {
       position: absolute;
-      z-index: 3;
+      z-index: 1;
       left: 50%;
       top: 40%;
       transform: translate(calc(-50% + var(--hero-shift-x)), -50%);
@@ -137,13 +136,27 @@
         drop-shadow(0px 8px 10px rgba(0,0,0,0.55));
     }
 
-    /* Shadow div no longer needed — shadow lives on the face-wrap filter */
-    .lp-hero-layer--shadow { display: none; }
-
-    /* z=2 — headline, below Supi so the logo sits on top */
-    .lp-headline {
+    /* z=2 — background-color blob between Supi and the headline so text reads cleanly */
+    .lp-hero-layer--shadow {
+      display: block;
       position: absolute;
       z-index: 2;
+      left: 50%;
+      top: 48%;
+      width: 200px;
+      height: 160px;
+      transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 20px));
+      border-radius: 50%;
+      background: var(--page-bg);
+      filter: blur(32px);
+      opacity: 0.92;
+      pointer-events: none;
+    }
+
+    /* z=3 — headline on top of both Supi and the shadow blob */
+    .lp-headline {
+      position: absolute;
+      z-index: 3;
       left: 50%;
       top: 72%;
       transform: translate(-50%, -50%);
@@ -370,7 +383,7 @@
     }
     @media (max-width: 560px) {
       .lp-hero-stack {
-        --hero-shift-x: clamp(72px, 22vw, 118px);
+        --hero-shift-x: clamp(100px, 26vw, 160px);
         min-height: 190px;
         margin-bottom: 8px;
       }
@@ -379,6 +392,10 @@
         top: 72%;
       }
       .lp-hero-layer--supi { top: 38%; }
+      .lp-hero-layer--shadow {
+        top: 46%;
+        transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 18px));
+      }
     }
     @media (max-width: 480px) {
       .lp-footer { font-size: 10px; padding: 14px 12px; }
