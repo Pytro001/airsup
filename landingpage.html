@@ -154,7 +154,7 @@
       position: absolute;
       z-index: 3;
       left: 50%;
-      top: 66%;
+      top: 72%;
       transform: translate(-50%, -50%);
       font-size: clamp(22px, 4.5vw, 46px);
       line-height: 1.08;
@@ -385,7 +385,7 @@
       }
       .lp-headline {
         white-space: normal;
-        top: 66%;
+        top: 72%;
       }
       .lp-hero-layer--supi { top: 56%; }
       .lp-hero-layer--shadow {
@@ -411,7 +411,7 @@
   <main class="lp-main">
     <div class="lp-hero-stack">
       <h1 class="lp-headline">Suppliers for Builders</h1>
-      <div class="lp-hero-layer lp-hero-layer--shadow" aria-hidden="true"></div>
+      <div id="lp-hero-shadow" class="lp-hero-layer lp-hero-layer--shadow" aria-hidden="true"></div>
       <div class="lp-hero-layer lp-hero-layer--supi" aria-hidden="true">
         <div class="lp-hero-face-wrap">
       <!--
@@ -523,23 +523,47 @@
     function animateBlink() {
       const CLOSE_MS = 120;
       const OPEN_MS  = 150;
+      const TOTAL_MS = CLOSE_MS + OPEN_MS;
+      const shadowEl = document.getElementById("lp-hero-shadow");
+      const REST_SHADOW_OPACITY = 0.9;
 
-      function run(startH, endH, duration, onDone) {
-        const t0 = performance.now();
-        (function frame(now) {
-          const p = Math.min((now - t0) / duration, 1);
-          const e = p < 0.5 ? 2*p*p : -1+(4-2*p)*p; // ease in-out
-          const h = (startH + (endH - startH) * e).toFixed(1);
-          lidL.setAttribute("height", h);
-          lidR.setAttribute("height", h);
-          if (p < 1) requestAnimationFrame(frame);
-          else onDone();
-        })(t0);
+      function easeInOut(p) {
+        return p < 0.5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
       }
 
-      run(0, EYE_H, CLOSE_MS, () => {
-        run(EYE_H, 0, OPEN_MS, scheduleBlink);
-      });
+      function shadowOpacityAt(p) {
+        // p: 0..1 over full blink — 100% at start, ≤5% from midpoint, back to rest at end
+        if (p <= 0.5) return 1 - (1 - 0.05) * (p / 0.5);
+        return 0.05 + (REST_SHADOW_OPACITY - 0.05) * ((p - 0.5) / 0.5);
+      }
+
+      const t0 = performance.now();
+      function frame(now) {
+        const elapsed = now - t0;
+        const p = Math.min(elapsed / TOTAL_MS, 1);
+
+        if (shadowEl) shadowEl.style.opacity = String(shadowOpacityAt(p));
+
+        let h;
+        if (elapsed < CLOSE_MS) {
+          const pc = elapsed / CLOSE_MS;
+          h = EYE_H * easeInOut(pc);
+        } else {
+          const po = (elapsed - CLOSE_MS) / OPEN_MS;
+          h = EYE_H * (1 - easeInOut(Math.min(po, 1)));
+        }
+        const hs = h.toFixed(1);
+        lidL.setAttribute("height", hs);
+        lidR.setAttribute("height", hs);
+
+        if (p < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          if (shadowEl) shadowEl.style.opacity = String(REST_SHADOW_OPACITY);
+          scheduleBlink();
+        }
+      }
+      requestAnimationFrame(frame);
     }
 
     function scheduleBlink() {
