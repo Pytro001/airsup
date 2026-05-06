@@ -10,15 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem("airsupTheme");
-        document.documentElement.dataset.theme = (t === "light") ? "light" : "dark";
-      } catch (e) { document.documentElement.dataset.theme = "dark"; }
-    })();
-  </script>
-  <script src="assets/theme.js" defer></script>
+  <script>document.documentElement.dataset.theme = "dark";</script>
 </head>
 <body>
   <header class="header" id="site-header">
@@ -159,10 +151,7 @@
     <!-- Supplier Dashboard -->
     <section class="page" id="page-supplier-dashboard">
       <div class="page-content">
-        <div class="page-title-row">
-          <h1 class="page-title">Dashboard</h1>
-          <button type="button" class="theme-toggle" id="supplier-theme-btn" aria-label="Toggle theme"></button>
-        </div>
+        <h1 class="page-title">Dashboard</h1>
         <p class="page-lead">Incoming project briefs and your active work.</p>
         <p id="supplier-dash-flash" class="form-message" role="status" hidden></p>
         <div class="supplier-stats" id="supplier-stats"></div>

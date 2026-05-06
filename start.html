@@ -8,15 +8,7 @@
   <link rel="prefetch" href="/onboard" />
   <link rel="prefetch" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" />
   <link rel="prefetch" href="app.js" />
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem("airsupTheme");
-        document.documentElement.dataset.theme = (t === "light") ? "light" : "dark";
-      } catch (e) { document.documentElement.dataset.theme = "dark"; }
-    })();
-  </script>
-  <script src="assets/theme.js" defer></script>
+  <script>document.documentElement.dataset.theme = "dark";</script>
   <style>
     :root {
       --page-bg: #fff; --text: #111; --text-muted: #666; --text-soft: #999;
@@ -53,13 +45,6 @@
     .start-logo:hover { opacity: 0.85; }
     .start-logo img { display: block; width: 32px; height: 32px; border-radius: 8px; object-fit: contain; }
     html[data-theme="dark"] .start-logo img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
-    .lp-theme-toggle {
-      width: 34px; height: 34px; border-radius: 50%;
-      display: inline-flex; align-items: center; justify-content: center;
-      color: var(--text-muted); transition: color 0.15s, background 0.15s;
-    }
-    .lp-theme-toggle:hover { color: var(--text); background: var(--accent-bg); }
-
     .start-main {
       flex: 1; display: flex; flex-direction: column; align-items: center;
       justify-content: center; padding: 24px 24px 80px; text-align: center;
@@ -113,7 +98,6 @@
     <a href="/" class="start-logo" aria-label="Airsup home">
       <img src="assets/brand/logo-air-sup.png" alt="" width="32" height="32" />
     </a>
-    <button type="button" class="lp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
   </header>
 
   <main class="start-main">

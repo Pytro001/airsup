@@ -1360,7 +1360,6 @@
         <button type="button" class="btn-danger" id="settings-delete-profile">Delete my profile</button>
       </div>`;
     root.innerHTML = `<div class="settings-section">
-      <div class="settings-field settings-field--row"><label class="settings-label">Appearance</label><button type="button" class="btn-outline btn-sm" id="settings-theme-toggle">Switch to light mode</button></div>
       <div class="settings-field"><label class="settings-label">Display name</label><input type="text" id="settings-displayName" class="settings-input" value="${escapeAttr(v.displayName)}" /></div>
       <div class="settings-field"><label class="settings-label">Company</label><input type="text" id="settings-company" class="settings-input" value="${escapeAttr(v.company)}" /></div>
       ${settingsPhoneRowHtml("Phone / WhatsApp", "settings-phone-cc", "settings-phone-local", v.phone)}
@@ -1379,20 +1378,6 @@
     });
     var settingsLoc = $("settings-location");
     if (settingsLoc) wireLocationAutocomplete(settingsLoc);
-    const themeBtn = $("settings-theme-toggle");
-    if (themeBtn) {
-      const syncThemeBtn = () => {
-        const isDark = document.documentElement.dataset.theme === "dark";
-        themeBtn.textContent = isDark ? "Switch to light mode" : "Switch to dark mode";
-      };
-      syncThemeBtn();
-      themeBtn.addEventListener("click", () => {
-        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-        document.documentElement.dataset.theme = next;
-        try { localStorage.setItem("airsupTheme", next); } catch (_) {}
-        syncThemeBtn();
-      });
-    }
     $("settings-save")?.addEventListener("click", saveSettings);
     $("settings-save-signin")?.addEventListener("click", saveSettingsSignIn);
     if (!onAdminPath) {
@@ -3298,22 +3283,6 @@
   async function loadSupplierDashboard() {
     if (!supabaseClient || !currentUser) return;
     setFormFlash("supplier-dash-flash", "", false);
-    // Wire theme toggle button on supplier dashboard
-    const supplierThemeBtn = $("supplier-theme-btn");
-    if (supplierThemeBtn && !supplierThemeBtn.dataset.wired) {
-      supplierThemeBtn.dataset.wired = "1";
-      const sync = () => {
-        const isDark = document.documentElement.dataset.theme === "dark";
-        supplierThemeBtn.title = isDark ? "Switch to light mode" : "Switch to dark mode";
-      };
-      sync();
-      supplierThemeBtn.addEventListener("click", () => {
-        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-        document.documentElement.dataset.theme = next;
-        try { localStorage.setItem("airsupTheme", next); } catch (_) {}
-        sync();
-      });
-    }
     const stats = $("supplier-stats");
     const briefs = $("supplier-briefs");
     const active = $("supplier-active");

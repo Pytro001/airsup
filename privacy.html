@@ -8,15 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem("airsupTheme");
-        document.documentElement.dataset.theme = (t === "light") ? "light" : "dark";
-      } catch (e) { document.documentElement.dataset.theme = "dark"; }
-    })();
-  </script>
-  <script src="assets/theme.js" defer></script>
+  <script>document.documentElement.dataset.theme = "dark";</script>
   <style>
     :root {
       --page-bg: #fff;
@@ -75,13 +67,6 @@
       transition: color 0.15s;
     }
     .pg-back:hover { color: var(--text); }
-    .pg-theme-toggle {
-      width: 34px; height: 34px; border-radius: 50%;
-      display: inline-flex; align-items: center; justify-content: center;
-      background: transparent; color: var(--text-faint); border: none; cursor: pointer;
-      transition: color 0.15s, background 0.15s;
-    }
-    .pg-theme-toggle:hover { color: var(--text); background: var(--toc-bg); }
 
     .pg-content {
       flex: 1; max-width: 720px; width: 100%;
@@ -144,7 +129,6 @@
       <img src="assets/brand/logo-air-sup.png" alt="Airsup" />
       Airsup
     </a>
-    <button type="button" class="pg-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
   </header>
 
   <main class="pg-content">

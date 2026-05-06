@@ -1125,19 +1125,6 @@ html[data-theme="dark"] .btn-password-toggle:hover {
   display: block;
 }
 
-/* ===== Theme toggle ===== */
-.theme-toggle {
-  width: 34px; height: 34px; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: transparent; color: var(--text-muted);
-  cursor: pointer; border: none; padding: 0;
-  transition: color 0.15s, background 0.15s;
-}
-.theme-toggle:hover { color: var(--text); background: var(--primary-light); }
-.theme-toggle svg { display: block; }
-/* Push the header toggle to the right edge */
-.header-inner .theme-toggle { margin-left: auto; }
-
 /* Dark-mode specific badge tweaks so legacy colored pill badges stay readable */
 html[data-theme="dark"] .badge--intake { background: #2b2b30; color: #c9c9cf; }
 html[data-theme="dark"] .badge--searching { background: #3a2f0e; color: #f3d27a; }

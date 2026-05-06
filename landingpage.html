@@ -15,15 +15,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
-  <script>
-    (function () {
-      try {
-        var t = localStorage.getItem("airsupTheme");
-        document.documentElement.dataset.theme = (t === "light") ? "light" : "dark";
-      } catch (e) { document.documentElement.dataset.theme = "dark"; }
-    })();
-  </script>
-  <script src="assets/theme.js" defer></script>
+  <script>document.documentElement.dataset.theme = "dark";</script>
   <style>
     :root {
       --page-bg: #fff;
@@ -112,20 +104,11 @@
     }
     .lp-brand img { height: 22px; width: 22px; border-radius: 6px; }
     html[data-theme="dark"] .lp-brand img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
-    .lp-header-right { display: flex; align-items: center; gap: 12px; }
     .lp-login-link {
       font-size: 14px; font-weight: 400; color: var(--text-muted);
       padding: 8px 0; transition: color 0.15s;
     }
     .lp-login-link:hover { color: var(--text); }
-    .lp-theme-toggle {
-      width: 34px; height: 34px; border-radius: 50%;
-      display: inline-flex; align-items: center; justify-content: center;
-      color: var(--text-muted);
-      transition: color 0.15s, background 0.15s;
-    }
-    .lp-theme-toggle:hover { color: var(--text); background: var(--accent-bg); }
-
     /* Give Supi a subtle ring in dark mode so his black body does not
        disappear against the near-black background. */
     #face-svg { border-radius: 22px; transition: box-shadow 0.2s; }
@@ -351,9 +334,6 @@
   <div class="lp-body-inner">
   <header class="lp-header">
     <div class="lp-brand" aria-hidden="true"></div>
-    <div class="lp-header-right">
-      <button type="button" class="lp-theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
-    </div>
   </header>
 
   <main class="lp-main">
