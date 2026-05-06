@@ -102,10 +102,12 @@
       border-radius: 22px;
       display: block;
     }
-    /* Supi: 17° tilt; shadow uses page gray #242424 (see reference) */
+    /* Supi: 17° tilt, nudged right; shadow uses page gray #242424 */
     .lp-hero-face {
+      position: relative;
+      z-index: 2;
       flex-shrink: 0;
-      transform: rotate(17deg);
+      transform: translateX(16px) rotate(17deg);
       transform-origin: center center;
       filter:
         drop-shadow(-18px 12px 22px #242424)
@@ -114,14 +116,16 @@
     }
 
     .lp-hero-row {
-      display: inline-flex;
+      display: flex;
       flex-direction: row;
       align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
-      gap: clamp(14px, 3.5vw, 42px);
+      flex-wrap: nowrap;
+      gap: clamp(40px, 9vw, 96px);
       margin-bottom: 28px;
-      max-width: min(100%, 52rem);
+      max-width: min(100%, 58rem);
+      isolation: isolate;
+      padding-inline: 12px;
     }
 
     /* ── Main ── */
@@ -137,13 +141,19 @@
       letter-spacing: -0.03em;
       font-weight: 300;
       margin: 0;
+      padding: 0;
       text-align: left;
       color: var(--text);
+      position: relative;
+      z-index: 1;
+      flex: 0 1 auto;
+      max-width: calc(100% - 160px);
+      white-space: nowrap;
+      /* Tight halo — avoids painting over Supi to the right */
       text-shadow:
-        0 0 28px rgba(36, 36, 36, 0.95),
-        0 0 48px rgba(36, 36, 36, 0.75),
-        0 2px 20px rgba(36, 36, 36, 0.9),
-        0 4px 32px rgba(36, 36, 36, 0.55);
+        0 0 18px rgba(36, 36, 36, 0.9),
+        0 2px 14px rgba(36, 36, 36, 0.85),
+        0 1px 6px rgba(0, 0, 0, 0.2);
     }
     .lp-sub {
       font-size: 17px; color: var(--text-muted); margin-bottom: 44px; max-width: 440px;
@@ -318,7 +328,7 @@
       box-sizing: border-box;
     }
     html[data-theme="dark"] .lp-footer {
-      color: var(--text-soft);
+      color: var(--text-muted);
     }
     .lp-footer-inner {
       display: flex;
@@ -343,17 +353,22 @@
     .lp-footer-nav a { color: var(--text-faint); margin: 0 6px; transition: color 0.15s; white-space: nowrap; }
     .lp-footer-nav a:hover { color: var(--text-muted); }
     html[data-theme="dark"] .lp-footer-nav a {
-      color: var(--text-soft);
+      color: var(--text-muted);
     }
     html[data-theme="dark"] .lp-footer-nav a:hover {
-      color: var(--text-muted);
+      color: var(--text);
     }
     @media (max-width: 520px) {
       .lp-hero-row {
         flex-direction: column;
-        gap: 22px;
+        flex-wrap: wrap;
+        gap: 28px;
       }
-      .lp-headline { text-align: center; }
+      .lp-headline {
+        text-align: center;
+        max-width: 100%;
+        white-space: normal;
+      }
     }
     @media (max-width: 480px) {
       .lp-footer { font-size: 10px; padding: 14px 12px; }
