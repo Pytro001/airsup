@@ -30,7 +30,7 @@
       --primary: #111;
       --primary-hover: #333;
       --on-primary: #fff;
-      --dot-color: rgba(0,0,0,0.075);
+      --dot-color: rgba(0,0,0,0.055);
       --shadow-card: 0 4px 18px rgba(0,0,0,0.07);
       color-scheme: light;
     }
@@ -47,7 +47,7 @@
       --primary: #f2f2f3;
       --primary-hover: #dcdce0;
       --on-primary: #242424;
-      --dot-color: rgba(255,255,255,0.15);
+      --dot-color: rgba(255,255,255,0.11);
       --shadow-card: 0 4px 18px rgba(0,0,0,0.5);
       color-scheme: dark;
     }
@@ -115,12 +115,13 @@
     html[data-theme="dark"] #face-svg {
       box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.6);
     }
+    .lp-hero-face { margin-bottom: 16px; }
 
     /* ── Main ── */
     .lp-main {
       flex: 1; display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      padding: 24px 24px 96px;
+      padding: 56px 24px 88px;
       text-align: center;
     }
     .lp-headline {
@@ -338,7 +339,7 @@
 
   <main class="lp-main">
     <!-- cursor-tracking face -->
-    <div style="margin-bottom:16px;">
+    <div class="lp-hero-face">
       <!--
         viewBox 200×200 square logo.
         Left eye:  x=23, y=37, w=72, h=76 → center (59, 75)
