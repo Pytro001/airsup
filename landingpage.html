@@ -111,11 +111,11 @@
 
     /* Hero: three independent layers (no flex coupling). Title centered on top. */
     .lp-hero-stack {
-      --hero-shift-x: clamp(88px, 14vw, 132px);
+      --hero-shift-x: clamp(102px, 16vw, 152px);
       position: relative;
       width: 100%;
-      min-height: 230px;
-      margin-bottom: 28px;
+      min-height: 195px;
+      margin-bottom: 8px;
       overflow: visible;
     }
 
@@ -124,7 +124,7 @@
       position: absolute;
       z-index: 1;
       left: 50%;
-      top: 50%;
+      top: 56%;
       transform: translate(calc(-50% + var(--hero-shift-x)), -50%);
       pointer-events: none;
     }
@@ -138,10 +138,10 @@
       position: absolute;
       z-index: 2;
       left: 50%;
-      top: 50%;
-      width: 200px;
-      height: 200px;
-      transform: translate(calc(-50% + var(--hero-shift-x)), -50%);
+      top: 52%;
+      width: 170px;
+      height: 170px;
+      transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 38px));
       border-radius: 44px;
       background: #242424;
       filter: blur(26px);
@@ -154,7 +154,7 @@
       position: absolute;
       z-index: 3;
       left: 50%;
-      top: 50%;
+      top: 62%;
       transform: translate(-50%, -50%);
       font-size: clamp(22px, 4.5vw, 46px);
       line-height: 1.08;
@@ -212,7 +212,7 @@
     .lp-choice-sub { font-size: 13px; color: var(--text-soft); line-height: 1.4; }
 
     .lp-start-wrap {
-      margin-top: 8px;
+      margin-top: 4px;
       margin-bottom: 40px;
     }
 
@@ -377,11 +377,18 @@
     }
     @media (max-width: 560px) {
       .lp-hero-stack {
-        --hero-shift-x: clamp(52px, 20vw, 100px);
-        min-height: 260px;
+        --hero-shift-x: clamp(72px, 22vw, 118px);
+        min-height: 175px;
+        margin-bottom: 8px;
       }
       .lp-headline {
         white-space: normal;
+        top: 62%;
+      }
+      .lp-hero-layer--supi { top: 56%; }
+      .lp-hero-layer--shadow {
+        top: 52%;
+        transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 34px));
       }
     }
     @media (max-width: 480px) {
@@ -412,7 +419,7 @@
         Pupils centered inside each eye at rest: left x=46 y=61, right x=129 y=61
         MAX_OFFSET=20 lets pupils travel fully in all directions.
       -->
-      <svg id="face-svg" viewBox="0 0 200 200" width="128" height="128"
+      <svg id="face-svg" viewBox="0 0 200 200" width="108" height="108"
            xmlns="http://www.w3.org/2000/svg"
            style="display:block;">
         <!-- full black square body -->
