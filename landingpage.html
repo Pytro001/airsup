@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Airsup</title>
-  <meta name="description" content="Finding the world's best suppliers under your requirements." />
+  <meta name="description" content="Suppliers for Builders — Airsup connects you with vetted manufacturers." />
   <meta property="og:title" content="Airsup" />
-  <meta property="og:description" content="Finding the world's best suppliers under your requirements." />
+  <meta property="og:description" content="Suppliers for Builders — Airsup connects you with vetted manufacturers." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="/assets/brand/logo-air-sup.png" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -111,11 +111,33 @@
     .lp-login-link:hover { color: var(--text); }
     /* Give Supi a subtle ring in dark mode so his black body does not
        disappear against the near-black background. */
-    #face-svg { border-radius: 22px; transition: box-shadow 0.2s; }
-    html[data-theme="dark"] #face-svg {
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 8px 28px rgba(0,0,0,0.6);
+    #face-svg {
+      border-radius: 22px;
+      display: block;
     }
-    .lp-hero-face { margin-bottom: 16px; }
+    /* Depth: soft shadow offset down-right (rotation applied on .lp-hero-face) */
+    .lp-hero-face {
+      flex-shrink: 0;
+      transform: rotate(20deg);
+      transform-origin: center center;
+      filter: drop-shadow(14px 18px 22px rgba(0, 0, 0, 0.55))
+        drop-shadow(4px 6px 10px rgba(0, 0, 0, 0.35));
+    }
+    html[data-theme="dark"] .lp-hero-face {
+      filter: drop-shadow(16px 22px 28px rgba(0, 0, 0, 0.75))
+        drop-shadow(6px 8px 14px rgba(0, 0, 0, 0.45));
+    }
+
+    .lp-hero-row {
+      display: inline-flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: clamp(14px, 3.5vw, 42px);
+      margin-bottom: 28px;
+      max-width: min(100%, 52rem);
+    }
 
     /* ── Main ── */
     .lp-main {
@@ -125,10 +147,13 @@
       text-align: center;
     }
     .lp-headline {
-      font-size: clamp(18px, 3.2vw, 38px); line-height: 1.15;
-      letter-spacing: -0.025em; font-weight: 500; margin-bottom: 14px;
-      max-width: 38rem;
-      margin-left: auto; margin-right: auto;
+      font-size: clamp(22px, 4.5vw, 46px);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      font-weight: 300;
+      margin: 0;
+      text-align: left;
+      color: var(--text);
     }
     .lp-sub {
       font-size: 17px; color: var(--text-muted); margin-bottom: 44px; max-width: 440px;
@@ -168,7 +193,7 @@
     .lp-choice-sub { font-size: 13px; color: var(--text-soft); line-height: 1.4; }
 
     .lp-start-wrap {
-      margin-top: 32px;
+      margin-top: 8px;
       margin-bottom: 40px;
     }
 
@@ -333,6 +358,13 @@
     html[data-theme="dark"] .lp-footer-nav a:hover {
       color: var(--text-muted);
     }
+    @media (max-width: 520px) {
+      .lp-hero-row {
+        flex-direction: column;
+        gap: 22px;
+      }
+      .lp-headline { text-align: center; }
+    }
     @media (max-width: 480px) {
       .lp-footer { font-size: 10px; padding: 14px 12px; }
       .lp-footer-nav { gap: 6px 10px; }
@@ -349,8 +381,9 @@
   </header>
 
   <main class="lp-main">
-    <!-- cursor-tracking face -->
-    <div class="lp-hero-face">
+    <div class="lp-hero-row">
+      <h1 class="lp-headline">Suppliers for Builders</h1>
+      <div class="lp-hero-face" aria-hidden="true">
       <!--
         viewBox 200×200 square logo.
         Left eye:  x=23, y=37, w=72, h=76 → center (59, 75)
@@ -358,9 +391,9 @@
         Pupils centered inside each eye at rest: left x=46 y=61, right x=129 y=61
         MAX_OFFSET=20 lets pupils travel fully in all directions.
       -->
-      <svg id="face-svg" viewBox="0 0 200 200" width="120" height="120"
+      <svg id="face-svg" viewBox="0 0 200 200" width="128" height="128"
            xmlns="http://www.w3.org/2000/svg"
-           style="display:block;margin:0 auto;">
+           style="display:block;">
         <!-- full black square body -->
         <rect x="0" y="0" width="200" height="200" rx="22" fill="#000"/>
         <!-- left eye white rounded square -->
@@ -380,9 +413,8 @@
         <rect id="lid-l" x="19" y="0" width="80" height="0" fill="#000"/>
         <rect id="lid-r" x="102" y="0" width="80" height="0" fill="#000"/>
       </svg>
+      </div>
     </div>
-
-    <h1 class="lp-headline">Finding the world's best suppliers<br>under your requirements</h1>
 
     <div class="lp-start-wrap">
       <a href="/start" class="lp-start-link" aria-label="Start">
