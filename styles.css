@@ -30,16 +30,16 @@
 
 html[data-theme="dark"] {
   --text: #f2f2f3;
-  --text-muted: #9a9aa2;
-  --text-soft: #6b6b73;
-  --border: #26262b;
-  --border-light: #1d1d22;
-  --bg: #111114;
-  --bg-subtle: #17171b;
+  --text-muted: #9a9a9a;
+  --text-soft: #6b6b6b;
+  --border: #282828;
+  --border-light: #1e1e1e;
+  --bg: #141414;
+  --bg-subtle: #161616;
   --bg-page: #242424;
   --primary: #f2f2f3;
   --primary-hover: #dcdce0;
-  --primary-light: #1d1d22;
+  --primary-light: #1e1e1e;
   --on-primary: #242424;
   --accent: #9ec4c8;
   --danger: #ff7a6b;

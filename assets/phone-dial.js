@@ -919,7 +919,7 @@
       '<div class="phone-cc-widget">' +
       '<input type="text" class="' + cls + ' phone-cc-input" id="' +
       escapeAttr(id) + '" placeholder="+1" value="' + escapeAttr(val) +
-      '" autocomplete="off" spellcheck="false" maxlength="8"' +
+      '" autocomplete="off" spellcheck="false" maxlength="5"' +
       ' aria-label="Country code" aria-autocomplete="list" />' +
       '<ul class="phone-cc-suggestions" role="listbox" hidden></ul>' +
       '</div>'

@@ -36,13 +36,13 @@
     html[data-theme="dark"] {
       --page-bg: #242424;
       --text: #f2f2f3;
-      --text-muted: #9a9aa2;
-      --text-soft: #6b6b73;
-      --text-faint: #44444a;
-      --border: #26262b;
-      --border-light: #1d1d22;
-      --card-bg: #111114;
-      --accent-bg: #1d1d22;
+      --text-muted: #9a9a9a;
+      --text-soft: #6b6b6b;
+      --text-faint: #444444;
+      --border: #282828;
+      --border-light: #1e1e1e;
+      --card-bg: #141414;
+      --accent-bg: #1e1e1e;
       --primary: #f2f2f3;
       --primary-hover: #dcdce0;
       --on-primary: #242424;
@@ -119,10 +119,9 @@
       overflow: visible;
     }
 
-    /* z=1 — Supi behind everything; no CSS filter here so blink never escapes z-ordering */
+    /* painted first (behind) via DOM order — no z-index needed */
     .lp-hero-layer--supi {
       position: absolute;
-      z-index: 1;
       left: 50%;
       top: 46%;
       transform: translate(calc(-50% + var(--hero-shift-x)), -50%);
@@ -133,11 +132,10 @@
       transform-origin: center center;
     }
 
-    /* z=2 — #242424 blurred blob in front of Supi, behind the headline */
+    /* painted second (in front of Supi, behind headline) via DOM order */
     .lp-hero-layer--shadow {
       display: block;
       position: absolute;
-      z-index: 2;
       left: 50%;
       top: 54%;
       width: 200px;
@@ -150,10 +148,9 @@
       pointer-events: none;
     }
 
-    /* z=3 — headline on top of both Supi and the shadow blob */
+    /* painted last (on top) via DOM order */
     .lp-headline {
       position: absolute;
-      z-index: 3;
       left: 50%;
       top: 72%;
       transform: translate(-50%, -50%);
@@ -389,10 +386,7 @@
         top: 72%;
       }
       .lp-hero-layer--supi { top: 44%; }
-      .lp-hero-layer--shadow {
-        top: 52%;
-        transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 18px));
-      }
+      .lp-hero-layer--shadow { top: 52%; transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 18px)); }
     }
     @media (max-width: 480px) {
       .lp-footer { font-size: 10px; padding: 14px 12px; }
@@ -411,8 +405,6 @@
 
   <main class="lp-main">
     <div class="lp-hero-stack">
-      <h1 class="lp-headline">Suppliers for Builders</h1>
-      <div id="lp-hero-shadow" class="lp-hero-layer lp-hero-layer--shadow" aria-hidden="true"></div>
       <div class="lp-hero-layer lp-hero-layer--supi" aria-hidden="true">
         <div class="lp-hero-face-wrap">
       <!--
@@ -446,6 +438,8 @@
       </svg>
         </div>
       </div>
+      <div class="lp-hero-layer lp-hero-layer--shadow" aria-hidden="true"></div>
+      <h1 class="lp-headline">Suppliers for Builders</h1>
     </div>
 
     <div class="lp-start-wrap">
