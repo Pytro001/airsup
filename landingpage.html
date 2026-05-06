@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="assets/brand/logo-air-sup.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <script>
     (function () {
       try {
@@ -62,7 +62,8 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { -webkit-text-size-adjust: 100%; }
     body {
-      font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-weight: 300;
       background-color: var(--page-bg);
       color: var(--text); line-height: 1.55;
       min-height: 100dvh; -webkit-font-smoothing: antialiased;
@@ -107,13 +108,13 @@
     }
     .lp-brand {
       display: inline-flex; align-items: center; gap: 9px;
-      font-weight: 600; font-size: 16px; color: var(--text);
+      font-weight: 500; font-size: 16px; color: var(--text);
     }
     .lp-brand img { height: 22px; width: 22px; border-radius: 6px; }
     html[data-theme="dark"] .lp-brand img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
     .lp-header-right { display: flex; align-items: center; gap: 12px; }
     .lp-login-link {
-      font-size: 14px; font-weight: 500; color: var(--text-muted);
+      font-size: 14px; font-weight: 400; color: var(--text-muted);
       padding: 8px 0; transition: color 0.15s;
     }
     .lp-login-link:hover { color: var(--text); }
@@ -141,7 +142,7 @@
     }
     .lp-headline {
       font-size: clamp(34px, 5.5vw, 58px); line-height: 1.05;
-      letter-spacing: -0.03em; font-weight: 600; margin-bottom: 14px;
+      letter-spacing: -0.03em; font-weight: 500; margin-bottom: 14px;
     }
     .lp-sub {
       font-size: 17px; color: var(--text-muted); margin-bottom: 44px; max-width: 440px;
@@ -177,7 +178,7 @@
       background: var(--accent-bg); display: flex; align-items: center;
       justify-content: center; margin-bottom: 14px; flex-shrink: 0;
     }
-    .lp-choice-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .lp-choice-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
     .lp-choice-sub { font-size: 13px; color: var(--text-soft); line-height: 1.4; }
 
     .lp-start-wrap {
@@ -205,9 +206,9 @@
       outline-offset: 4px;
     }
     .lp-start-text {
-      font-family: "Inter", "DM Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 0.92rem;
-      font-weight: 500;
+      font-weight: 400;
       letter-spacing: 0.01em;
       color: #111;
     }
@@ -287,7 +288,7 @@
     .lp-email-btn {
       padding: 11px 20px; border-radius: 999px;
       background: var(--primary); color: var(--on-primary);
-      font-size: 14px; font-weight: 500;
+      font-size: 14px; font-weight: 400;
       transition: background 0.15s;
       white-space: nowrap;
     }

@@ -3512,7 +3512,7 @@
       overlay.style.cssText = "position:fixed;inset:0;background:var(--bg-page);color:var(--text);z-index:9999;display:flex;align-items:center;justify-content:center;";
       overlay.innerHTML = `
         <div style="text-align:center;max-width:320px;width:90%;padding:0 24px;">
-          <h1 style="font-size:22px;font-weight:600;margin-bottom:8px;">Admin access</h1>
+          <h1 style="font-size:22px;font-weight:500;margin-bottom:8px;">Admin access</h1>
           <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Enter the admin password to continue.</p>
           <div style="display:flex;flex-direction:column;gap:12px;">
             <div class="password-input-wrap" style="position:relative;width:100%;">
@@ -3520,7 +3520,7 @@
             ${passwordToggleButtonHtml("admin-pw-input")}
             </div>
             <p id="admin-pw-error" style="color:#d93025;font-size:13px;display:none;margin:0;">Wrong password.</p>
-            <button type="button" id="admin-pw-btn" style="padding:11px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:500;border:none;cursor:pointer;">Unlock</button>
+            <button type="button" id="admin-pw-btn" style="padding:11px;border-radius:999px;background:var(--primary);color:var(--on-primary);font-size:14px;font-weight:400;border:none;cursor:pointer;">Unlock</button>
           </div>
         </div>`;
       document.body.appendChild(overlay);
