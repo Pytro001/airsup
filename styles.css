@@ -286,10 +286,10 @@ html[data-theme="dark"] .site-logo img {
   display: flex; align-items: center; padding: 16px 20px;
   border: 1px solid var(--border); border-radius: var(--radius);
   font-size: 16px; font-weight: 400; text-align: left;
-  background: var(--bg);
+  background: transparent;
   transition: border-color 0.15s, background 0.15s, transform 0.1s;
 }
-.onboard-choice:hover { border-color: var(--text-soft); background: var(--bg-subtle); }
+.onboard-choice:hover { border-color: var(--text-soft); background: transparent; }
 .onboard-choice:active { transform: scale(0.99); }
 .onboard-choice.selected { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
 .onboard-form { display: flex; flex-direction: column; gap: 20px; }
