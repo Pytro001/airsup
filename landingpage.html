@@ -215,17 +215,17 @@
       margin-top: 0;
       margin-bottom: 40px;
     }
-    .lp-footer-inner {
-      flex-direction: column;
-      gap: 6px;
-    }
     .lp-social-proof {
-      display: inline-flex;
+      display: flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
+      padding: 8px 20px;
       font-size: 12px;
       color: var(--text-muted);
       white-space: nowrap;
+      width: 100%;
+      box-sizing: border-box;
     }
     .lp-stars {
       color: #f5a623;
@@ -470,12 +470,13 @@
 
   </div>
 
+  <div class="lp-social-proof">
+    <span class="lp-stars">★★★★★</span>
+    <span>Trusted Suppliers from 🇺🇸 US &nbsp;🇨🇳 CN &nbsp;🇪🇺 EU</span>
+  </div>
+
   <footer class="lp-footer">
     <div class="lp-footer-inner">
-      <div class="lp-social-proof">
-        <span class="lp-stars">★★★★★</span>
-        <span>Trusted Suppliers from 🇺🇸 US &nbsp;🇨🇳 CN &nbsp;🇪🇺 EU</span>
-      </div>
       <nav class="lp-footer-nav" aria-label="Footer">
         <a href="/supi">Supi</a>
         <a href="/support">Support</a>
