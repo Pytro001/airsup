@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Start — Airsup</title>
+  <title>Airsup</title>
   <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
   <link rel="prefetch" href="/onboard" />
   <link rel="prefetch" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" />
@@ -18,8 +18,8 @@
       color-scheme: light;
     }
     html[data-theme="dark"] {
-      --page-bg: #242424; --text: #f2f2f3; --text-muted: #9a9aa2; --text-soft: #6b6b73;
-      --border: #26262b; --card-bg: #111114; --accent-bg: #1d1d22;
+      --page-bg: #242424; --text: #f2f2f3; --text-muted: #9a9a9a; --text-soft: #6b6b6b;
+      --border: #282828; --card-bg: #141414; --accent-bg: #1e1e1e;
       --primary: #f2f2f3; --primary-hover: #dcdce0; --on-primary: #242424;
       --shadow-card: 0 4px 18px rgba(0,0,0,0.5);
       color-scheme: dark;
@@ -74,15 +74,12 @@
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       padding: 24px 22px; border-radius: 14px;
-      border: 1.5px solid var(--border); background: var(--card-bg);
-      text-align: center; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+      border: 1.5px solid var(--text-soft); background: transparent;
+      text-align: center; cursor: pointer; transition: border-color 0.15s, transform 0.1s;
       color: var(--text);
     }
     .start-choice:hover {
-      border-color: var(--text); box-shadow: var(--shadow-card); transform: translateY(-1px);
-    }
-    html[data-theme="dark"] .start-choice:hover {
-      border-color: rgba(255,255,255,0.14); box-shadow: none; transform: none; background: #141418;
+      border-color: var(--text);
     }
     .start-choice-title { font-size: 16px; font-weight: 500; }
     @media (max-width: 520px) {
