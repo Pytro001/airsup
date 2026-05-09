@@ -18,6 +18,7 @@ import { intakeImportRouter } from "./routes/intake-import.js";
 import { placesRouter } from "./routes/places.js";
 import { notifyRouter } from "./routes/notify.js";
 import { startWorker } from "./jobs/worker.js";
+import { registerAllSkills, triggerSkill } from "./skills/index.js";
 
 const app = express();
 const port = parseInt(process.env.PORT || "3001", 10);
@@ -44,7 +45,19 @@ app.use("/api/notify", notifyRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 
+// Project-created webhook (called by signup form after creating a project)
+app.post("/webhooks/project-created", async (req, res) => {
+  const { projectId, buyerId } = req.body ?? {};
+  if (!projectId || !buyerId) {
+    res.status(400).json({ error: "projectId and buyerId required" });
+    return;
+  }
+  res.status(200).json({ ok: true });
+  triggerSkill("signup", { projectId, buyerId });
+});
+
 app.listen(port, () => {
   console.log(`[Airsup] Server listening on http://localhost:${port}`);
+  registerAllSkills();
   startWorker();
 });

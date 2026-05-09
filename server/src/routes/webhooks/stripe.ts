@@ -46,6 +46,16 @@ stripeWebhookRouter.post("/", async (req: Request, res: Response) => {
         break;
       }
 
+      case "checkout.session.completed": {
+        const session = event.data.object as any;
+        const outreachId = session.metadata?.outreach_id;
+        if (outreachId) {
+          const { triggerSkill } = await import("../../skills/index.js");
+          await triggerSkill("handover", { outreachId });
+        }
+        break;
+      }
+
       case "charge.refunded": {
         const charge = event.data.object as any;
         const intentId = charge.payment_intent;

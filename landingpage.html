@@ -34,18 +34,18 @@
       color-scheme: light;
     }
     html[data-theme="dark"] {
-      --page-bg: #242424;
+      --page-bg: #181818;
       --text: #f2f2f3;
       --text-muted: #9a9a9a;
       --text-soft: #6b6b6b;
       --text-faint: #444444;
       --border: #282828;
       --border-light: #1e1e1e;
-      --card-bg: #141414;
+      --card-bg: #0e0e0e;
       --accent-bg: #1e1e1e;
       --primary: #f2f2f3;
       --primary-hover: #dcdce0;
-      --on-primary: #242424;
+      --on-primary: #181818;
       --shadow-card: 0 4px 18px rgba(0,0,0,0.5);
       color-scheme: dark;
     }
@@ -67,6 +67,12 @@
       min-height: 0;
       position: relative;
       z-index: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.09) 1px, transparent 1px);
+      background-size: 28px 28px;
+      background-position: 0 0;
+    }
+    html[data-theme="dark"] .lp-body-inner {
+      background-image: radial-gradient(circle, rgba(255,255,255,0.09) 1px, transparent 1px);
     }
     .lp-main {
       flex: 1;
@@ -142,7 +148,7 @@
       height: 160px;
       transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 20px));
       border-radius: 50%;
-      background: #242424;
+      background: #181818;
       filter: blur(32px);
       opacity: 0.95;
       pointer-events: none;

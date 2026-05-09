@@ -794,8 +794,8 @@
     if (account) account.hidden = !loggedIn || inOnboarding || isBuyer || isSupplier;
     const avatarEl = $("avatar-letter");
     if (loggedIn && avatarEl) avatarEl.textContent = (currentUser.displayName || "?").charAt(0).toUpperCase();
-    const nav = $("header-nav");
-    if (nav) nav.style.display = (loggedIn && !inOnboarding) ? "" : "none";
+    const nav = $("bottom-nav");
+    if (nav) nav.hidden = !(loggedIn && !inOnboarding);
     const onThankyou = currentView === "thankyou";
     // Hide header on board (buyers use rail) and thankyou page
     const header = $("site-header");
@@ -803,7 +803,7 @@
   }
 
   function buildNav() {
-    const nav = $("header-nav");
+    const nav = $("bottom-nav");
     if (!nav) return;
     if (userRole === "supplier") {
       nav.innerHTML = '<button type="button" class="nav-link active" data-view="supplier-dashboard">Dashboard</button><button type="button" class="nav-link" data-view="supplier-profile">Factory profile</button>';
@@ -881,7 +881,7 @@
     document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
     const page = $(`page-${name}`);
     if (page) page.classList.add("active");
-    const nav = $("header-nav");
+    const nav = $("bottom-nav");
     if (nav) nav.querySelectorAll(".nav-link").forEach((n) => n.classList.toggle("active", n.dataset.view === name));
     updateAuthUI();
 
@@ -4316,8 +4316,8 @@
   if (window.location.pathname.replace(/\/+$/, "") === "/admin") {
     const account = $("header-account");
     if (account) account.hidden = true;
-    const nav = $("header-nav");
-    if (nav) nav.style.display = "none";
+    const nav = $("bottom-nav");
+    if (nav) nav.hidden = true;
     showAdminGate();
   } else if (window.location.pathname.replace(/\/+$/, "") === "/onboard") {
     // Show onboarding form immediately — no need to wait for session bootstrap
