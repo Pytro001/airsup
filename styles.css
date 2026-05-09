@@ -449,7 +449,6 @@ textarea.settings-input.onboard-textarea--compact {
 }
 .onboard-actions {
   display: flex; gap: 12px; margin-top: 24px;
-  background: var(--bg-page); border-top: 1px solid var(--border);
   padding: 20px 0 0;
 }
 .onboard-field-error { color: #d93025; font-size: 14px; margin: 0; line-height: 1.35; }
