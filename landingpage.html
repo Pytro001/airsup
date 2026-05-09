@@ -117,7 +117,7 @@
 
     /* Hero: three independent layers. z ordering: Supi(1) < shadow-blob(2) < headline(3) */
     .lp-hero-stack {
-      --hero-shift-x: clamp(100px, 14vw, 150px);
+      --hero-shift-x: clamp(130px, 18vw, 190px);
       position: relative;
       width: 100%;
       min-height: 210px;
@@ -230,6 +230,8 @@
       font-size: 12px;
       color: var(--text-muted);
       white-space: nowrap;
+      position: relative;
+      z-index: 2;
     }
     .lp-stars {
       color: #f5a623;
