@@ -117,7 +117,7 @@
 
     /* Hero: three independent layers. z ordering: Supi(1) < shadow-blob(2) < headline(3) */
     .lp-hero-stack {
-      --hero-shift-x: clamp(160px, 22vw, 220px);
+      --hero-shift-x: clamp(100px, 14vw, 150px);
       position: relative;
       width: 100%;
       min-height: 210px;
@@ -134,7 +134,6 @@
       pointer-events: none;
     }
     .lp-hero-face-wrap {
-      transform: rotate(15deg);
       transform-origin: center center;
     }
 
@@ -160,7 +159,7 @@
       left: 50%;
       top: 80%;
       transform: translate(-50%, -50%);
-      font-size: clamp(36px, 9vw, 72px);
+      font-size: clamp(32px, 7.5vw, 58px);
       line-height: 1.08;
       letter-spacing: -0.03em;
       font-weight: 500;
@@ -429,7 +428,7 @@
   <main class="lp-main">
     <div class="lp-hero-stack">
       <div class="lp-hero-layer lp-hero-layer--supi" aria-hidden="true">
-        <div class="lp-hero-face-wrap">
+        <div class="lp-hero-face-wrap" style="transform:rotate(8deg)">
       <!--
         viewBox 200×200 square logo.
         Left eye:  x=23, y=37, w=72, h=76 → center (59, 75)
