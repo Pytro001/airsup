@@ -1043,7 +1043,7 @@
       var nf = onboardingProjectFiles.length;
       var fileBtnLabel =
         nf === 0
-          ? "Choose files"
+          ? "Add files"
           : nf === 1
             ? escapeHtml(onboardingProjectFiles[0].name || "1 file")
             : escapeHtml(String(nf) + " files selected");
@@ -1058,7 +1058,7 @@
         '<input class="onboard-brief-file-input" type="file" id="onboard-brief-file" multiple ' +
         'accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.mdown,.csv,.tsv,.xlsx,.xls,.ppt,.pptx,.odt,.ods,.odp,.rtf,.html,.htm,.json,.xml,.heic" hidden />' +
         '<button type="button" class="onboard-brief-file-btn" id="onboard-brief-file-btn">' + fileBtnLabel + "</button></div>" +
-        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-paste">Paste the conversation (optional)</label>' +
+        '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-paste">Project requirements</label>' +
         '<textarea class="onboard-textarea onboard-input" id="onboard-brief-paste" rows="5" placeholder="If a share link fails to import, paste the chat here. You can also paste only, without a link.">' +
         escapeHtml(onboardData.briefPastedText || "") +
         "</textarea></div><p class=\"onboard-field-error\" id=\"onboard-brief-error\" role=\"status\" hidden></p></div>" +
@@ -1096,7 +1096,7 @@
             var n = onboardingProjectFiles.length;
             fileBtn.textContent =
               n === 0
-                ? "Choose files"
+                ? "Add files"
                 : n === 1
                   ? onboardingProjectFiles[0].name || "1 file"
                   : n + " files selected";
