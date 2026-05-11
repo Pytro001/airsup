@@ -899,6 +899,7 @@
     if (name === "supplier-profile") loadSupplierProfile();
     if (name === "admin") {
       closeAdminWorkspace();
+      initAdminWhatsapp();
       loadAdminOverview();
     }
     if (name === "thankyou") loadThankyou();
@@ -3590,45 +3591,25 @@
         const facOpts = (adminWorkspaceFactoriesCache || [])
           .map((f) => '<option value="' + escapeAttr(String(f.id)) + '">' + escapeHtml(f.name || "#" + f.id) + "</option>")
           .join("");
+        const stepLabels = ['Project', 'Contact', 'Connected'];
         right.innerHTML =
-          '<p class="admin-ws-h">Steps (Project \u2192 Contact \u2192 Connected)</p>' +
+          '<p class="admin-ws-h">Step</p>' +
           '<div class="admin-step-btns">' +
-          [1, 2, 3]
-            .map(
-              (n) => {
-                const lab = n === 1 ? "Project" : n === 2 ? "Contact" : "Connected";
-                return (
-                  '<button type="button" class="btn-outline btn-sm admin-step-btn" data-step="' +
-                  n +
-                  '" title="Step ' +
-                  n +
-                  " — " +
-                  lab +
-                  '"><span class="admin-step-num">' +
-                  n +
-                  '</span><span class="admin-step-lab">' +
-                  lab +
-                  "</span></button>"
-                );
-              }
-            )
-            .join("") +
-          "</div>" +
-          '<p class="admin-ws-h">AI replies</p>' +
-          '<label class="admin-ws-toggle"><input type="checkbox" id="admin-ws-ai-toggle" ' +
-          (co === "ai" ? "checked" : "") +
-          " /> Claude handles buyer chat</label>" +
-          '<p class="admin-ws-h">Link factory</p>' +
+          [1, 2, 3].map((n) => {
+            const lab = stepLabels[n - 1];
+            const active = n === step ? ' admin-step-btn--active' : '';
+            return '<button type="button" class="btn-outline btn-sm admin-step-btn' + active + '" data-step="' + n + '">' +
+              '<span class="admin-step-num">' + n + '</span>' +
+              '<span class="admin-step-lab">' + lab + '</span>' +
+              '</button>';
+          }).join('') +
+          '</div>' +
+          '<p class="admin-ws-h" style="margin-top:20px;">Connect supplier</p>' +
           '<select id="admin-ws-factory" class="settings-input">' +
-          '<option value="">Choose factory\u2026</option>' +
+          '<option value="">Choose supplier…</option>' +
           facOpts +
-          "</select>" +
+          '</select>' +
           '<button type="button" class="btn-primary btn-sm" id="admin-ws-link-factory" style="margin-top:8px;width:100%;">Connect</button>' +
-          '<p class="admin-ws-h">Sourcing</p>' +
-          '<p class="project-detail-muted" style="font-size:11px;margin-bottom:6px;">Platform-first; falls back to Claude web search on JD / Canton Fair.</p>' +
-          '<button type="button" class="btn-primary btn-sm" id="admin-ws-source-run" style="width:100%;">Find suppliers</button>' +
-          '<button type="button" class="btn-outline btn-sm" id="admin-ws-source-rerun" style="width:100%;margin-top:6px;display:none;">Re-run search</button>' +
-          '<div id="admin-ws-sourcing-list" class="admin-sourcing-list"></div>' +
           '<p id="admin-ws-flash" class="form-message" role="status" hidden></p>';
 
         right.querySelectorAll(".admin-step-btn").forEach((btn) => {
@@ -3658,147 +3639,6 @@
           });
         });
 
-        $("admin-ws-ai-toggle")?.addEventListener("change", async (ev) => {
-          const mode = ev.target.checked ? "ai" : "supi_manual";
-          try {
-            const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/coordination`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ coordination_mode: mode }),
-            });
-            const j = await r.json();
-            if (!r.ok) throw new Error(j?.error || "Failed");
-          } catch (e) {
-            console.error(e);
-          }
-        });
-
-        const renderSourcingList = (cands) => {
-          const wrap = $("admin-ws-sourcing-list");
-          const reBtn = $("admin-ws-source-rerun");
-          if (!wrap) return;
-          if (!cands || !cands.length) {
-            wrap.innerHTML = '<div class="admin-sourcing-empty">No candidates yet.</div>';
-            if (reBtn) reBtn.style.display = "none";
-            return;
-          }
-          if (reBtn) reBtn.style.display = "";
-          wrap.innerHTML = cands.map((c) => {
-            const src = String(c.source || "platform");
-            const status = String(c.status || "pending");
-            const linkHtml = c.supplier_url
-              ? '<div class="admin-sourcing-link"><a href="' + escapeAttr(c.supplier_url) + '" target="_blank" rel="noopener">' + escapeHtml(c.supplier_url) + "</a></div>"
-              : "";
-            const statusBadge =
-              status === "approved"
-                ? '<span class="admin-sourcing-status admin-sourcing-status--approved">approved</span>'
-                : status === "rejected"
-                ? '<span class="admin-sourcing-status admin-sourcing-status--rejected">rejected</span>'
-                : "";
-            const actions =
-              status === "pending"
-                ? '<div class="admin-sourcing-actions">' +
-                  '<button type="button" class="btn-primary btn-sm admin-sourcing-approve" data-cand-id="' + escapeAttr(c.id) + '">Approve</button>' +
-                  '<button type="button" class="btn-outline btn-sm admin-sourcing-reject" data-cand-id="' + escapeAttr(c.id) + '">Reject</button>' +
-                  "</div>"
-                : "";
-            const raw = (c.raw && typeof c.raw === "object") ? c.raw : {};
-            const waNum = normalizeWhatsappNumber(raw.whatsapp || "");
-            const waLink = waNum ? "https://wa.me/" + waNum : "";
-            const phone = raw.phone || "";
-            const wechat = raw.wechat || "";
-            const contactHtml =
-              (waLink ? '<a class="admin-sourcing-wa" href="' + escapeAttr(waLink) + '" target="_blank" rel="noopener">💬 WhatsApp ' + escapeHtml(raw.whatsapp) + '</a>' : '') +
-              (!waLink && phone ? '<span class="admin-sourcing-phone">📞 ' + escapeHtml(phone) + '</span>' : '') +
-              (wechat ? '<span class="admin-sourcing-wechat">WeChat: ' + escapeHtml(wechat) + '</span>' : '');
-            return (
-              '<div class="admin-sourcing-card">' +
-                '<div class="admin-sourcing-row">' +
-                  '<span class="admin-sourcing-source admin-sourcing-source--' + escapeAttr(src) + '">' + escapeHtml(src) + "</span>" +
-                  '<span class="admin-sourcing-name">' + escapeHtml(c.supplier_name || "") + "</span>" +
-                  statusBadge +
-                "</div>" +
-                (c.supplier_location ? '<div class="admin-sourcing-loc">' + escapeHtml(c.supplier_location) + "</div>" : "") +
-                (c.reasoning ? '<div class="admin-sourcing-reason">' + escapeHtml(c.reasoning) + "</div>" : "") +
-                (contactHtml ? '<div class="admin-sourcing-contact">' + contactHtml + "</div>" : "") +
-                linkHtml +
-                actions +
-              "</div>"
-            );
-          }).join("");
-
-          wrap.querySelectorAll(".admin-sourcing-approve").forEach((b) => {
-            b.addEventListener("click", async () => {
-              const cid = b.getAttribute("data-cand-id");
-              if (!cid) return;
-              b.disabled = true;
-              try {
-                const r = await fetch(`${API_BASE}/api/admin/sourcing-candidates/${encodeURIComponent(cid)}/approve`, { method: "POST" });
-                const j = await r.json();
-                if (!r.ok) throw new Error(j?.error || "Failed");
-                void openAdminProjectWorkspace(projectId, customerId || "");
-              } catch (e) {
-                const flash = $("admin-ws-flash");
-                if (flash) { flash.hidden = false; flash.textContent = e.message || "Error"; flash.style.color = "#d93025"; }
-                b.disabled = false;
-              }
-            });
-          });
-          wrap.querySelectorAll(".admin-sourcing-reject").forEach((b) => {
-            b.addEventListener("click", async () => {
-              const cid = b.getAttribute("data-cand-id");
-              if (!cid) return;
-              b.disabled = true;
-              try {
-                const r = await fetch(`${API_BASE}/api/admin/sourcing-candidates/${encodeURIComponent(cid)}/reject`, { method: "POST" });
-                const j = await r.json();
-                if (!r.ok) throw new Error(j?.error || "Failed");
-                void openAdminProjectWorkspace(projectId, customerId || "");
-              } catch (e) {
-                const flash = $("admin-ws-flash");
-                if (flash) { flash.hidden = false; flash.textContent = e.message || "Error"; flash.style.color = "#d93025"; }
-                b.disabled = false;
-              }
-            });
-          });
-        };
-
-        renderSourcingList(data.sourcing_candidates || []);
-
-        const runSource = async (force) => {
-          const flash = $("admin-ws-flash");
-          const btn = $("admin-ws-source-run");
-          const reBtn = $("admin-ws-source-rerun");
-          if (btn) { btn.disabled = true; btn.textContent = "Searching…"; }
-          if (reBtn) { reBtn.disabled = true; }
-          if (flash) { flash.hidden = false; flash.textContent = "Searching for suppliers…"; flash.style.color = ""; }
-          try {
-            const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/source`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ force: !!force }),
-            });
-            const j = await r.json();
-            if (!r.ok) throw new Error(j?.error || "Failed");
-            renderSourcingList(j.candidates || []);
-            const used = j.result || {};
-            if (flash) {
-              flash.hidden = false;
-              flash.style.color = "";
-              if (used.reused_existing) flash.textContent = "Showing " + used.reused_existing + " existing candidate(s).";
-              else if (used.used_web_search) flash.textContent = "Web search complete: " + (used.candidate_count || 0) + " candidate(s).";
-              else flash.textContent = "Platform match: " + (used.candidate_count || 0) + " candidate(s).";
-            }
-          } catch (e) {
-            if (flash) { flash.hidden = false; flash.textContent = e.message || "Error"; flash.style.color = "#d93025"; }
-          } finally {
-            if (btn) { btn.disabled = false; btn.textContent = "Find suppliers"; }
-            if (reBtn) { reBtn.disabled = false; }
-          }
-        };
-
-        $("admin-ws-source-run")?.addEventListener("click", () => void runSource(false));
-        $("admin-ws-source-rerun")?.addEventListener("click", () => void runSource(true));
 
         $("admin-ws-link-factory")?.addEventListener("click", async () => {
           const sel = $("admin-ws-factory");
@@ -3887,6 +3727,141 @@
     return true;
   }
 
+  async function openAdminFactoryWorkspace(factoryId) {
+    const ow = $("admin-overview-wrap");
+    const ws = $("admin-workspace");
+    if (ow) ow.hidden = true;
+    if (ws) { ws.hidden = false; ws.dataset.factoryId = factoryId; }
+    const head = $("admin-workspace-heading");
+    const left = $("admin-ws-left");
+    const right = $("admin-ws-right");
+    const mid = $("admin-ws-messages");
+    if (left) left.innerHTML = '<div class="projects-empty">Loading…</div>';
+    if (right) right.innerHTML = "";
+    if (mid) mid.innerHTML = "";
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/factories/${encodeURIComponent(factoryId)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Load failed");
+      const f = data.factory || data || {};
+      if (head) head.textContent = f.name || "Supplier";
+      function infoRow(label, val) {
+        if (!val) return "";
+        return "<div class=\"admin-info-row\"><span class=\"admin-info-label\">" + escapeHtml(label) + "</span><span class=\"admin-info-val\">" + val + "</span></div>";
+      }
+      const waDigits = (f.phone || "").replace(/[^0-9]/g, "");
+      const waLink = waDigits ? "<a href=\"https://wa.me/" + encodeURIComponent(waDigits) + "\" target=\"_blank\" rel=\"noopener\" class=\"admin-wa-link\">" + escapeHtml(f.phone) + "</a>" : "";
+      if (left) {
+        left.innerHTML =
+          "<section class=\"project-detail-section admin-customer-card\">" +
+          "<h3 class=\"project-detail-h\">Supplier</h3>" +
+          infoRow("Name", escapeHtml(f.name || "")) +
+          infoRow("Category", escapeHtml(f.category || "")) +
+          infoRow("Location", escapeHtml(f.location || "")) +
+          infoRow("WhatsApp", waLink) +
+          infoRow("MOQ", escapeHtml(String(f.moq || ""))) +
+          "</section>" +
+          (f.capabilities_description ? "<section class=\"project-detail-section\"><h3 class=\"project-detail-h\">Capabilities</h3><p class=\"project-detail-p\">" + escapeHtml(f.capabilities_description) + "</p></section>" : "") +
+          buildMatchesSection(data.matches || []);
+      }
+      if (right) {
+        right.innerHTML =
+          "<p class=\"admin-ws-h\">Connect to customer project</p>" +
+          "<select id=\"admin-ws-project-sel\" class=\"settings-input\"><option value=\"\">Choose project…</option>" +
+          (data.unmatched_projects || []).map((p) => "<option value=\"" + escapeAttr(p.id) + "\">" + escapeHtml(p.title || p.id) + "</option>").join("") +
+          "</select>" +
+          "<button type=\"button\" class=\"btn-primary btn-sm\" id=\"admin-ws-link-project\" style=\"margin-top:8px;width:100%;\" >Connect</button>" +
+          "<p id=\"admin-ws-flash\" class=\"form-message\" role=\"status\" hidden></p>";
+        $("admin-ws-link-project")?.addEventListener("click", async () => {
+          const sel = $("admin-ws-project-sel");
+          const pid = sel && sel.value;
+          const flash = $("admin-ws-flash");
+          if (!pid) return;
+          try {
+            const r = await fetch(`${API_BASE}/api/admin/matches`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ project_id: pid, factory_id: parseInt(factoryId, 10) }),
+            });
+            const j = await r.json();
+            if (!r.ok) throw new Error(j?.error || "Failed");
+            if (flash) { flash.hidden = false; flash.textContent = j.deduped ? "Already linked." : "Connected."; flash.style.color = ""; }
+            void openAdminFactoryWorkspace(factoryId);
+          } catch (e) {
+            if (flash) { flash.hidden = false; flash.textContent = e.message || "Error"; flash.style.color = "#d93025"; }
+          }
+        });
+      }
+    } catch (e) {
+      if (left) left.innerHTML = "<div class=\"projects-empty\">" + escapeHtml(e.message || "Error") + "</div>";
+    }
+  }
+
+  function initAdminWhatsapp() {
+    const statusEl = $("admin-wa-status");
+    const fbBtn = $("admin-wa-fb-btn");
+    const manualBtn = $("admin-wa-manual-btn");
+    const manualForm = $("admin-wa-manual-form");
+    const cancelBtn = $("admin-wa-manual-cancel");
+    const saveBtn = $("admin-wa-save-btn");
+    const flash = $("admin-wa-form-flash");
+
+    async function loadWaStatus() {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/whatsapp-config`);
+        const d = await res.json();
+        if (d.phone_number_id) {
+          if (statusEl) { statusEl.textContent = "Connected · " + (d.display_phone || d.phone_number_id); statusEl.style.color = "#22c55e"; }
+          if (fbBtn) fbBtn.textContent = "Reconnect";
+        } else {
+          if (statusEl) { statusEl.textContent = "Not connected"; statusEl.style.color = ""; }
+        }
+      } catch (_) {}
+    }
+    void loadWaStatus();
+
+    fbBtn?.addEventListener("click", () => {
+      if (typeof FB === "undefined") { alert("Facebook SDK not loaded yet, try again in a moment."); return; }
+      FB.login((response) => {
+        if (response.authResponse) {
+          const tokenInput = $("admin-wa-token-input");
+          if (tokenInput) tokenInput.value = response.authResponse.accessToken || "";
+          if (manualForm) manualForm.hidden = false;
+          if (flash) { flash.hidden = false; flash.textContent = "Facebook connected. Enter your Phone Number ID and save."; flash.style.color = ""; }
+        }
+      }, { scope: "whatsapp_business_management,whatsapp_business_messaging,business_management" });
+    });
+
+    manualBtn?.addEventListener("click", () => {
+      if (manualForm) manualForm.hidden = !manualForm.hidden;
+    });
+    cancelBtn?.addEventListener("click", () => {
+      if (manualForm) manualForm.hidden = true;
+    });
+
+    saveBtn?.addEventListener("click", async () => {
+      const token = ($("admin-wa-token-input")?.value || "").trim();
+      const phoneId = ($("admin-wa-phone-id-input")?.value || "").trim();
+      if (!token || !phoneId) { if (flash) { flash.hidden = false; flash.textContent = "Both fields required."; flash.style.color = "#d93025"; } return; }
+      saveBtn.disabled = true;
+      try {
+        const r = await fetch(`${API_BASE}/api/admin/whatsapp-config`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token: token, phone_number_id: phoneId }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j?.error || "Failed");
+        if (manualForm) manualForm.hidden = true;
+        void loadWaStatus();
+      } catch (e) {
+        if (flash) { flash.hidden = false; flash.textContent = e.message || "Error"; flash.style.color = "#d93025"; }
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
   function renderAdminOverviewData(data) {
     const customers = data.customers || [];
     const factories = data.factories || [];
@@ -3914,45 +3889,32 @@
       const title = escapeHtml(c.company || c.display_name || "Unnamed customer");
       const namePart = c.display_name && c.display_name !== c.company ? escapeHtml(c.display_name) : "";
       const sub = [c.location, namePart].filter(Boolean).join(" · ");
-      const desc = c.company_description ? String(c.company_description).slice(0, 220) : (c.project_titles || []).slice(0, 2).join(" · ");
+      const desc = c.company_description ? String(c.company_description).slice(0, 180) : (c.project_titles || []).slice(0, 2).join(" · ");
       const badge = c.connected
         ? `<span class="project-card-badge badge--accepted">Connected</span>`
-        : `<span class="project-card-badge badge--pending">Not connected</span>`;
-      const meta = `<span class="project-card-meta-item">${c.project_count} project${c.project_count === 1 ? "" : "s"}</span>` +
-        `<span class="project-card-meta-item">${c.match_count} match${c.match_count === 1 ? "" : "es"}</span>`;
-      const chips =
-        c.projects && c.projects.length
-          ? `<div class="admin-proj-chips">${c.projects
-              .map(
-                (p) =>
-                  `<button type="button" class="admin-proj-chip" data-customer-id="${escapeAttr(c.id)}" data-project-id="${escapeAttr(p.id)}">${escapeHtml(
-                    String(p.title || "Project").slice(0, 42)
-                  )}</button>`
-              )
-              .join("")}</div>`
-          : "";
-      const phoneHtml = c.phone ? `<div class="admin-contact-phone"><a href="https://wa.me/${encodeURIComponent(c.phone.replace(/[^0-9]/g, ""))}" target="_blank" rel="noopener" class="admin-wa-link">&#128241; ${escapeHtml(c.phone)}</a></div>` : "";
-      return `<div class="project-card" style="position:relative;">
+        : `<span class="project-card-badge badge--pending">No match yet</span>`;
+      const meta = `<span class="project-card-meta-item">${c.project_count} project${c.project_count === 1 ? "" : "s"}</span>`;
+      const phoneHtml = c.phone ? `<div class="admin-contact-phone"><a href="https://wa.me/${encodeURIComponent(c.phone.replace(/[^0-9]/g, ""))}" target="_blank" rel="noopener" class="admin-wa-link" onclick="event.stopPropagation()">&#128241; ${escapeHtml(c.phone)}</a></div>` : "";
+      const firstProjectId = c.projects && c.projects.length ? escapeAttr(c.projects[0].id) : "";
+      return `<div class="project-card project-card--clickable" data-customer-id="${escapeAttr(c.id)}" data-project-id="${firstProjectId}" style="position:relative;cursor:pointer;">
         <button class="admin-delete-btn" data-type="customer" data-id="${escapeAttr(c.id)}" title="Move to bin">&#128465;</button>
         <div class="project-card-title">${title}</div>
         ${sub ? `<div class="project-card-sub">${sub}</div>` : ""}
         ${phoneHtml}
         <div class="project-card-desc">${escapeHtml(desc || "No description")}</div>
-        ${chips}
         <div class="project-card-meta">${badge}${meta}</div>
       </div>`;
     };
 
     const renderFactoryCard = (f) => {
-      const title = escapeHtml(f.name || "Unnamed factory");
+      const title = escapeHtml(f.name || "Unnamed supplier");
       const sub = [f.category, f.location].filter(Boolean).join(" · ");
-      const desc = f.capabilities_description ? String(f.capabilities_description).slice(0, 220) : "";
+      const desc = f.capabilities_description ? String(f.capabilities_description).slice(0, 180) : "";
       const badge = f.connected
         ? `<span class="project-card-badge badge--accepted">Connected</span>`
-        : `<span class="project-card-badge badge--pending">Not connected</span>`;
-      const meta = `<span class="project-card-meta-item">${f.brief_count} brief${f.brief_count === 1 ? "" : "s"}</span>` +
-        `<span class="project-card-meta-item">${f.match_count} match${f.match_count === 1 ? "" : "es"}</span>`;
-      return `<div class="project-card" style="position:relative;">
+        : `<span class="project-card-badge badge--pending">No match yet</span>`;
+      const meta = `<span class="project-card-meta-item">${f.match_count} match${f.match_count === 1 ? "" : "es"}</span>`;
+      return `<div class="project-card project-card--clickable" data-factory-id="${escapeAttr(String(f.id))}" style="position:relative;cursor:pointer;">
         <button class="admin-delete-btn" data-type="factory" data-id="${escapeAttr(String(f.id))}" title="Move to bin">&#128465;</button>
         <div class="project-card-title">${title}</div>
         ${sub ? `<div class="project-card-sub">${escapeHtml(sub)}</div>` : ""}
@@ -3965,34 +3927,29 @@
       if (!customers.length) custEl.innerHTML = '<div class="projects-empty">No customers yet.</div>';
       else {
         custEl.innerHTML = customers.map(renderCustomerCard).join("");
-        if (!custEl.dataset.projChipWired) {
-          custEl.dataset.projChipWired = "1";
-          custEl.addEventListener("click", (e) => {
-            const chip = e.target.closest(".admin-proj-chip");
-            if (!chip) return;
-            e.preventDefault();
-            const pid = chip.getAttribute("data-project-id");
-            const cid = chip.getAttribute("data-customer-id") || "";
-            if (pid) void openAdminProjectWorkspace(pid, cid);
-          });
-        }
+        custEl.addEventListener("click", (e) => {
+          if (e.target.closest(".admin-delete-btn")) return;
+          const card = e.target.closest(".project-card--clickable[data-project-id]");
+          if (!card) return;
+          const pid = card.getAttribute("data-project-id");
+          const cid = card.getAttribute("data-customer-id") || "";
+          if (pid) void openAdminProjectWorkspace(pid, cid);
+        });
       }
     }
 
     if (facEl) {
-      if (!factories.length) facEl.innerHTML = '<div class="projects-empty">No factories yet.</div>';
-      else facEl.innerHTML = factories.map(renderFactoryCard).join("");
-    }
-
-    if (connEl) {
-      if (!connections.length) connEl.innerHTML = '<div class="projects-empty">No AI-made connections yet.</div>';
-      else connEl.innerHTML = connections.map((m) => {
-        const buyer = m.buyer?.company || m.buyer?.display_name || "Unknown buyer";
-        const factory = m.factory?.name || "Unknown factory";
-        const proj = m.project?.title || "Untitled project";
-        const statusClass = String(m.status || "").replace(/[^a-zA-Z0-9_-]/g, "_");
-        return `<div class="project-card"><div class="project-card-title">${escapeHtml(buyer)} <span class="admin-arrow">&rarr;</span> ${escapeHtml(factory)}</div><div class="project-card-sub">${escapeHtml(proj)}</div><div class="project-card-meta"><span class="project-card-badge badge--${statusClass}">${escapeHtml(m.status || "pending")}</span></div></div>`;
-      }).join("");
+      if (!factories.length) facEl.innerHTML = '<div class="projects-empty">No suppliers yet.</div>';
+      else {
+        facEl.innerHTML = factories.map(renderFactoryCard).join("");
+        facEl.addEventListener("click", (e) => {
+          if (e.target.closest(".admin-delete-btn")) return;
+          const card = e.target.closest(".project-card--clickable[data-factory-id]");
+          if (!card) return;
+          const fid = card.getAttribute("data-factory-id");
+          if (fid) void openAdminFactoryWorkspace(fid);
+        });
+      }
     }
 
     document.querySelectorAll(".admin-delete-btn").forEach((btn) => {

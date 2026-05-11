@@ -246,6 +246,25 @@ main { padding-bottom: 56px; }
   transition: color 0.15s, background 0.15s; line-height: 1;
 }
 .admin-delete-btn:hover { color: var(--danger); background: var(--danger-bg); }
+.admin-wa-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 16px 20px; margin-bottom: 20px; background: var(--bg-subtle);
+}
+.admin-wa-card-title { font-size: 14px; font-weight: 500; color: var(--text); }
+.admin-wa-card-status { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.admin-wa-card-right { display: flex; gap: 8px; flex-shrink: 0; }
+.admin-wa-manual-form {
+  border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 16px 20px; margin-bottom: 20px; background: var(--bg-subtle);
+}
+.admin-bin-details { margin-top: 40px; }
+.admin-bin-summary {
+  font-size: 13px; color: var(--text-muted); cursor: pointer; padding: 4px 0; user-select: none;
+}
+.admin-bin-summary:hover { color: var(--text); }
+.admin-step-btn--active { background: var(--primary) !important; color: var(--on-primary) !important; border-color: var(--primary) !important; }
+.project-card--clickable { cursor: pointer; }
 
 /* Admin "Bin" card styles (formerly inline) */
 .bin-card {
