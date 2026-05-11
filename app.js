@@ -3585,59 +3585,17 @@
       }
 
       if (right) {
-        const st = Number(data.project.pipeline_step);
-        const step = Number.isFinite(st) && st >= 1 && st <= 3 ? st : 1;
-        const co = data.project.coordination_mode || "supi_manual";
         const facOpts = (adminWorkspaceFactoriesCache || [])
           .map((f) => '<option value="' + escapeAttr(String(f.id)) + '">' + escapeHtml(f.name || "#" + f.id) + "</option>")
           .join("");
-        const stepLabels = ['Project', 'Contact', 'Connected'];
         right.innerHTML =
-          '<p class="admin-ws-h">Step</p>' +
-          '<div class="admin-step-btns">' +
-          [1, 2, 3].map((n) => {
-            const lab = stepLabels[n - 1];
-            const active = n === step ? ' admin-step-btn--active' : '';
-            return '<button type="button" class="btn-outline btn-sm admin-step-btn' + active + '" data-step="' + n + '">' +
-              '<span class="admin-step-num">' + n + '</span>' +
-              '<span class="admin-step-lab">' + lab + '</span>' +
-              '</button>';
-          }).join('') +
-          '</div>' +
-          '<p class="admin-ws-h" style="margin-top:20px;">Connect supplier</p>' +
+          '<p class="admin-ws-h">Connect supplier</p>' +
           '<select id="admin-ws-factory" class="settings-input">' +
           '<option value="">Choose supplier…</option>' +
           facOpts +
           '</select>' +
           '<button type="button" class="btn-primary btn-sm" id="admin-ws-link-factory" style="margin-top:8px;width:100%;">Connect</button>' +
           '<p id="admin-ws-flash" class="form-message" role="status" hidden></p>';
-
-        right.querySelectorAll(".admin-step-btn").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const n = parseInt(btn.getAttribute("data-step") || "1", 10);
-            const flash = $("admin-ws-flash");
-            try {
-              const r = await fetch(`${API_BASE}/api/admin/projects/${encodeURIComponent(projectId)}/pipeline`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pipeline_step: n }),
-              });
-              const j = await r.json();
-              if (!r.ok) throw new Error(j?.error || "Failed");
-              if (flash) {
-                flash.hidden = false;
-                flash.textContent = "Step " + n + " saved.";
-                flash.style.color = "";
-              }
-            } catch (e) {
-              if (flash) {
-                flash.hidden = false;
-                flash.textContent = e.message || "Error";
-                flash.style.color = "#d93025";
-              }
-            }
-          });
-        });
 
 
         $("admin-ws-link-factory")?.addEventListener("click", async () => {
