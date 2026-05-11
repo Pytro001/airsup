@@ -599,6 +599,30 @@ adminRouter.delete("/customers/:id", async (req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+/** Get a single factory with its matches and unmatched projects. */
+adminRouter.get("/factories/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const factoryId = parseInt(id, 10);
+  if (!factoryId) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [factoryRes, matchesRes, projectsRes] = await Promise.all([
+    supabaseAdmin.from("factories").select("*").eq("id", factoryId).single(),
+    supabaseAdmin.from("matches").select("id, status, project_id, projects(id, title, description)").eq("factory_id", factoryId),
+    supabaseAdmin.from("projects").select("id, title").is("deleted_at", null),
+  ]);
+
+  if (factoryRes.error) { res.status(404).json({ error: factoryRes.error.message }); return; }
+
+  const matchedProjectIds = new Set((matchesRes.data || []).map((m: any) => m.project_id));
+  const unmatchedProjects = (projectsRes.data || []).filter((p: any) => !matchedProjectIds.has(p.id));
+
+  res.json({
+    factory: factoryRes.data,
+    matches: matchesRes.data || [],
+    unmatched_projects: unmatchedProjects,
+  });
+});
+
 /** Soft-delete a factory (moves to bin). */
 adminRouter.delete("/factories/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -844,6 +868,35 @@ adminRouter.post(
     res.json({ ok: true, filename, storage_path: storagePath });
   }
 );
+
+/** Get WhatsApp Business config status. */
+adminRouter.get("/whatsapp-config", async (_req: Request, res: Response) => {
+  const { data } = await supabaseAdmin
+    .from("app_config")
+    .select("value")
+    .eq("key", "whatsapp")
+    .maybeSingle();
+  const cfg = (data?.value as Record<string, string>) || {};
+  res.json({
+    phone_number_id: cfg.phone_number_id || null,
+    display_phone: cfg.display_phone || null,
+  });
+});
+
+/** Save WhatsApp Business credentials. */
+adminRouter.post("/whatsapp-config", async (req: Request, res: Response) => {
+  const { access_token, phone_number_id } = req.body || {};
+  if (!access_token || !phone_number_id) {
+    res.status(400).json({ error: "access_token and phone_number_id required" });
+    return;
+  }
+  const { error } = await supabaseAdmin.from("app_config").upsert(
+    { key: "whatsapp", value: { access_token, phone_number_id } },
+    { onConflict: "key" }
+  );
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ ok: true });
+});
 
 /** indexOf helper: find needle in haystack starting at offset. */
 function indexOf(haystack: Buffer, needle: Buffer, offset = 0): number {
