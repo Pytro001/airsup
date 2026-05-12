@@ -73,9 +73,13 @@ async function parseInstruction(instruction: string): Promise<Parsed | null> {
   }
 }
 
-async function discoverLeads(p: Parsed): Promise<Lead[]> {
+async function discoverLeads(p: Parsed, skipEmails: string[]): Promise<Lead[]> {
   const anthropic = getAnthropicClient();
   const where = p.country ? `in ${p.country}` : `in region ${p.region}`;
+
+  const skipLine = skipEmails.length > 0
+    ? `\nDo NOT include any company whose email is in this list (already contacted): ${skipEmails.join(", ")}.`
+    : "";
 
   const system =
     "You research real manufacturers and return high quality leads only. " +
@@ -83,7 +87,8 @@ async function discoverLeads(p: Parsed): Promise<Lead[]> {
     "country, contact_name if shown, named_customers (array of brand names they show on their site), reasoning (one short sentence why they qualify). " +
     "STRICT quality bar: the supplier's own website must be in English, modern, professional, and show at least one named brand customer. " +
     "Skip Alibaba, Made-in-China, Global Sources storefronts and trading-company resellers. " +
-    "If you cannot find a real contact email, OMIT that supplier. Do not invent emails or URLs.";
+    "If you cannot find a real contact email, OMIT that supplier. Do not invent emails or URLs." +
+    skipLine;
 
   const user =
     `Find ${p.count} high quality manufacturers ${where} in the category: ${p.category}. ` +
@@ -174,25 +179,37 @@ async function draftCustomEmail(lead: Lead, p: Parsed): Promise<{ subject: strin
     `Specific call to action to include: ${p.cta}\n\n` +
     `Write the email. JSON only.`;
 
-  try {
+  const tryDraft = async (sys: string, usr: string) => {
     const r = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 800,
-      system,
-      messages: [{ role: "user", content: user }],
+      system: sys,
+      messages: [{ role: "user", content: usr }],
     });
     let txt = "";
     for (const b of r.content) if (b.type === "text") txt += b.text;
+    console.log(`[cold-admin] draft raw for ${lead.email}:`, txt.slice(0, 300));
     txt = txt.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const s = txt.indexOf("{");
     const e = txt.lastIndexOf("}");
-    if (s === -1 || e === -1) return null;
+    if (s === -1 || e === -1) throw new Error("no JSON object in response");
     const v = JSON.parse(txt.slice(s, e + 1)) as { subject?: string; body?: string };
-    if (!v.subject || !v.body) return null;
+    if (!v.subject || !v.body) throw new Error("missing subject or body");
     return { subject: v.subject.slice(0, 80), body: v.body };
+  };
+
+  try {
+    return await tryDraft(system, user);
   } catch (err) {
-    console.error(`[cold-admin] draft failed for ${lead.email}:`, err);
-    return null;
+    console.error(`[cold-admin] draft attempt 1 failed for ${lead.email}:`, err);
+    // Retry with a simpler prompt
+    try {
+      const fallbackUser = `Write a short cold email (40-70 words, plain text) from Konstantin at Airsup (airsup.dev) to ${lead.company_name} (${lead.website}). ${p.angle}. Sign just "Konstantin". Return JSON: { "subject": string, "body": string }`;
+      return await tryDraft('Return JSON only: { "subject": string, "body": string }. Plain text email body, 40-70 words, no markdown.', fallbackUser);
+    } catch (err2) {
+      console.error(`[cold-admin] draft attempt 2 failed for ${lead.email}:`, err2);
+      return null;
+    }
   }
 }
 
@@ -209,7 +226,14 @@ export async function runColdAdminTask(instruction: string): Promise<AdminTaskRe
   const parsed = await parseInstruction(instruction);
   if (!parsed) return { ok: false, parsed: null, discovered: 0, sent: [], skipped: [], error: "Could not parse instruction." };
 
-  const leads = await discoverLeads(parsed);
+  // Fetch all known emails so discovery avoids them
+  const { data: knownRows } = await supabaseAdmin
+    .from("cold_targets")
+    .select("email")
+    .not("status", "eq", "discovered");
+  const skipEmails = (knownRows || []).map((r: { email: string }) => r.email).filter(Boolean);
+
+  const leads = await discoverLeads(parsed, skipEmails);
   const sent: AdminTaskResult["sent"] = [];
   const skipped: AdminTaskResult["skipped"] = [];
 
