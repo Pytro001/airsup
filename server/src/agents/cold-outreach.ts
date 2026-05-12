@@ -37,17 +37,19 @@ async function draftEmail(t: Target): Promise<{ subject: string; body: string } 
     : `No specific named customers were captured.`;
 
   const system =
-    "You write short, personal cold outreach emails from Konstantin, the founder of Airsup (airsup.dev). " +
-    "Airsup is a curated B2B platform that matches vetted manufacturers with serious Western buyers/founders (EU/US). It's free for suppliers. " +
-    "Your job: get this manufacturer to finish onboarding at https://airsup.dev/start. " +
-    "\nSTYLE RULES:\n" +
-    "  - Plain text. No markdown, no bullets, no asterisks.\n" +
-    "  - 90 to 130 words MAX.\n" +
-    "  - First sentence MUST reference something specific from THIS company (their customers, their category, their country). NEVER generic openers like 'I hope this finds you well'.\n" +
-    "  - Second paragraph: one concrete value prop (e.g. 'we send pre-qualified Western buyers, not RFQ spam').\n" +
-    "  - End with a soft single CTA — a link to https://airsup.dev/start — and a one-line PS only if it adds something.\n" +
-    "  - Sign as 'Konstantin'. Do not include a footer (the system appends one with unsubscribe).\n" +
-    "  - Subject must be under 55 chars, lowercase, no clickbait. Reference their company or category.\n" +
+    "You write very short, personal cold outreach emails from Konstantin, the founder of Airsup (airsup.dev). " +
+    "Airsup is a curated B2B platform that matches vetted manufacturers with serious Western buyers and founders. It is free for suppliers. " +
+    "Your job: get this manufacturer to finish onboarding at https://airsup.dev/start.\n\n" +
+    "STYLE RULES (strict):\n" +
+    "  - Plain text only. No markdown, no bullets, no asterisks.\n" +
+    "  - 50 to 90 words MAX. Keep it tight.\n" +
+    "  - Do NOT use em-dashes or en-dashes (— or –). Use a period or comma instead.\n" +
+    "  - Do NOT use forward slashes (e.g. 'anker / logitech'). Use the word 'and' or a comma. URLs are fine.\n" +
+    "  - First sentence references something specific about THIS company (a named customer, their product category, their country). Never generic openers.\n" +
+    "  - One short paragraph saying what Airsup does in simple words.\n" +
+    "  - One soft CTA with the link https://airsup.dev/start.\n" +
+    "  - Sign 'Konstantin' on its own line. No footer, no signature block, no company address.\n" +
+    "  - Subject under 50 chars, lowercase, no em-dashes, no slashes, no clickbait.\n" +
     "Return JSON: { \"subject\": string, \"body\": string }.";
 
   const user =

@@ -57,10 +57,6 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
     ? `https://airsup.dev/api/cold/unsubscribe/${args.unsubscribeToken}`
     : null;
 
-  const footerText = unsubUrl
-    ? `\n\n---\nAirsup · Konstantinerstrasse 12, Berlin · If you'd rather not hear from me, just reply "stop" or visit ${unsubUrl}`
-    : "";
-
   const headers: Record<string, string> = {};
   if (args.inReplyTo) headers["In-Reply-To"] = args.inReplyTo;
   if (args.references?.length) headers["References"] = args.references.join(" ");
@@ -73,7 +69,7 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
     from: `"${FROM_NAME}" <${USER}>`,
     to: args.to,
     subject: args.subject,
-    text: args.text + footerText,
+    text: args.text,
     html: args.html,
     headers,
   });
