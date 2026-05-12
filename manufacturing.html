@@ -15,19 +15,19 @@
     body {
       font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
       font-weight: 300;
-      background: #0a0a12;
+      background: #08080f;
       color: #f2f2f3;
       display: flex;
       flex-direction: column;
       -webkit-font-smoothing: antialiased;
     }
+    a { color: inherit; text-decoration: none; }
 
     .sp-header {
       flex-shrink: 0;
       padding: 18px 28px;
       display: flex;
       align-items: center;
-      z-index: 10;
     }
     .sp-brand {
       display: inline-flex; align-items: center; gap: 9px;
@@ -53,112 +53,120 @@
       user-select: none;
     }
     .globe-panel:active { cursor: grabbing; }
-    #globe-canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+    #globe-canvas { display: block; width: 100%; height: 100%; }
 
-    /* Nav arrows */
-    .nav-arrow {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: rgba(255,255,255,0.55);
-      width: 40px; height: 40px;
-      border-radius: 50%;
-      font-size: 16px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
-      z-index: 5;
-      line-height: 1;
-    }
-    .nav-arrow:hover { background: rgba(255,255,255,0.12); color: #fff; }
-    .nav-arrow--left  { left: 20px; }
-    .nav-arrow--right { right: 20px; }
-
-    /* Planet dots */
     .planet-dots {
       position: absolute;
-      bottom: 24px;
+      bottom: 22px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       gap: 8px;
       z-index: 5;
+      pointer-events: none;
     }
     .dot {
-      width: 6px; height: 6px;
+      width: 5px; height: 5px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.18);
       transition: background 0.3s, transform 0.3s;
     }
     .dot.active {
-      background: rgba(255,255,255,0.8);
-      transform: scale(1.3);
+      background: rgba(255,255,255,0.75);
+      transform: scale(1.4);
     }
 
     /* ── Info panel ── */
     .info-panel {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 40px 36px 40px;
-      border-left: 1px solid rgba(255,255,255,0.06);
+      overflow-y: auto;
+      overflow-x: hidden;
+      border-left: 1px solid rgba(255,255,255,0.055);
       position: relative;
-      overflow: hidden;
     }
+    .info-panel::-webkit-scrollbar { width: 4px; }
+    .info-panel::-webkit-scrollbar-thumb { background: #2a2a38; border-radius: 4px; }
 
     .planet-info {
-      position: absolute;
-      inset: 0;
-      padding: 40px 36px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s ease;
+      display: none;
+      padding: 32px 28px 40px;
     }
-    .planet-info.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .planet-info.active { display: block; }
 
     .planet-info h2 {
-      font-size: clamp(36px, 4vw, 58px);
+      font-size: clamp(34px, 3.5vw, 52px);
       font-weight: 500;
       letter-spacing: -0.03em;
       line-height: 1;
-      color: #f2f2f3;
+      margin-bottom: 6px;
+    }
+    .planet-tagline {
+      font-size: 13px;
+      color: #5c5c6e;
+      margin-bottom: 20px;
     }
 
     .planet-photo-wrap {
-      flex: 1;
-      min-height: 0;
-      border-radius: 20px;
+      width: 100%;
+      height: 200px;
+      border-radius: 16px;
       overflow: hidden;
       background: #111118;
+      margin-bottom: 24px;
     }
     .planet-photo-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: opacity 0.4s;
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
     }
 
-    @media (max-width: 700px) {
-      html, body { overflow: auto; height: auto; }
-      .mfg-layout { flex-direction: column; height: auto; }
-      .globe-panel { flex: 0 0 60vw; height: 60vw; }
-      .info-panel { padding: 24px 20px; min-height: 50vw; position: relative; }
-      .planet-info { position: relative; inset: auto; padding: 0; }
-      .planet-info:not(.active) { display: none; }
+    /* Listing */
+    .listing-section-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #3e3e50;
+      margin: 0 0 10px;
     }
+    .listing-section-label + .listing-section-label { margin-top: 20px; }
+
+    .listing-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .listing-item:last-child { border-bottom: none; }
+    .listing-body { flex: 1; min-width: 0; }
+    .listing-name {
+      font-size: 13px;
+      font-weight: 400;
+      color: #d8d8e0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .listing-meta {
+      font-size: 11px;
+      color: #46465a;
+      margin-top: 2px;
+    }
+    .listing-badge {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .badge--go       { background: rgba(74,222,128,0.10); color: #4ade80; }
+    .badge--planned  { background: rgba(99,179,237,0.10); color: #63b3ed; }
+    .badge--goal     { background: rgba(167,139,250,0.10); color: #a78bfa; }
+    .badge--fact     { background: rgba(251,191,36,0.10); color: #fbbf24; }
+    .badge--delayed  { background: rgba(252,165,165,0.10); color: #fca5a5; }
   </style>
 </head>
 <body>
@@ -171,8 +179,6 @@
   <div class="mfg-layout">
     <div class="globe-panel" id="globe-panel">
       <canvas id="globe-canvas"></canvas>
-      <button class="nav-arrow nav-arrow--left"  id="nav-prev" aria-label="Previous">&#8592;</button>
-      <button class="nav-arrow nav-arrow--right" id="nav-next" aria-label="Next">&#8594;</button>
       <div class="planet-dots" id="planet-dots">
         <span class="dot active"></span>
         <span class="dot"></span>
@@ -180,58 +186,241 @@
       </div>
     </div>
 
-    <aside class="info-panel" id="info-panel">
+    <aside class="info-panel">
+
+      <!-- Earth -->
       <div class="planet-info active" id="info-earth">
         <h2>Earth</h2>
+        <p class="planet-tagline">Where everything is built — for now.</p>
         <div class="planet-photo-wrap">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg" alt="Earth from Apollo 17" />
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg" alt="Earth — Apollo 17" />
+        </div>
+
+        <p class="listing-section-label">Launches</p>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Starship IFT-9 / IFT-10</div>
+            <div class="listing-meta">SpaceX · Boca Chica · 2026</div>
+          </div>
+          <span class="listing-badge badge--planned">Planned</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Falcon 9 — weekly cadence</div>
+            <div class="listing-meta">SpaceX · ~60 launches/yr</div>
+          </div>
+          <span class="listing-badge badge--go">Active</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">New Glenn Block 2</div>
+            <div class="listing-meta">Blue Origin · Cape Canaveral · 2026</div>
+          </div>
+          <span class="listing-badge badge--planned">Planned</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Neutron — debut flight</div>
+            <div class="listing-meta">Rocket Lab · Wallops Island · 2026–27</div>
+          </div>
+          <span class="listing-badge badge--goal">Announced</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Ariane 6 operational</div>
+            <div class="listing-meta">ArianeGroup · Kourou · 6–8 flights/yr</div>
+          </div>
+          <span class="listing-badge badge--go">Active</span>
+        </div>
+
+        <p class="listing-section-label" style="margin-top:20px;">Manufacturing</p>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Raptor engine every 4 hours</div>
+            <div class="listing-meta">SpaceX · ~180 engines/month at peak</div>
+          </div>
+          <span class="listing-badge badge--fact">Fact</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Lights-out robot factories</div>
+            <div class="listing-meta">FANUC · zero humans, 24/7, &lt;0.001% error</div>
+          </div>
+          <span class="listing-badge badge--fact">Fact</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Solid-state batteries scaling</div>
+            <div class="listing-meta">Toyota / CATL · 2026 GWh production</div>
+          </div>
+          <span class="listing-badge badge--planned">2026</span>
         </div>
       </div>
+
+      <!-- Moon -->
       <div class="planet-info" id="info-moon">
         <h2>Moon</h2>
+        <p class="planet-tagline">Humanity's next outpost. 384,400 km away.</p>
         <div class="planet-photo-wrap">
           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/1024px-FullMoon2010.jpg" alt="Full Moon" />
         </div>
-      </div>
-      <div class="planet-info" id="info-mars">
-        <h2>Mars</h2>
-        <div class="planet-photo-wrap">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/1024px-OSIRIS_Mars_true_color.jpg" alt="Mars true color" />
+
+        <p class="listing-section-label">Missions</p>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Artemis II — crewed flyby</div>
+            <div class="listing-meta">NASA / ESA · first humans past LEO since 1972</div>
+          </div>
+          <span class="listing-badge badge--planned">2026</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Artemis III — lunar landing</div>
+            <div class="listing-meta">NASA / SpaceX HLS · south pole</div>
+          </div>
+          <span class="listing-badge badge--planned">2027</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Blue Ghost Mission 2</div>
+            <div class="listing-meta">Firefly Aerospace · CLPS · NASA instruments</div>
+          </div>
+          <span class="listing-badge badge--planned">2026</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Chang'e 7 — south pole lander</div>
+            <div class="listing-meta">CNSA · mini flying probe for shadowed craters</div>
+          </div>
+          <span class="listing-badge badge--planned">2026</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Lunar Gateway PPE + HALO</div>
+            <div class="listing-meta">NASA · first lunar space station elements</div>
+          </div>
+          <span class="listing-badge badge--goal">2027</span>
+        </div>
+
+        <p class="listing-section-label" style="margin-top:20px;">Manufacturing</p>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">3D printing base from moon dust</div>
+            <div class="listing-meta">ESA + ICON · sintering regolith with sunlight</div>
+          </div>
+          <span class="listing-badge badge--fact">Research</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Water ice → rocket fuel</div>
+            <div class="listing-meta">South pole reserves · electrolysis → LH₂/LOX</div>
+          </div>
+          <span class="listing-badge badge--fact">ISRU</span>
         </div>
       </div>
+
+      <!-- Mars -->
+      <div class="planet-info" id="info-mars">
+        <h2>Mars</h2>
+        <p class="planet-tagline">~225 million km. Next launch window: June 2026.</p>
+        <div class="planet-photo-wrap">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Mars_Valles_Marineris.jpeg/1024px-Mars_Valles_Marineris.jpeg" alt="Mars — Valles Marineris" />
+        </div>
+
+        <p class="listing-section-label">Missions</p>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Starship Mars demo — uncrewed</div>
+            <div class="listing-meta">SpaceX · window opens June 2026</div>
+          </div>
+          <span class="listing-badge badge--goal">2026</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Crewed Mars mission</div>
+            <div class="listing-meta">SpaceX · ~5 Starship launches per mission</div>
+          </div>
+          <span class="listing-badge badge--goal">2028–29</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Tianwen-3 sample return</div>
+            <div class="listing-meta">CNSA · two-launch architecture</div>
+          </div>
+          <span class="listing-badge badge--planned">2028</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Mars Sample Return</div>
+            <div class="listing-meta">NASA / ESA · architecture redesign</div>
+          </div>
+          <span class="listing-badge badge--delayed">Delayed</span>
+        </div>
+
+        <p class="listing-section-label" style="margin-top:20px;">Manufacturing</p>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">ISRU: oxygen from CO₂ atmosphere</div>
+            <div class="listing-meta">MOXIE proved it · SpaceX needs 30t for return</div>
+          </div>
+          <span class="listing-badge badge--fact">ISRU</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Factories arrive before astronauts</div>
+            <div class="listing-meta">SpaceX plan · pre-produce propellant on surface</div>
+          </div>
+          <span class="listing-badge badge--fact">Strategy</span>
+        </div>
+        <div class="listing-item">
+          <div class="listing-body">
+            <div class="listing-name">Habitat 3D-printed from regolith</div>
+            <div class="listing-meta">Northwestern · load-bearing from Mars soil sim</div>
+          </div>
+          <span class="listing-badge badge--fact">Research</span>
+        </div>
+      </div>
+
     </aside>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
   (function () {
+
+    // ── Planet config ─────────────────────────────────────────────────────
     const PLANETS = [
       {
         key:      'earth',
-        texUrl:   'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/earth_atmos_2048.jpg',
-        atmo:     0x3a88cc,
-        atmoOp:   0.18,
-        rotSpeed: 0.0022,
+        dayUrl:   'https://unpkg.com/three-globe/example/img/earth-day.jpg',
+        nightUrl: 'https://unpkg.com/three-globe/example/img/earth-night.jpg',
+        hasDayNight: true,
+        atmoColor:   0x2277cc,
+        atmoOpacity: 0.20,
+        rotSpeed: 0.0018,
         tilt:     0.41,
       },
       {
         key:      'moon',
-        texUrl:   'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/moon_1024.jpg',
-        atmo:     0x888888,
-        atmoOp:   0.03,
-        rotSpeed: 0.0007,
+        dayUrl:   'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/moon_1024.jpg',
+        hasDayNight: false,
+        atmoColor:   0x888888,
+        atmoOpacity: 0.02,
+        rotSpeed: 0.0006,
         tilt:     0.03,
       },
       {
         key:      'mars',
-        texUrl:   'https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg',
-        atmo:     0xcc5522,
-        atmoOp:   0.10,
-        rotSpeed: 0.0020,
+        dayUrl:   'https://raw.githubusercontent.com/mrdoob/three.js/r121/examples/textures/planets/mars_1k_color.jpg',
+        hasDayNight: false,
+        atmoColor:   0xbb4411,
+        atmoOpacity: 0.09,
+        rotSpeed: 0.0017,
         tilt:     0.44,
       },
     ];
 
+    // ── DOM refs ──────────────────────────────────────────────────────────
     const panel    = document.getElementById('globe-panel');
     const canvas   = document.getElementById('globe-canvas');
     const dotsEl   = document.getElementById('planet-dots');
@@ -241,14 +430,14 @@
       mars:  document.getElementById('info-mars'),
     };
 
-    // ── Renderer ────────────────────────────────────────────────────────
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    // ── Renderer ──────────────────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x07070f, 1);
+    renderer.setClearColor(0x06060d, 1);
 
     const scene  = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
-    camera.position.z = 6.5;
+    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 300);
+    camera.position.z = 7;
 
     function onResize() {
       const w = panel.clientWidth, h = panel.clientHeight;
@@ -259,77 +448,149 @@
     onResize();
     window.addEventListener('resize', onResize);
 
-    // ── Stars ────────────────────────────────────────────────────────────
-    const starsGeo = new THREE.BufferGeometry();
-    const starPos  = new Float32Array(3000 * 3);
-    for (let i = 0; i < 3000 * 3; i++) starPos[i] = (Math.random() - 0.5) * 120;
-    starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-    scene.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.07, sizeAttenuation: true })));
+    // ── Stars ─────────────────────────────────────────────────────────────
+    (function () {
+      const count = 3500;
+      const pos   = new Float32Array(count * 3);
+      for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 150;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.08, sizeAttenuation: true });
+      scene.add(new THREE.Points(geo, mat));
+    })();
 
-    // ── Lights ───────────────────────────────────────────────────────────
-    scene.add(new THREE.AmbientLight(0x1a2a44, 1.0));
-    const sun = new THREE.DirectionalLight(0xfff0e0, 2.0);
-    sun.position.set(8, 5, 8);
-    scene.add(sun);
-    const fill = new THREE.DirectionalLight(0x224466, 0.2);
-    fill.position.set(-6, -3, -4);
-    scene.add(fill);
+    // ── Sun light (fixed direction) ────────────────────────────────────────
+    const SUN_POS = new THREE.Vector3(9, 5, 8).normalize();
+    scene.add(new THREE.AmbientLight(0x111828, 1.0));
+    const sunLight = new THREE.DirectionalLight(0xfff5ee, 2.2);
+    sunLight.position.copy(SUN_POS.clone().multiplyScalar(20));
+    scene.add(sunLight);
+    const fillLight = new THREE.DirectionalLight(0x1a2840, 0.25);
+    fillLight.position.set(-8, -4, -6);
+    scene.add(fillLight);
 
-    // ── Globe mesh ────────────────────────────────────────────────────────
-    const RADIUS = 2.2;
+    // ── Shaders for Earth day/night ────────────────────────────────────────
+    const earthVert = `
+      varying vec3 vWorldNormal;
+      varying vec2 vUv;
+      void main() {
+        vWorldNormal = normalize(mat3(modelMatrix) * normal);
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `;
+    const earthFrag = `
+      uniform sampler2D dayMap;
+      uniform sampler2D nightMap;
+      uniform vec3      sunDir;
+      varying vec3 vWorldNormal;
+      varying vec2 vUv;
+      void main() {
+        float cosA    = dot(normalize(vWorldNormal), sunDir);
+        float blend   = smoothstep(-0.18, 0.22, cosA);
+        vec4  day     = texture2D(dayMap,   vUv);
+        vec4  night   = texture2D(nightMap, vUv);
+        night.rgb    *= 2.8;
+        vec4  col     = mix(night, day, blend);
+        // specular on ocean
+        vec3  viewDir = normalize(vec3(0.0, 0.0, 1.0)); // approx
+        vec3  halfV   = normalize(sunDir + viewDir);
+        float spec    = pow(max(dot(normalize(vWorldNormal), halfV), 0.0), 28.0);
+        float ocean   = 1.0 - clamp(day.r * 1.4 - 0.05, 0.0, 1.0);
+        col.rgb      += vec3(0.15, 0.22, 0.35) * spec * ocean * blend;
+        gl_FragColor  = col;
+      }
+    `;
+
+    // ── Globe meshes ───────────────────────────────────────────────────────
+    const RADIUS = 2.4;
     const globeGroup = new THREE.Group();
     scene.add(globeGroup);
 
+    // Tilted sub-group (axial tilt stays fixed while group slides)
     const tiltGroup = new THREE.Group();
     globeGroup.add(tiltGroup);
 
+    // Sphere
     const sphereGeo = new THREE.SphereGeometry(RADIUS, 128, 128);
-    const sphereMat = new THREE.MeshPhongMaterial({ shininess: 10, specular: new THREE.Color(0x080810) });
-    const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+
+    // Earth — custom day/night shader
+    const earthMat = new THREE.ShaderMaterial({
+      uniforms: {
+        dayMap:   { value: null },
+        nightMap: { value: null },
+        sunDir:   { value: SUN_POS.clone() },
+      },
+      vertexShader:   earthVert,
+      fragmentShader: earthFrag,
+    });
+
+    // Standard material for Moon & Mars
+    const stdMat = new THREE.MeshPhongMaterial({
+      shininess: 6,
+      specular: new THREE.Color(0x0a0a14),
+    });
+
+    const sphereMesh = new THREE.Mesh(sphereGeo, earthMat);
     tiltGroup.add(sphereMesh);
 
     // Atmosphere
-    const atmoGeo  = new THREE.SphereGeometry(RADIUS * 1.04, 64, 64);
-    const atmoMat  = new THREE.MeshPhongMaterial({ transparent: true, side: THREE.BackSide, depthWrite: false });
-    const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
+    const atmoMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(RADIUS * 1.045, 64, 64),
+      new THREE.MeshPhongMaterial({ transparent: true, side: THREE.BackSide, depthWrite: false })
+    );
     tiltGroup.add(atmoMesh);
 
-    // ── Texture loading ───────────────────────────────────────────────────
-    const loader   = new THREE.TextureLoader();
+    // ── Texture loading ────────────────────────────────────────────────────
+    const loader = new THREE.TextureLoader();
     loader.crossOrigin = 'anonymous';
-    const texCache = {};
+    const cache = {};
 
-    function loadTex(url, onDone) {
-      if (texCache[url]) { onDone(texCache[url]); return; }
+    function loadTex(url, cb) {
+      if (cache[url]) { cb(cache[url]); return; }
       loader.load(url, tex => {
         tex.colorSpace = THREE.SRGBColorSpace;
-        texCache[url]  = tex;
-        onDone(tex);
+        cache[url] = tex;
+        cb(tex);
+      }, undefined, () => {
+        // On error try to load a fallback for Mars
+        if (url.includes('mars')) {
+          const fallback = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/MSL_Sol_1516_-_Mastcam-Z_Right.png/800px-MSL_Sol_1516_-_Mastcam-Z_Right.png';
+          loader.load(fallback, tex => { tex.colorSpace = THREE.SRGBColorSpace; cache[url] = tex; cb(tex); }, undefined, () => {});
+        }
       });
     }
 
-    // ── State & transition ────────────────────────────────────────────────
-    let currentIdx  = 0;
-    let anim        = null; // { phase:'out'|'in', t, dir, nextIdx }
-    let rotSpeed    = PLANETS[0].rotSpeed;
+    // ── State ──────────────────────────────────────────────────────────────
+    let currentIdx = 0;
+    let anim       = null; // { phase:'out'|'in', t, dir }
+    const SLIDE    = 10;
+    const SPEED    = 0.060;
 
-    function easeInQuad(t)  { return t * t; }
-    function easeOutQuad(t) { return 1 - (1 - t) * (1 - t); }
-    const SLIDE_DIST = 9;
+    function easeIn(t)  { return t * t * t; }
+    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
     function applyPlanet(idx) {
       const p = PLANETS[idx];
       tiltGroup.rotation.z = p.tilt;
-      rotSpeed = p.rotSpeed;
-      atmoMat.color.setHex(p.atmo);
-      atmoMat.opacity = p.atmoOp;
-      loadTex(p.texUrl, tex => { sphereMat.map = tex; sphereMat.needsUpdate = true; });
+      atmoMesh.material.color.setHex(p.atmoColor);
+      atmoMesh.material.opacity = p.atmoOpacity;
+
+      if (p.hasDayNight) {
+        sphereMesh.material = earthMat;
+        loadTex(p.dayUrl,   tex => { earthMat.uniforms.dayMap.value   = tex; });
+        loadTex(p.nightUrl, tex => { earthMat.uniforms.nightMap.value = tex; });
+      } else {
+        sphereMesh.material = stdMat;
+        loadTex(p.dayUrl, tex => { stdMat.map = tex; stdMat.needsUpdate = true; });
+      }
     }
 
     function updateUI(idx) {
       const key = PLANETS[idx].key;
       Object.values(infoPanels).forEach(el => el.classList.remove('active'));
       infoPanels[key].classList.add('active');
+      infoPanels[key].parentElement.scrollTop = 0;
       Array.from(dotsEl.children).forEach((d, i) => d.classList.toggle('active', i === idx));
     }
 
@@ -342,68 +603,55 @@
     // Init first planet
     applyPlanet(0);
     updateUI(0);
+    PLANETS.forEach(p => { loadTex(p.dayUrl, () => {}); if (p.nightUrl) loadTex(p.nightUrl, () => {}); });
 
-    // Pre-load all textures
-    PLANETS.forEach(p => loadTex(p.texUrl, () => {}));
-
-    // ── Controls ──────────────────────────────────────────────────────────
-    document.getElementById('nav-prev').addEventListener('click', () => navigate(-1));
-    document.getElementById('nav-next').addEventListener('click', () => navigate(1));
-
-    // Keyboard
+    // ── Input ─────────────────────────────────────────────────────────────
     window.addEventListener('keydown', e => {
       if (e.key === 'ArrowRight') navigate(1);
       if (e.key === 'ArrowLeft')  navigate(-1);
     });
 
-    // Touch / mouse drag swipe
-    let dragStartX = null;
-    function onDragStart(x) { dragStartX = x; }
-    function onDragEnd(x) {
-      if (dragStartX === null) return;
-      const dx = x - dragStartX;
-      dragStartX = null;
-      if (Math.abs(dx) > 50) navigate(dx < 0 ? 1 : -1);
-    }
-    panel.addEventListener('mousedown',  e => onDragStart(e.clientX));
-    window.addEventListener('mouseup',   e => onDragEnd(e.clientX));
-    panel.addEventListener('touchstart', e => onDragStart(e.touches[0].clientX), { passive: true });
-    panel.addEventListener('touchend',   e => onDragEnd(e.changedTouches[0].clientX), { passive: true });
+    let dragX = null;
+    panel.addEventListener('mousedown',  e => { dragX = e.clientX; });
+    window.addEventListener('mouseup',   e => {
+      if (dragX === null) return;
+      const dx = e.clientX - dragX; dragX = null;
+      if (Math.abs(dx) > 55) navigate(dx < 0 ? 1 : -1);
+    });
+    panel.addEventListener('touchstart', e => { dragX = e.touches[0].clientX; }, { passive: true });
+    panel.addEventListener('touchend',   e => {
+      const dx = e.changedTouches[0].clientX - dragX; dragX = null;
+      if (Math.abs(dx) > 45) navigate(dx < 0 ? 1 : -1);
+    }, { passive: true });
 
-    // ── Animation loop ────────────────────────────────────────────────────
-    const SPEED = 0.055;
+    // ── Render loop ────────────────────────────────────────────────────────
+    const rotSpeeds = PLANETS.map(p => p.rotSpeed);
 
-    function animate() {
-      requestAnimationFrame(animate);
+    function tick() {
+      requestAnimationFrame(tick);
 
       if (anim) {
         anim.t = Math.min(anim.t + SPEED, 1);
-
         if (anim.phase === 'out') {
-          globeGroup.position.x = easeInQuad(anim.t) * SLIDE_DIST * -anim.dir;
+          globeGroup.position.x = easeIn(anim.t) * SLIDE * -anim.dir;
           if (anim.t >= 1) {
-            // Swap planet
             currentIdx = anim.nextIdx;
             applyPlanet(currentIdx);
             updateUI(currentIdx);
-            globeGroup.position.x = SLIDE_DIST * anim.dir;
+            globeGroup.position.x = SLIDE * anim.dir;
             anim = { phase: 'in', t: 0, dir: anim.dir, nextIdx: anim.nextIdx };
           }
         } else {
-          const ease = easeOutQuad(anim.t);
-          globeGroup.position.x = (1 - ease) * SLIDE_DIST * anim.dir;
-          if (anim.t >= 1) {
-            globeGroup.position.x = 0;
-            anim = null;
-          }
+          globeGroup.position.x = (1 - easeOut(anim.t)) * SLIDE * anim.dir;
+          if (anim.t >= 1) { globeGroup.position.x = 0; anim = null; }
         }
       }
 
-      sphereMesh.rotation.y += rotSpeed;
+      sphereMesh.rotation.y += rotSpeeds[currentIdx];
       renderer.render(scene, camera);
     }
 
-    animate();
+    tick();
   })();
   </script>
 </body>
