@@ -4,6 +4,7 @@ import { runColdDiscovery } from "../agents/cold-discovery.js";
 import { runColdQuality } from "../agents/cold-quality.js";
 import { runColdOutreach } from "../agents/cold-outreach.js";
 import { runColdReply, reconcileConversions } from "../agents/cold-reply.js";
+import { runColdAdminTask } from "../agents/cold-admin.js";
 
 export const coldRouter = Router();
 
@@ -62,6 +63,24 @@ coldRouter.get("/stats", async (req, res) => {
     .eq("direction", "outbound")
     .gte("sent_at", today.toISOString());
   res.json({ targets: out, sent_today: sentToday || 0 });
+});
+
+/**
+ * Admin one-shot: free-text instruction goes in, real factories get emailed.
+ * Open like the rest of /api/admin/* (the admin page is unauth in this app).
+ */
+coldRouter.post("/admin-task", async (req, res) => {
+  const instruction = String((req.body || {}).instruction || "").trim();
+  if (!instruction || instruction.length < 10) {
+    res.status(400).json({ error: "Provide a longer instruction." });
+    return;
+  }
+  try {
+    const result = await runColdAdminTask(instruction);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 coldRouter.post("/run/:job", async (req, res) => {

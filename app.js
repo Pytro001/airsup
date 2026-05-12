@@ -903,6 +903,7 @@
     if (name === "admin") {
       closeAdminWorkspace();
       initAdminWhatsapp();
+      initAdminColdOutreach();
       loadAdminOverview();
     }
     if (name === "thankyou") loadThankyou();
@@ -3832,6 +3833,54 @@
     } catch (e) {
       if (left) left.innerHTML = "<div class=\"projects-empty\">" + escapeHtml(e.message || "Error") + "</div>";
     }
+  }
+
+  function initAdminColdOutreach() {
+    const runBtn = $("admin-cold-run");
+    const input = $("admin-cold-input");
+    const statusEl = $("admin-cold-status");
+    const resultEl = $("admin-cold-result");
+    if (!runBtn || !input || runBtn.dataset.wired === "1") return;
+    runBtn.dataset.wired = "1";
+    runBtn.addEventListener("click", async () => {
+      const instruction = (input.value || "").trim();
+      if (instruction.length < 10) {
+        if (statusEl) statusEl.textContent = "Write a longer instruction.";
+        return;
+      }
+      runBtn.disabled = true;
+      const original = runBtn.innerHTML;
+      runBtn.innerHTML = '<span class="btn-spinner"></span>Running…';
+      if (statusEl) statusEl.textContent = "Discovering and emailing factories. This can take a minute.";
+      if (resultEl) { resultEl.hidden = true; resultEl.innerHTML = ""; }
+      try {
+        const res = await fetch(`${API_BASE}/api/cold/admin-task`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ instruction }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d?.error || "Run failed");
+        if (statusEl) {
+          const p = d.parsed || {};
+          statusEl.textContent = `Parsed: ${p.count || "?"} × ${p.country || p.region || "any"} · ${p.category || "any"}. Sent ${d.sent?.length || 0} of ${d.discovered || 0}.`;
+        }
+        if (resultEl) {
+          const sentItems = (d.sent || []).map((s) => `<div class="admin-cold-result-item">${escapeHtml(s.company)} <small>${escapeHtml(s.email)} · ${escapeHtml(s.subject)}</small></div>`).join("");
+          const skipItems = (d.skipped || []).map((s) => `<div class="admin-cold-result-item" style="opacity:0.6;">${escapeHtml(s.company || "?")} <small>${escapeHtml(s.email || "")} · skipped: ${escapeHtml(s.reason)}</small></div>`).join("");
+          let html = "";
+          if (sentItems) html += `<div><strong>Sent</strong><div class="admin-cold-result-list">${sentItems}</div></div>`;
+          if (skipItems) html += `<div style="margin-top:10px;"><strong>Skipped</strong><div class="admin-cold-result-list">${skipItems}</div></div>`;
+          resultEl.innerHTML = html || "<em>No emails sent.</em>";
+          resultEl.hidden = false;
+        }
+      } catch (err) {
+        if (statusEl) statusEl.textContent = err && err.message ? err.message : "Run failed.";
+      } finally {
+        runBtn.disabled = false;
+        runBtn.innerHTML = original;
+      }
+    });
   }
 
   function initAdminWhatsapp() {

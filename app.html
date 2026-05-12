@@ -160,6 +160,17 @@
             <p id="admin-wa-form-flash" class="form-message" role="status" hidden style="margin-top:8px;"></p>
           </div>
 
+          <div class="admin-cold-card" id="admin-cold-card">
+            <div class="admin-cold-title">Run cold outreach</div>
+            <div class="admin-cold-sub">Describe what you want and I will discover factories, draft personalised emails, and send them from konstantin@airsup.dev.</div>
+            <textarea id="admin-cold-input" class="settings-input admin-cold-input" rows="3" placeholder="e.g. search 20 high quality manufacturers from hong kong right now and email them for a meeting this week at their factory to invite them on our platform"></textarea>
+            <div class="admin-cold-actions">
+              <button type="button" class="btn-primary btn-sm" id="admin-cold-run">Run</button>
+              <span id="admin-cold-status" class="admin-cold-status"></span>
+            </div>
+            <div id="admin-cold-result" class="admin-cold-result" hidden></div>
+          </div>
+
           <div class="admin-stats" id="admin-stats"></div>
           <div class="admin-grid">
             <div class="admin-col">
@@ -219,6 +230,6 @@
   <script src="config.js"></script>
   <script src="assets/phone-dial.js"></script>
   <script src="assets/password-toggles.js"></script>
-  <script src="app.js?v=20260512b"></script>
+  <script src="app.js?v=20260512c"></script>
 </body>
 </html>
