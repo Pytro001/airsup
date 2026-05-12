@@ -45,6 +45,7 @@ export type SendArgs = {
   inReplyTo?: string;
   references?: string[];
   unsubscribeToken?: string;
+  bcc?: string;
 };
 
 export type SendResult = {
@@ -68,6 +69,7 @@ export async function sendEmail(args: SendArgs): Promise<SendResult> {
   const result = await t.sendMail({
     from: `"${FROM_NAME}" <${USER}>`,
     to: args.to,
+    bcc: args.bcc,
     subject: args.subject,
     text: args.text,
     html: args.html,

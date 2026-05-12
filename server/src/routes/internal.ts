@@ -3,6 +3,7 @@ import type { Response } from "express";
 import { runJobPollOnce } from "../jobs/poll.js";
 import { cleanupStaleAnonymousUsers } from "../jobs/cleanup-anonymous.js";
 import { supabaseAdmin } from "../services/supabase.js";
+import { runColdOutreach } from "../agents/cold-outreach.js";
 
 export const internalRouter = Router();
 
@@ -76,7 +77,18 @@ async function runJobs(_req: unknown, res: Response): Promise<void> {
   try {
     await runJobPollOnce();
     const purged = await purgeBin();
-    res.json({ ok: true, purged });
+
+    let coldSent = 0;
+    if (process.env.COLD_OUTREACH_ENABLED === "1") {
+      try {
+        coldSent = await runColdOutreach(10);
+        console.log(`[internal/jobs] cold outreach sent ${coldSent}`);
+      } catch (err) {
+        console.error("[internal/jobs] cold outreach failed:", err);
+      }
+    }
+
+    res.json({ ok: true, purged, coldSent });
   } catch (err) {
     console.error("[internal/jobs]", err);
     res.status(500).json({ error: err instanceof Error ? err.message : "Job run failed" });
