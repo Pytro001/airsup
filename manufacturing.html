@@ -166,27 +166,6 @@
     }
     .card:hover .card-img img { transform: scale(1.05); }
 
-    /* Gradient fallback covers */
-    .card-img-fallback {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 36px;
-      opacity: 0;
-    }
-    .card-img img.failed + .card-img-fallback,
-    .card-img.no-img .card-img-fallback { opacity: 1; }
-    .card-img img.failed { opacity: 0; }
-
-    .grad-space    { background: linear-gradient(135deg, #0d1b3e 0%, #1a3a6e 50%, #0a0f1a 100%); }
-    .grad-robotics { background: linear-gradient(135deg, #0a2010 0%, #1a4a20 50%, #0a1a0a 100%); }
-    .grad-energy   { background: linear-gradient(135deg, #1a1200 0%, #3a2800 50%, #1a0a00 100%); }
-    .grad-chips    { background: linear-gradient(135deg, #100a2a 0%, #2a1a5a 50%, #0a0a1a 100%); }
-    .grad-bio      { background: linear-gradient(135deg, #1a0a1a 0%, #3a1040 50%, #0a0a10 100%); }
-    .grad-evs      { background: linear-gradient(135deg, #001a1a 0%, #003a3a 50%, #000a0a 100%); }
-
     /* Card body */
     .card-body {
       padding: 16px 18px 20px;
@@ -286,10 +265,7 @@
         <!-- SpaceX catches booster -->
         <div class="card" data-cat="space">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/SpaceX_IFT-5_mechazilla_catch.jpg/800px-SpaceX_IFT-5_mechazilla_catch.jpg"
-                 alt="SpaceX Mechazilla catch"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-space">🦾</div>
+            <img src="https://picsum.photos/seed/spacexlaunch/800/450" alt="SpaceX" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-space">Space</span>
@@ -302,10 +278,7 @@
         <!-- Figure robot at BMW -->
         <div class="card" data-cat="robotics">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Figure_AI_Figure_02_humanoid_robot.jpg/800px-Figure_AI_Figure_02_humanoid_robot.jpg"
-                 alt="Figure 02 robot"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-robotics">🤖</div>
+            <img src="https://picsum.photos/seed/robotfactory/800/450" alt="Robot factory" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-robotics">Robotics</span>
@@ -318,10 +291,7 @@
         <!-- TSMC 2nm -->
         <div class="card" data-cat="chips">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/TSMC_headquarters.jpg/800px-TSMC_headquarters.jpg"
-                 alt="TSMC"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-chips">🔬</div>
+            <img src="https://picsum.photos/seed/semiconductor/800/450" alt="Semiconductor" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-chips">Chips</span>
@@ -334,10 +304,7 @@
         <!-- Toyota solid-state battery -->
         <div class="card" data-cat="energy">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Toyota_Motor_North_America_Research_%26_Development_Battery.jpg/800px-Toyota_Motor_North_America_Research_%26_Development_Battery.jpg"
-                 alt="Toyota battery"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-energy">⚡</div>
+            <img src="https://picsum.photos/seed/energylab/800/450" alt="Battery lab" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-energy">Energy</span>
@@ -350,10 +317,7 @@
         <!-- BYD EV factory -->
         <div class="card" data-cat="evs">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/BYD_Auto_factory_2023.jpg/800px-BYD_Auto_factory_2023.jpg"
-                 alt="BYD factory"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-evs">🚗</div>
+            <img src="https://picsum.photos/seed/electriccar/800/450" alt="EV factory" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-evs">EVs</span>
@@ -366,10 +330,7 @@
         <!-- FANUC lights-out -->
         <div class="card" data-cat="robotics">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/FANUC_robot_factory.jpg/800px-FANUC_robot_factory.jpg"
-                 alt="FANUC factory"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-robotics">🏭</div>
+            <img src="https://picsum.photos/seed/darkfactory/800/450" alt="Dark factory" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-robotics">Robotics</span>
@@ -382,10 +343,7 @@
         <!-- Varda Space orbital mfg -->
         <div class="card" data-cat="space">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Varda_W-1_reentry_capsule.jpg/800px-Varda_W-1_reentry_capsule.jpg"
-                 alt="Varda Space"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-space">🛸</div>
+            <img src="https://picsum.photos/seed/orbitspace/800/450" alt="Orbital manufacturing" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-space">Space</span>
@@ -398,10 +356,7 @@
         <!-- SpaceX Raptor production -->
         <div class="card" data-cat="space">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/SpaceX_Raptor_engine_2022.jpg/800px-SpaceX_Raptor_engine_2022.jpg"
-                 alt="Raptor engine"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-space">🚀</div>
+            <img src="https://picsum.photos/seed/rocketengine/800/450" alt="Rocket engine" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-space">Space</span>
@@ -414,10 +369,7 @@
         <!-- Rocket Lab 3D print -->
         <div class="card" data-cat="space">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Rocket_Lab_Rutherford_engine.jpg/800px-Rocket_Lab_Rutherford_engine.jpg"
-                 alt="Rocket Lab Rutherford"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-space">🖨️</div>
+            <img src="https://picsum.photos/seed/additiveprint/800/450" alt="3D printing" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-space">Space</span>
@@ -430,10 +382,7 @@
         <!-- Biomanufacturing insulin -->
         <div class="card" data-cat="bio">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Bioreactor_at_NREL.jpg/800px-Bioreactor_at_NREL.jpg"
-                 alt="Bioreactor"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-bio">🧬</div>
+            <img src="https://picsum.photos/seed/bioreactor/800/450" alt="Bioreactor" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-bio">Bio</span>
@@ -446,10 +395,7 @@
         <!-- Airbus titanium 3D print -->
         <div class="card" data-cat="mfg">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Airbus_A350_XWB_first_flight_-_1.jpg/800px-Airbus_A350_XWB_first_flight_-_1.jpg"
-                 alt="Airbus A350"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-chips">✈️</div>
+            <img src="https://picsum.photos/seed/aerospace/800/450" alt="Aerospace manufacturing" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-chips">Manufacturing</span>
@@ -462,10 +408,7 @@
         <!-- Samsung foldable -->
         <div class="card" data-cat="chips">
           <div class="card-img">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Samsung_Galaxy_Z_Fold5_Phantom_Black.jpg/800px-Samsung_Galaxy_Z_Fold5_Phantom_Black.jpg"
-                 alt="Samsung foldable"
-                 onerror="this.classList.add('failed')" />
-            <div class="card-img-fallback grad-chips">📱</div>
+            <img src="https://picsum.photos/seed/displaytech/800/450" alt="Display technology" />
           </div>
           <div class="card-body">
             <span class="card-tag tag-chips">Chips</span>
@@ -490,13 +433,6 @@
   </footer>
 
   <script>
-    // Image error → show gradient fallback
-    document.querySelectorAll('.card-img img').forEach(img => {
-      img.addEventListener('error', function () {
-        this.classList.add('failed');
-      });
-    });
-
     // Category filter
     const filterBtns = document.querySelectorAll('.filter-btn');
     const cards = document.querySelectorAll('.card');
