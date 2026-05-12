@@ -1,4 +1,5 @@
 import { runJobPollOnce } from "./poll.js";
+import { tickColdLoop } from "./cold-loop.js";
 
 const POLL_INTERVAL = 15_000;
 
@@ -9,6 +10,12 @@ async function poll(): Promise<void> {
     await runJobPollOnce();
   } catch (err) {
     console.error("[Worker] poll error:", err);
+  }
+
+  try {
+    await tickColdLoop();
+  } catch (err) {
+    console.error("[Worker] cold-loop error:", err);
   }
 
   // Daily digest at 9:00 local server time

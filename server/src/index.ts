@@ -17,6 +17,7 @@ import { profileRouter } from "./routes/profile.js";
 import { intakeImportRouter } from "./routes/intake-import.js";
 import { placesRouter } from "./routes/places.js";
 import { notifyRouter } from "./routes/notify.js";
+import { coldRouter } from "./routes/cold.js";
 import { startWorker } from "./jobs/worker.js";
 import { registerAllSkills, triggerSkill } from "./skills/index.js";
 
@@ -42,6 +43,7 @@ app.use("/api/factories", factoriesRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/intake", intakeImportRouter);
 app.use("/api/notify", notifyRouter);
+app.use("/api/cold", coldRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 
