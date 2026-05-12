@@ -4,655 +4,517 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Manufacturing · Airsup</title>
+  <meta name="description" content="The most interesting things being built right now." />
   <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
+  <link rel="apple-touch-icon" href="assets/brand/logo-air-sup.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <script>document.documentElement.dataset.theme = "dark";</script>
   <style>
+    :root {
+      --page-bg: #fff;
+      --text: #111;
+      --text-muted: #666;
+      --text-soft: #999;
+      --text-faint: #bbb;
+      --border: #e8e8e8;
+      --border-light: #f0f0f0;
+      --card-bg: #fff;
+      --accent-bg: #f5f5f5;
+      color-scheme: light;
+    }
+    html[data-theme="dark"] {
+      --page-bg: #111111;
+      --text: #f2f2f3;
+      --text-muted: #9a9a9a;
+      --text-soft: #6b6b6b;
+      --text-faint: #444444;
+      --border: #282828;
+      --border-light: #1e1e1e;
+      --card-bg: #0a0a0a;
+      --accent-bg: #1a1a1a;
+      color-scheme: dark;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-weight: 300;
-      background: #08080f;
-      color: #f2f2f3;
+      background: var(--page-bg);
+      color: var(--text);
+      line-height: 1.55;
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
       display: flex;
       flex-direction: column;
-      -webkit-font-smoothing: antialiased;
     }
     a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
 
-    .sp-header {
-      flex-shrink: 0;
-      padding: 18px 28px;
+    /* ── Dot grid ── */
+    .page-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.09) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* ── Header ── */
+    .lp-header {
+      padding: 20px 28px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
     }
-    .sp-brand {
+    .lp-brand {
       display: inline-flex; align-items: center; gap: 9px;
-      font-weight: 500; font-size: 15px; color: #f2f2f3;
+      font-weight: 500; font-size: 16px; color: var(--text);
     }
-    .sp-brand img {
-      height: 28px; width: 28px; border-radius: 7px;
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
-    }
+    .lp-brand img { height: 22px; width: 22px; border-radius: 6px; }
+    html[data-theme="dark"] .lp-brand img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
 
-    .mfg-layout {
+    /* ── Content ── */
+    .mfg-content {
       flex: 1;
-      display: flex;
-      min-height: 0;
+      max-width: 1120px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 24px 80px;
     }
 
-    /* ── Globe panel ── */
-    .globe-panel {
-      flex: 0 0 60%;
-      position: relative;
-      overflow: hidden;
-      cursor: grab;
-      user-select: none;
+    /* ── Page heading ── */
+    .mfg-hero {
+      padding: 40px 0 32px;
     }
-    .globe-panel:active { cursor: grabbing; }
-    #globe-canvas { display: block; width: 100%; height: 100%; }
-
-    .planet-dots {
-      position: absolute;
-      bottom: 22px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-      z-index: 5;
-      pointer-events: none;
-    }
-    .dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.18);
-      transition: background 0.3s, transform 0.3s;
-    }
-    .dot.active {
-      background: rgba(255,255,255,0.75);
-      transform: scale(1.4);
-    }
-
-    /* ── Info panel ── */
-    .info-panel {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      border-left: 1px solid rgba(255,255,255,0.055);
-      position: relative;
-    }
-    .info-panel::-webkit-scrollbar { width: 4px; }
-    .info-panel::-webkit-scrollbar-thumb { background: #2a2a38; border-radius: 4px; }
-
-    .planet-info {
-      display: none;
-      padding: 32px 28px 40px;
-    }
-    .planet-info.active { display: block; }
-
-    .planet-info h2 {
-      font-size: clamp(34px, 3.5vw, 52px);
+    .mfg-hero h1 {
+      font-size: clamp(24px, 3.5vw, 38px);
       font-weight: 500;
       letter-spacing: -0.03em;
-      line-height: 1;
-      margin-bottom: 6px;
+      line-height: 1.1;
+      margin-bottom: 8px;
     }
-    .planet-tagline {
-      font-size: 13px;
-      color: #5c5c6e;
-      margin-bottom: 20px;
-    }
-
-    .planet-photo-wrap {
-      width: 100%;
-      height: 200px;
-      border-radius: 16px;
-      overflow: hidden;
-      background: #111118;
-      margin-bottom: 24px;
-    }
-    .planet-photo-wrap img {
-      width: 100%; height: 100%;
-      object-fit: cover; display: block;
+    .mfg-hero-sub {
+      font-size: 15px;
+      color: var(--text-muted);
     }
 
-    /* Listing */
-    .listing-section-label {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #3e3e50;
-      margin: 0 0 10px;
-    }
-    .listing-section-label + .listing-section-label { margin-top: 20px; }
-
-    .listing-item {
+    /* ── Filter bar ── */
+    .filter-bar {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 11px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      gap: 6px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
     }
-    .listing-item:last-child { border-bottom: none; }
-    .listing-body { flex: 1; min-width: 0; }
-    .listing-name {
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: 999px;
       font-size: 13px;
       font-weight: 400;
-      color: #d8d8e0;
-      white-space: nowrap;
+      color: var(--text-soft);
+      background: transparent;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s, border-color 0.15s;
+      font-family: inherit;
+    }
+    .filter-btn:hover { color: var(--text-muted); }
+    .filter-btn.active {
+      color: var(--text);
+      background: var(--accent-bg);
+      border-color: var(--text-soft);
+    }
+
+    /* ── Cards grid ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
       overflow: hidden;
-      text-overflow: ellipsis;
+      transition: border-color 0.15s, transform 0.2s;
+      display: flex;
+      flex-direction: column;
     }
-    .listing-meta {
-      font-size: 11px;
-      color: #46465a;
-      margin-top: 2px;
+    html[data-theme="dark"] .card:hover {
+      border-color: rgba(255,255,255,0.1);
+      transform: translateY(-2px);
     }
-    .listing-badge {
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 2px 7px;
-      border-radius: 999px;
-      white-space: nowrap;
+    .card[hidden] { display: none !important; }
+
+    /* Card image */
+    .card-img {
+      width: 100%;
+      height: 190px;
+      overflow: hidden;
+      background: var(--accent-bg);
+      position: relative;
       flex-shrink: 0;
     }
-    .badge--go       { background: rgba(74,222,128,0.10); color: #4ade80; }
-    .badge--planned  { background: rgba(99,179,237,0.10); color: #63b3ed; }
-    .badge--goal     { background: rgba(167,139,250,0.10); color: #a78bfa; }
-    .badge--fact     { background: rgba(251,191,36,0.10); color: #fbbf24; }
-    .badge--delayed  { background: rgba(252,165,165,0.10); color: #fca5a5; }
+    .card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.5s ease;
+    }
+    .card:hover .card-img img { transform: scale(1.05); }
+
+    /* Gradient fallback covers */
+    .card-img-fallback {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      opacity: 0;
+    }
+    .card-img img.failed + .card-img-fallback,
+    .card-img.no-img .card-img-fallback { opacity: 1; }
+    .card-img img.failed { opacity: 0; }
+
+    .grad-space    { background: linear-gradient(135deg, #0d1b3e 0%, #1a3a6e 50%, #0a0f1a 100%); }
+    .grad-robotics { background: linear-gradient(135deg, #0a2010 0%, #1a4a20 50%, #0a1a0a 100%); }
+    .grad-energy   { background: linear-gradient(135deg, #1a1200 0%, #3a2800 50%, #1a0a00 100%); }
+    .grad-chips    { background: linear-gradient(135deg, #100a2a 0%, #2a1a5a 50%, #0a0a1a 100%); }
+    .grad-bio      { background: linear-gradient(135deg, #1a0a1a 0%, #3a1040 50%, #0a0a10 100%); }
+    .grad-evs      { background: linear-gradient(135deg, #001a1a 0%, #003a3a 50%, #000a0a 100%); }
+
+    /* Card body */
+    .card-body {
+      padding: 16px 18px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .card-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+      align-self: flex-start;
+    }
+    .tag-space    { background: rgba(99,179,237,0.12);  color: #63b3ed; }
+    .tag-robotics { background: rgba(74,222,128,0.12);  color: #4ade80; }
+    .tag-energy   { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+    .tag-chips    { background: rgba(167,139,250,0.12); color: #a78bfa; }
+    .tag-bio      { background: rgba(244,114,182,0.12); color: #f472b6; }
+    .tag-evs      { background: rgba(52,211,153,0.12);  color: #34d399; }
+    .tag-mfg      { background: rgba(251,146,60,0.12);  color: #fb923c; }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 500;
+      line-height: 1.35;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-meta {
+      font-size: 11px;
+      color: var(--text-soft);
+      margin-top: 12px;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Footer ── */
+    .lp-footer {
+      display: flex; justify-content: center; align-items: center;
+      padding: 16px 20px; font-size: 12px; color: var(--text-faint);
+      border-top: 1px solid var(--border-light); background: var(--page-bg);
+      flex-shrink: 0;
+    }
+    .lp-footer-nav { display: flex; gap: 0; flex-wrap: nowrap; }
+    .lp-footer-nav a { color: var(--text-faint); margin: 0 6px; transition: color 0.15s; white-space: nowrap; }
+    .lp-footer-nav a:hover { color: var(--text-muted); }
+    html[data-theme="dark"] .lp-footer-nav a { color: var(--text-muted); }
+    html[data-theme="dark"] .lp-footer-nav a:hover { color: var(--text); }
+
+    @media (max-width: 560px) {
+      .mfg-hero { padding: 28px 0 24px; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <header class="sp-header">
-    <a href="/" class="sp-brand">
-      <img src="assets/brand/logo-air-sup.png" alt="Airsup" width="22" height="22" />
-    </a>
-  </header>
+  <div class="page-wrap">
+    <header class="lp-header">
+      <a href="/" class="lp-brand">
+        <img src="assets/brand/logo-air-sup.png" alt="Airsup" width="22" height="22" />
+        Airsup
+      </a>
+    </header>
 
-  <div class="mfg-layout">
-    <div class="globe-panel" id="globe-panel">
-      <canvas id="globe-canvas"></canvas>
-      <div class="planet-dots" id="planet-dots">
-        <span class="dot active"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
-      </div>
-    </div>
-
-    <aside class="info-panel">
-
-      <!-- Earth -->
-      <div class="planet-info active" id="info-earth">
-        <h2>Earth</h2>
-        <p class="planet-tagline">Where everything is built — for now.</p>
-        <div class="planet-photo-wrap">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg" alt="Earth — Apollo 17" />
-        </div>
-
-        <p class="listing-section-label">Launches</p>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Starship IFT-9 / IFT-10</div>
-            <div class="listing-meta">SpaceX · Boca Chica · 2026</div>
-          </div>
-          <span class="listing-badge badge--planned">Planned</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Falcon 9 — weekly cadence</div>
-            <div class="listing-meta">SpaceX · ~60 launches/yr</div>
-          </div>
-          <span class="listing-badge badge--go">Active</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">New Glenn Block 2</div>
-            <div class="listing-meta">Blue Origin · Cape Canaveral · 2026</div>
-          </div>
-          <span class="listing-badge badge--planned">Planned</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Neutron — debut flight</div>
-            <div class="listing-meta">Rocket Lab · Wallops Island · 2026–27</div>
-          </div>
-          <span class="listing-badge badge--goal">Announced</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Ariane 6 operational</div>
-            <div class="listing-meta">ArianeGroup · Kourou · 6–8 flights/yr</div>
-          </div>
-          <span class="listing-badge badge--go">Active</span>
-        </div>
-
-        <p class="listing-section-label" style="margin-top:20px;">Manufacturing</p>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Raptor engine every 4 hours</div>
-            <div class="listing-meta">SpaceX · ~180 engines/month at peak</div>
-          </div>
-          <span class="listing-badge badge--fact">Fact</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Lights-out robot factories</div>
-            <div class="listing-meta">FANUC · zero humans, 24/7, &lt;0.001% error</div>
-          </div>
-          <span class="listing-badge badge--fact">Fact</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Solid-state batteries scaling</div>
-            <div class="listing-meta">Toyota / CATL · 2026 GWh production</div>
-          </div>
-          <span class="listing-badge badge--planned">2026</span>
-        </div>
+    <main class="mfg-content">
+      <div class="mfg-hero">
+        <h1>What's happening in manufacturing</h1>
+        <p class="mfg-hero-sub">The most interesting things being built right now.</p>
       </div>
 
-      <!-- Moon -->
-      <div class="planet-info" id="info-moon">
-        <h2>Moon</h2>
-        <p class="planet-tagline">Humanity's next outpost. 384,400 km away.</p>
-        <div class="planet-photo-wrap">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/1024px-FullMoon2010.jpg" alt="Full Moon" />
-        </div>
-
-        <p class="listing-section-label">Missions</p>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Artemis II — crewed flyby</div>
-            <div class="listing-meta">NASA / ESA · first humans past LEO since 1972</div>
-          </div>
-          <span class="listing-badge badge--planned">2026</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Artemis III — lunar landing</div>
-            <div class="listing-meta">NASA / SpaceX HLS · south pole</div>
-          </div>
-          <span class="listing-badge badge--planned">2027</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Blue Ghost Mission 2</div>
-            <div class="listing-meta">Firefly Aerospace · CLPS · NASA instruments</div>
-          </div>
-          <span class="listing-badge badge--planned">2026</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Chang'e 7 — south pole lander</div>
-            <div class="listing-meta">CNSA · mini flying probe for shadowed craters</div>
-          </div>
-          <span class="listing-badge badge--planned">2026</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Lunar Gateway PPE + HALO</div>
-            <div class="listing-meta">NASA · first lunar space station elements</div>
-          </div>
-          <span class="listing-badge badge--goal">2027</span>
-        </div>
-
-        <p class="listing-section-label" style="margin-top:20px;">Manufacturing</p>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">3D printing base from moon dust</div>
-            <div class="listing-meta">ESA + ICON · sintering regolith with sunlight</div>
-          </div>
-          <span class="listing-badge badge--fact">Research</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Water ice → rocket fuel</div>
-            <div class="listing-meta">South pole reserves · electrolysis → LH₂/LOX</div>
-          </div>
-          <span class="listing-badge badge--fact">ISRU</span>
-        </div>
+      <div class="filter-bar" id="filter-bar">
+        <button class="filter-btn active" data-cat="all">All</button>
+        <button class="filter-btn" data-cat="space">Space</button>
+        <button class="filter-btn" data-cat="robotics">Robotics</button>
+        <button class="filter-btn" data-cat="energy">Energy</button>
+        <button class="filter-btn" data-cat="chips">Chips</button>
+        <button class="filter-btn" data-cat="evs">EVs</button>
+        <button class="filter-btn" data-cat="bio">Bio</button>
       </div>
 
-      <!-- Mars -->
-      <div class="planet-info" id="info-mars">
-        <h2>Mars</h2>
-        <p class="planet-tagline">~225 million km. Next launch window: June 2026.</p>
-        <div class="planet-photo-wrap">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Mars_Valles_Marineris.jpeg/1024px-Mars_Valles_Marineris.jpeg" alt="Mars — Valles Marineris" />
+      <div class="cards-grid" id="cards-grid">
+
+        <!-- SpaceX catches booster -->
+        <div class="card" data-cat="space">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/SpaceX_IFT-5_mechazilla_catch.jpg/800px-SpaceX_IFT-5_mechazilla_catch.jpg"
+                 alt="SpaceX Mechazilla catch"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-space">🦾</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-space">Space</span>
+            <div class="card-title">SpaceX caught a 70-metre rocket booster out of thin air</div>
+            <div class="card-desc">Mechazilla's robotic arms grabbed the falling Super Heavy booster during IFT-5. Nothing like it had ever been attempted at this scale.</div>
+            <div class="card-meta">SpaceX · Oct 2024</div>
+          </div>
         </div>
 
-        <p class="listing-section-label">Missions</p>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Starship Mars demo — uncrewed</div>
-            <div class="listing-meta">SpaceX · window opens June 2026</div>
+        <!-- Figure robot at BMW -->
+        <div class="card" data-cat="robotics">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Figure_AI_Figure_02_humanoid_robot.jpg/800px-Figure_AI_Figure_02_humanoid_robot.jpg"
+                 alt="Figure 02 robot"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-robotics">🤖</div>
           </div>
-          <span class="listing-badge badge--goal">2026</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Crewed Mars mission</div>
-            <div class="listing-meta">SpaceX · ~5 Starship launches per mission</div>
+          <div class="card-body">
+            <span class="card-tag tag-robotics">Robotics</span>
+            <div class="card-title">A humanoid robot just got hired at a BMW factory</div>
+            <div class="card-desc">Figure AI's Figure 02 started assembling vehicles at BMW's South Carolina plant. It learned the task in under a week using reinforcement learning.</div>
+            <div class="card-meta">Figure AI / BMW · 2024</div>
           </div>
-          <span class="listing-badge badge--goal">2028–29</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Tianwen-3 sample return</div>
-            <div class="listing-meta">CNSA · two-launch architecture</div>
-          </div>
-          <span class="listing-badge badge--planned">2028</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Mars Sample Return</div>
-            <div class="listing-meta">NASA / ESA · architecture redesign</div>
-          </div>
-          <span class="listing-badge badge--delayed">Delayed</span>
         </div>
 
-        <p class="listing-section-label" style="margin-top:20px;">Manufacturing</p>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">ISRU: oxygen from CO₂ atmosphere</div>
-            <div class="listing-meta">MOXIE proved it · SpaceX needs 30t for return</div>
+        <!-- TSMC 2nm -->
+        <div class="card" data-cat="chips">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/TSMC_headquarters.jpg/800px-TSMC_headquarters.jpg"
+                 alt="TSMC"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-chips">🔬</div>
           </div>
-          <span class="listing-badge badge--fact">ISRU</span>
-        </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Factories arrive before astronauts</div>
-            <div class="listing-meta">SpaceX plan · pre-produce propellant on surface</div>
+          <div class="card-body">
+            <span class="card-tag tag-chips">Chips</span>
+            <div class="card-title">TSMC is manufacturing chips smaller than a coronavirus</div>
+            <div class="card-desc">TSMC's N2 node entered production in 2025 — 20 billion transistors on an area the size of a fingernail. Each wafer takes 3 months to produce.</div>
+            <div class="card-meta">TSMC · 2025</div>
           </div>
-          <span class="listing-badge badge--fact">Strategy</span>
         </div>
-        <div class="listing-item">
-          <div class="listing-body">
-            <div class="listing-name">Habitat 3D-printed from regolith</div>
-            <div class="listing-meta">Northwestern · load-bearing from Mars soil sim</div>
+
+        <!-- Toyota solid-state battery -->
+        <div class="card" data-cat="energy">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Toyota_Motor_North_America_Research_%26_Development_Battery.jpg/800px-Toyota_Motor_North_America_Research_%26_Development_Battery.jpg"
+                 alt="Toyota battery"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-energy">⚡</div>
           </div>
-          <span class="listing-badge badge--fact">Research</span>
+          <div class="card-body">
+            <span class="card-tag tag-energy">Energy</span>
+            <div class="card-title">Toyota's solid-state battery charges in 10 minutes flat</div>
+            <div class="card-desc">2× energy density, no fire risk, 10-minute charge. Toyota and CATL are both racing to scale production. Mass manufacturing begins 2027.</div>
+            <div class="card-meta">Toyota / CATL · 2025</div>
+          </div>
         </div>
+
+        <!-- BYD EV factory -->
+        <div class="card" data-cat="evs">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/BYD_Auto_factory_2023.jpg/800px-BYD_Auto_factory_2023.jpg"
+                 alt="BYD factory"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-evs">🚗</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-evs">EVs</span>
+            <div class="card-title">BYD makes a new electric car every 8 seconds</div>
+            <div class="card-desc">BYD's Shenzhen megafactory runs 24/7 producing 1.76 million EVs a year. In 2024 it beat Tesla in global EV deliveries for the first time.</div>
+            <div class="card-meta">BYD · 2024</div>
+          </div>
+        </div>
+
+        <!-- FANUC lights-out -->
+        <div class="card" data-cat="robotics">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/FANUC_robot_factory.jpg/800px-FANUC_robot_factory.jpg"
+                 alt="FANUC factory"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-robotics">🏭</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-robotics">Robotics</span>
+            <div class="card-title">FANUC's factory runs in total darkness — zero humans</div>
+            <div class="card-desc">FANUC's Oshino plant operates 24/7 with no lights, no heating, no humans on the floor. Robots build robots. Error rate: below 0.001%.</div>
+            <div class="card-meta">FANUC · ongoing</div>
+          </div>
+        </div>
+
+        <!-- Varda Space orbital mfg -->
+        <div class="card" data-cat="space">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Varda_W-1_reentry_capsule.jpg/800px-Varda_W-1_reentry_capsule.jpg"
+                 alt="Varda Space"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-space">🛸</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-space">Space</span>
+            <div class="card-title">Drugs manufactured in orbit, landed back on Earth</div>
+            <div class="card-desc">Varda Space made pharmaceuticals aboard a Rocket Lab satellite in microgravity, then re-entered the capsule to Earth. Crystals grow purer without gravity.</div>
+            <div class="card-meta">Varda Space · 2024</div>
+          </div>
+        </div>
+
+        <!-- SpaceX Raptor production -->
+        <div class="card" data-cat="space">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/SpaceX_Raptor_engine_2022.jpg/800px-SpaceX_Raptor_engine_2022.jpg"
+                 alt="Raptor engine"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-space">🚀</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-space">Space</span>
+            <div class="card-title">SpaceX builds one Raptor engine every 4 hours</div>
+            <div class="card-desc">At peak, ~180 Raptor engines per month in Hawthorne — the fastest aerospace production ramp in history. Each has ~100 parts vs thousands in legacy engines.</div>
+            <div class="card-meta">SpaceX · 2024</div>
+          </div>
+        </div>
+
+        <!-- Rocket Lab 3D print -->
+        <div class="card" data-cat="space">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Rocket_Lab_Rutherford_engine.jpg/800px-Rocket_Lab_Rutherford_engine.jpg"
+                 alt="Rocket Lab Rutherford"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-space">🖨️</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-space">Space</span>
+            <div class="card-title">Rocket Lab 3D-prints its entire rocket engine in 24 hours</div>
+            <div class="card-desc">The Rutherford is the first orbital rocket engine produced entirely through additive manufacturing. Printed — not machined or assembled — in a single day.</div>
+            <div class="card-meta">Rocket Lab · ongoing</div>
+          </div>
+        </div>
+
+        <!-- Biomanufacturing insulin -->
+        <div class="card" data-cat="bio">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Bioreactor_at_NREL.jpg/800px-Bioreactor_at_NREL.jpg"
+                 alt="Bioreactor"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-bio">🧬</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-bio">Bio</span>
+            <div class="card-title">99% of all insulin is now grown inside engineered yeast</div>
+            <div class="card-desc">Modern insulin is manufactured by yeast cells engineered to produce human insulin — not extracted from pigs. Billions of doses per year, all from fermenters.</div>
+            <div class="card-meta">Novo Nordisk / Eli Lilly · ongoing</div>
+          </div>
+        </div>
+
+        <!-- Airbus titanium 3D print -->
+        <div class="card" data-cat="mfg">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Airbus_A350_XWB_first_flight_-_1.jpg/800px-Airbus_A350_XWB_first_flight_-_1.jpg"
+                 alt="Airbus A350"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-chips">✈️</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-chips">Manufacturing</span>
+            <div class="card-title">Airbus 3D-prints titanium parts that hold planes together</div>
+            <div class="card-desc">Airbus uses selective laser melting to print titanium brackets for the A350 — 25% lighter than machined alternatives, with zero material waste.</div>
+            <div class="card-meta">Airbus · ongoing</div>
+          </div>
+        </div>
+
+        <!-- Samsung foldable -->
+        <div class="card" data-cat="chips">
+          <div class="card-img">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Samsung_Galaxy_Z_Fold5_Phantom_Black.jpg/800px-Samsung_Galaxy_Z_Fold5_Phantom_Black.jpg"
+                 alt="Samsung foldable"
+                 onerror="this.classList.add('failed')" />
+            <div class="card-img-fallback grad-chips">📱</div>
+          </div>
+          <div class="card-body">
+            <span class="card-tag tag-chips">Chips</span>
+            <div class="card-title">Samsung etches 200 million pixels onto a 6-inch folding screen</div>
+            <div class="card-desc">Pixel density exceeds human visual acuity. The manufacturing process requires cleanrooms 1000× cleaner than a hospital operating theatre.</div>
+            <div class="card-meta">Samsung · 2024</div>
+          </div>
+        </div>
+
       </div>
-
-    </aside>
+    </main>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <footer class="lp-footer">
+    <nav class="lp-footer-nav">
+      <a href="/supi">Supi</a>
+      <a href="/support">Support</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="/faq">FAQ</a>
+    </nav>
+  </footer>
+
   <script>
-  (function () {
-
-    // ── Planet config ─────────────────────────────────────────────────────
-    const PLANETS = [
-      {
-        key:      'earth',
-        dayUrl:   'https://unpkg.com/three-globe/example/img/earth-day.jpg',
-        nightUrl: 'https://unpkg.com/three-globe/example/img/earth-night.jpg',
-        hasDayNight: true,
-        atmoColor:   0x2277cc,
-        atmoOpacity: 0.20,
-        rotSpeed: 0.0018,
-        tilt:     0.41,
-      },
-      {
-        key:      'moon',
-        dayUrl:   'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/moon_1024.jpg',
-        hasDayNight: false,
-        atmoColor:   0x888888,
-        atmoOpacity: 0.02,
-        rotSpeed: 0.0006,
-        tilt:     0.03,
-      },
-      {
-        key:      'mars',
-        dayUrl:   'https://raw.githubusercontent.com/mrdoob/three.js/r121/examples/textures/planets/mars_1k_color.jpg',
-        hasDayNight: false,
-        atmoColor:   0xbb4411,
-        atmoOpacity: 0.09,
-        rotSpeed: 0.0017,
-        tilt:     0.44,
-      },
-    ];
-
-    // ── DOM refs ──────────────────────────────────────────────────────────
-    const panel    = document.getElementById('globe-panel');
-    const canvas   = document.getElementById('globe-canvas');
-    const dotsEl   = document.getElementById('planet-dots');
-    const infoPanels = {
-      earth: document.getElementById('info-earth'),
-      moon:  document.getElementById('info-moon'),
-      mars:  document.getElementById('info-mars'),
-    };
-
-    // ── Renderer ──────────────────────────────────────────────────────────
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x06060d, 1);
-
-    const scene  = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 300);
-    camera.position.z = 7;
-
-    function onResize() {
-      const w = panel.clientWidth, h = panel.clientHeight;
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-    }
-    onResize();
-    window.addEventListener('resize', onResize);
-
-    // ── Stars ─────────────────────────────────────────────────────────────
-    (function () {
-      const count = 3500;
-      const pos   = new Float32Array(count * 3);
-      for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 150;
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.08, sizeAttenuation: true });
-      scene.add(new THREE.Points(geo, mat));
-    })();
-
-    // ── Sun light (fixed direction) ────────────────────────────────────────
-    const SUN_POS = new THREE.Vector3(9, 5, 8).normalize();
-    scene.add(new THREE.AmbientLight(0x111828, 1.0));
-    const sunLight = new THREE.DirectionalLight(0xfff5ee, 2.2);
-    sunLight.position.copy(SUN_POS.clone().multiplyScalar(20));
-    scene.add(sunLight);
-    const fillLight = new THREE.DirectionalLight(0x1a2840, 0.25);
-    fillLight.position.set(-8, -4, -6);
-    scene.add(fillLight);
-
-    // ── Shaders for Earth day/night ────────────────────────────────────────
-    const earthVert = `
-      varying vec3 vWorldNormal;
-      varying vec2 vUv;
-      void main() {
-        vWorldNormal = normalize(mat3(modelMatrix) * normal);
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `;
-    const earthFrag = `
-      uniform sampler2D dayMap;
-      uniform sampler2D nightMap;
-      uniform vec3      sunDir;
-      varying vec3 vWorldNormal;
-      varying vec2 vUv;
-      void main() {
-        float cosA    = dot(normalize(vWorldNormal), sunDir);
-        float blend   = smoothstep(-0.18, 0.22, cosA);
-        vec4  day     = texture2D(dayMap,   vUv);
-        vec4  night   = texture2D(nightMap, vUv);
-        night.rgb    *= 2.8;
-        vec4  col     = mix(night, day, blend);
-        // specular on ocean
-        vec3  viewDir = normalize(vec3(0.0, 0.0, 1.0)); // approx
-        vec3  halfV   = normalize(sunDir + viewDir);
-        float spec    = pow(max(dot(normalize(vWorldNormal), halfV), 0.0), 28.0);
-        float ocean   = 1.0 - clamp(day.r * 1.4 - 0.05, 0.0, 1.0);
-        col.rgb      += vec3(0.15, 0.22, 0.35) * spec * ocean * blend;
-        gl_FragColor  = col;
-      }
-    `;
-
-    // ── Globe meshes ───────────────────────────────────────────────────────
-    const RADIUS = 2.4;
-    const globeGroup = new THREE.Group();
-    scene.add(globeGroup);
-
-    // Tilted sub-group (axial tilt stays fixed while group slides)
-    const tiltGroup = new THREE.Group();
-    globeGroup.add(tiltGroup);
-
-    // Sphere
-    const sphereGeo = new THREE.SphereGeometry(RADIUS, 128, 128);
-
-    // Earth — custom day/night shader
-    const earthMat = new THREE.ShaderMaterial({
-      uniforms: {
-        dayMap:   { value: null },
-        nightMap: { value: null },
-        sunDir:   { value: SUN_POS.clone() },
-      },
-      vertexShader:   earthVert,
-      fragmentShader: earthFrag,
-    });
-
-    // Standard material for Moon & Mars
-    const stdMat = new THREE.MeshPhongMaterial({
-      shininess: 6,
-      specular: new THREE.Color(0x0a0a14),
-    });
-
-    const sphereMesh = new THREE.Mesh(sphereGeo, earthMat);
-    tiltGroup.add(sphereMesh);
-
-    // Atmosphere
-    const atmoMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(RADIUS * 1.045, 64, 64),
-      new THREE.MeshPhongMaterial({ transparent: true, side: THREE.BackSide, depthWrite: false })
-    );
-    tiltGroup.add(atmoMesh);
-
-    // ── Texture loading ────────────────────────────────────────────────────
-    const loader = new THREE.TextureLoader();
-    loader.crossOrigin = 'anonymous';
-    const cache = {};
-
-    function loadTex(url, cb) {
-      if (cache[url]) { cb(cache[url]); return; }
-      loader.load(url, tex => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        cache[url] = tex;
-        cb(tex);
-      }, undefined, () => {
-        // On error try to load a fallback for Mars
-        if (url.includes('mars')) {
-          const fallback = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/MSL_Sol_1516_-_Mastcam-Z_Right.png/800px-MSL_Sol_1516_-_Mastcam-Z_Right.png';
-          loader.load(fallback, tex => { tex.colorSpace = THREE.SRGBColorSpace; cache[url] = tex; cb(tex); }, undefined, () => {});
-        }
+    // Image error → show gradient fallback
+    document.querySelectorAll('.card-img img').forEach(img => {
+      img.addEventListener('error', function () {
+        this.classList.add('failed');
       });
-    }
-
-    // ── State ──────────────────────────────────────────────────────────────
-    let currentIdx = 0;
-    let anim       = null; // { phase:'out'|'in', t, dir }
-    const SLIDE    = 10;
-    const SPEED    = 0.060;
-
-    function easeIn(t)  { return t * t * t; }
-    function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
-
-    function applyPlanet(idx) {
-      const p = PLANETS[idx];
-      tiltGroup.rotation.z = p.tilt;
-      atmoMesh.material.color.setHex(p.atmoColor);
-      atmoMesh.material.opacity = p.atmoOpacity;
-
-      if (p.hasDayNight) {
-        sphereMesh.material = earthMat;
-        loadTex(p.dayUrl,   tex => { earthMat.uniforms.dayMap.value   = tex; });
-        loadTex(p.nightUrl, tex => { earthMat.uniforms.nightMap.value = tex; });
-      } else {
-        sphereMesh.material = stdMat;
-        loadTex(p.dayUrl, tex => { stdMat.map = tex; stdMat.needsUpdate = true; });
-      }
-    }
-
-    function updateUI(idx) {
-      const key = PLANETS[idx].key;
-      Object.values(infoPanels).forEach(el => el.classList.remove('active'));
-      infoPanels[key].classList.add('active');
-      infoPanels[key].parentElement.scrollTop = 0;
-      Array.from(dotsEl.children).forEach((d, i) => d.classList.toggle('active', i === idx));
-    }
-
-    function navigate(dir) {
-      if (anim) return;
-      const nextIdx = (currentIdx + dir + PLANETS.length) % PLANETS.length;
-      anim = { phase: 'out', t: 0, dir, nextIdx };
-    }
-
-    // Init first planet
-    applyPlanet(0);
-    updateUI(0);
-    PLANETS.forEach(p => { loadTex(p.dayUrl, () => {}); if (p.nightUrl) loadTex(p.nightUrl, () => {}); });
-
-    // ── Input ─────────────────────────────────────────────────────────────
-    window.addEventListener('keydown', e => {
-      if (e.key === 'ArrowRight') navigate(1);
-      if (e.key === 'ArrowLeft')  navigate(-1);
     });
 
-    let dragX = null;
-    panel.addEventListener('mousedown',  e => { dragX = e.clientX; });
-    window.addEventListener('mouseup',   e => {
-      if (dragX === null) return;
-      const dx = e.clientX - dragX; dragX = null;
-      if (Math.abs(dx) > 55) navigate(dx < 0 ? 1 : -1);
-    });
-    panel.addEventListener('touchstart', e => { dragX = e.touches[0].clientX; }, { passive: true });
-    panel.addEventListener('touchend',   e => {
-      const dx = e.changedTouches[0].clientX - dragX; dragX = null;
-      if (Math.abs(dx) > 45) navigate(dx < 0 ? 1 : -1);
-    }, { passive: true });
+    // Category filter
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.card');
 
-    // ── Render loop ────────────────────────────────────────────────────────
-    const rotSpeeds = PLANETS.map(p => p.rotSpeed);
-
-    function tick() {
-      requestAnimationFrame(tick);
-
-      if (anim) {
-        anim.t = Math.min(anim.t + SPEED, 1);
-        if (anim.phase === 'out') {
-          globeGroup.position.x = easeIn(anim.t) * SLIDE * -anim.dir;
-          if (anim.t >= 1) {
-            currentIdx = anim.nextIdx;
-            applyPlanet(currentIdx);
-            updateUI(currentIdx);
-            globeGroup.position.x = SLIDE * anim.dir;
-            anim = { phase: 'in', t: 0, dir: anim.dir, nextIdx: anim.nextIdx };
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', function () {
+        const cat = this.dataset.cat;
+        filterBtns.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        cards.forEach(card => {
+          if (cat === 'all' || card.dataset.cat === cat) {
+            card.hidden = false;
+          } else {
+            card.hidden = true;
           }
-        } else {
-          globeGroup.position.x = (1 - easeOut(anim.t)) * SLIDE * anim.dir;
-          if (anim.t >= 1) { globeGroup.position.x = 0; anim = null; }
-        }
-      }
-
-      sphereMesh.rotation.y += rotSpeeds[currentIdx];
-      renderer.render(scene, camera);
-    }
-
-    tick();
-  })();
+        });
+      });
+    });
   </script>
 </body>
 </html>
