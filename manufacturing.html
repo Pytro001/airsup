@@ -4,63 +4,35 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Manufacturing · Airsup</title>
-  <meta name="description" content="Launch schedules, space events, and wild manufacturing news from Earth to Mars." />
   <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <script>document.documentElement.dataset.theme = "dark";</script>
   <style>
-    :root {
-      --page-bg: #fff;
-      --text: #111;
-      --text-muted: #555;
-      --text-soft: #888;
-      --text-faint: #aaa;
-      --border: #e0e0e0;
-      --card-border: #e8e8e8;
-      --card-bg: #fff;
-      --accent-bg: #f5f5f5;
-      color-scheme: light;
-    }
-    html[data-theme="dark"] {
-      --text: #f2f2f3;
-      --text-muted: #b8b8c0;
-      --text-soft: #8a8a92;
-      --text-faint: #5c5c64;
-      --border: #2a2a32;
-      --card-border: #2a2a32;
-      --card-bg: #111114;
-      --accent-bg: #1a1a1e;
-      --page-bg: #111111;
-      color-scheme: dark;
-    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    html { -webkit-text-size-adjust: 100%; height: 100%; }
     body {
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-weight: 300;
-      background: var(--page-bg);
-      color: var(--text);
-      line-height: 1.6;
-      min-height: 100dvh;
-      -webkit-font-smoothing: antialiased;
+      background: #111111;
+      color: #f2f2f3;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
     a { color: inherit; text-decoration: none; }
-    img { display: block; max-width: 100%; }
 
     /* ── Header ── */
     .sp-header {
-      padding: 20px 28px;
+      flex-shrink: 0;
+      padding: 18px 28px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      background: var(--page-bg);
+      border-bottom: 1px solid #1e1e26;
+      background: #111111;
       z-index: 10;
     }
     .sp-brand {
@@ -68,428 +40,199 @@
       align-items: center;
       gap: 9px;
       font-weight: 500;
-      font-size: 16px;
-      color: var(--text);
+      font-size: 15px;
+      color: #f2f2f3;
     }
-    .sp-brand img { height: 32px; width: 32px; border-radius: 8px; }
-    html[data-theme="dark"] .sp-brand img { box-shadow: 0 0 0 1px rgba(255,255,255,0.1); }
+    .sp-brand img {
+      height: 28px;
+      width: 28px;
+      border-radius: 7px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
+    }
 
-    /* ── Layout ── */
-    .mfg-content {
+    /* ── Main layout ── */
+    .mfg-layout {
       flex: 1;
-      max-width: 960px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 0 24px 80px;
-    }
-
-    /* ── Hero ── */
-    .mfg-hero {
-      text-align: center;
-      padding: 64px 0 48px;
-    }
-    .mfg-hero-label {
-      font-size: 11px;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-soft);
-      margin-bottom: 16px;
-    }
-    .mfg-hero h1 {
-      font-size: clamp(30px, 5vw, 52px);
-      font-weight: 500;
-      letter-spacing: -0.03em;
-      line-height: 1.08;
-      margin-bottom: 16px;
-    }
-    .mfg-hero-sub {
-      font-size: 17px;
-      font-weight: 300;
-      color: var(--text-muted);
-      max-width: 500px;
-      margin: 0 auto 48px;
-      line-height: 1.6;
-    }
-
-    /* ── Globes ── */
-    .globes-row {
       display: flex;
-      justify-content: center;
-      gap: 40px;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
+      overflow: hidden;
+      min-height: 0;
     }
-    .globe-wrap {
+
+    /* ── Globe panel ── */
+    .globes-panel {
+      flex: 0 0 62%;
+      position: relative;
+      overflow: hidden;
+      background: #080810;
+    }
+    #globe-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Globe name overlays */
+    .globe-label {
+      position: absolute;
+      pointer-events: none;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
-      cursor: pointer;
+      gap: 3px;
+      transform: translate(-50%, 0);
+      transition: opacity 0.3s;
     }
-    .globe-wrap:hover .globe { transform: scale(1.04); }
-    .globe {
-      border-radius: 50%;
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.3s ease;
-      box-shadow: inset -18px -8px 40px rgba(0,0,0,0.5), 0 8px 32px rgba(0,0,0,0.4);
-    }
-    .globe::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.18) 0%, transparent 55%);
-      pointer-events: none;
-    }
-    .globe-spin {
-      width: 100%;
-      height: 100%;
-      animation: spin-globe 18s linear infinite;
-      background-size: 200% 100%;
-    }
-
-    /* Earth */
-    .globe--earth { width: 120px; height: 120px; }
-    .globe--earth .globe-spin {
-      background-image: linear-gradient(
-        90deg,
-        #1a4a7a 0%,
-        #2a6e3a 12%,
-        #1d5c88 22%,
-        #2d7a40 30%,
-        #1b5080 38%,
-        #3a8a50 46%,
-        #1e62a2 58%,
-        #2a7035 68%,
-        #1a4a8a 78%,
-        #3a6a38 88%,
-        #1a4a7a 100%
-      );
-    }
-
-    /* Moon */
-    .globe--moon { width: 80px; height: 80px; }
-    .globe--moon .globe-spin {
-      background-image: linear-gradient(
-        90deg,
-        #8a8a8a 0%,
-        #a0a0a0 10%,
-        #787878 20%,
-        #b0b0b0 30%,
-        #707070 42%,
-        #a8a8a8 50%,
-        #808080 60%,
-        #999999 70%,
-        #686868 82%,
-        #adadad 92%,
-        #8a8a8a 100%
-      );
-    }
-
-    /* Mars */
-    .globe--mars { width: 100px; height: 100px; }
-    .globe--mars .globe-spin {
-      background-image: linear-gradient(
-        90deg,
-        #8b3a1c 0%,
-        #b04820 12%,
-        #7a3018 22%,
-        #c05228 30%,
-        #8a3820 40%,
-        #703018 50%,
-        #a84020 58%,
-        #6a2c16 70%,
-        #b84c22 80%,
-        #7c3418 90%,
-        #8b3a1c 100%
-      );
-    }
-
-    @keyframes spin-globe {
-      from { background-position: 0% 50%; }
-      to   { background-position: 200% 50%; }
-    }
-
-    .globe-name {
+    .globe-label-name {
       font-size: 13px;
       font-weight: 500;
-      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      color: rgba(242, 242, 243, 0.7);
+    }
+    .globe-label-dist {
+      font-size: 10px;
+      color: rgba(242, 242, 243, 0.35);
       letter-spacing: 0.04em;
     }
-    .globe-dist {
-      font-size: 11px;
-      color: var(--text-soft);
-      margin-top: -10px;
-    }
+    .globe-label.selected .globe-label-name { color: #f2f2f3; }
+    .globe-label.selected .globe-label-dist { color: rgba(242, 242, 243, 0.55); }
 
-    /* ── Section headers ── */
-    .mfg-section { margin-top: 56px; }
-    .section-eyebrow {
-      font-size: 11px;
+    /* ── Sidebar ── */
+    .events-sidebar {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-left: 1px solid #1e1e26;
+      background: #111114;
+    }
+    .sidebar-header {
+      flex-shrink: 0;
+      padding: 24px 24px 16px;
+      border-bottom: 1px solid #1e1e26;
+    }
+    .sidebar-dest-name {
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .sidebar-dest-sub {
+      font-size: 13px;
+      color: #8a8a92;
+      margin-top: 5px;
+      font-weight: 300;
+    }
+    .sidebar-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 24px 24px;
+    }
+    .sidebar-body::-webkit-scrollbar { width: 4px; }
+    .sidebar-body::-webkit-scrollbar-thumb { background: #2a2a32; border-radius: 4px; }
+
+    .sidebar-dest-panel { display: none; }
+    .sidebar-dest-panel.active { display: block; }
+
+    /* Section label */
+    .sb-section-label {
+      font-size: 10px;
       font-weight: 500;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--text-soft);
-      margin-bottom: 10px;
+      color: #5c5c64;
+      margin: 20px 0 10px;
     }
-    .section-heading {
-      font-size: clamp(20px, 3vw, 28px);
-      font-weight: 500;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
-    .section-sub {
-      font-size: 15px;
-      color: var(--text-muted);
-      margin-bottom: 24px;
-    }
+    .sb-section-label:first-child { margin-top: 4px; }
 
-    /* ── Tabs ── */
-    .dest-tabs {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    .dest-tab {
-      padding: 8px 16px;
-      border-radius: 999px;
-      font-size: 14px;
-      font-weight: 400;
-      color: var(--text-soft);
-      background: transparent;
-      border: 1px solid var(--card-border);
-      cursor: pointer;
-      transition: color 0.2s, background 0.2s, border-color 0.2s;
-    }
-    .dest-tab[aria-selected="true"] {
-      color: var(--text);
-      background: var(--accent-bg);
-      border-color: var(--border);
-    }
-
-    /* ── Launch cards ── */
-    .launches-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 12px;
-    }
-    .launch-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 20px;
+    /* Mission card */
+    .mission-card {
+      background: #17171c;
+      border: 1px solid #222228;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
       transition: border-color 0.2s;
     }
-    .launch-card:hover { border-color: var(--border); }
-    .launch-card-header {
+    .mission-card:hover { border-color: #2e2e38; }
+    .mission-card-top {
       display: flex;
-      justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 8px;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 4px;
     }
-    .launch-mission {
-      font-size: 15px;
+    .mission-name {
+      font-size: 13px;
       font-weight: 500;
-      color: var(--text);
+      color: #f2f2f3;
       line-height: 1.3;
     }
-    .launch-badge {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 3px 8px;
-      border-radius: 999px;
-      white-space: nowrap;
-      margin-left: 8px;
-      flex-shrink: 0;
-    }
-    .badge--confirmed { background: rgba(34,197,94,0.12); color: #4ade80; }
-    .badge--planned   { background: rgba(99,179,237,0.12); color: #63b3ed; }
-    .badge--window    { background: rgba(251,191,36,0.12); color: #fbbf24; }
-    .badge--announced { background: rgba(167,139,250,0.12); color: #a78bfa; }
-    .launch-org {
-      font-size: 12px;
-      color: var(--text-soft);
-      margin-bottom: 6px;
-      font-weight: 400;
-    }
-    .launch-date {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .launch-date strong {
-      color: var(--text);
-      font-weight: 500;
-    }
-    .launch-desc {
-      font-size: 13px;
-      color: var(--text-soft);
-      margin-top: 8px;
-      line-height: 1.5;
-    }
-
-    /* ── Events list ── */
-    .events-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      overflow: hidden;
-    }
-    .event-row {
-      display: flex;
-      gap: 20px;
-      align-items: flex-start;
-      padding: 16px 20px;
-      background: var(--card-bg);
-      transition: background 0.15s;
-    }
-    .event-row:hover { background: var(--accent-bg); }
-    .event-row + .event-row { border-top: 1px solid var(--card-border); }
-    .event-date-col {
-      min-width: 80px;
-      flex-shrink: 0;
-    }
-    .event-month {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text-soft);
-    }
-    .event-day {
-      font-size: 22px;
-      font-weight: 500;
-      color: var(--text);
-      line-height: 1.1;
-    }
-    .event-year {
-      font-size: 11px;
-      color: var(--text-soft);
-    }
-    .event-body { flex: 1; }
-    .event-title {
-      font-size: 15px;
-      font-weight: 400;
-      color: var(--text);
-      margin-bottom: 3px;
-    }
-    .event-detail {
-      font-size: 13px;
-      color: var(--text-soft);
-      line-height: 1.5;
-    }
-    .event-tag {
-      display: inline-block;
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.06em;
+    .mission-badge {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
       text-transform: uppercase;
       padding: 2px 7px;
       border-radius: 999px;
-      margin-top: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
-    .tag--space    { background: rgba(99,179,237,0.1);  color: #63b3ed; }
-    .tag--launch   { background: rgba(34,197,94,0.1);   color: #4ade80; }
-    .tag--mfg      { background: rgba(251,191,36,0.1);  color: #fbbf24; }
-    .tag--ai       { background: rgba(167,139,250,0.1); color: #a78bfa; }
+    .badge--go       { background: rgba(74,222,128,0.12); color: #4ade80; }
+    .badge--planned  { background: rgba(99,179,237,0.12); color: #63b3ed; }
+    .badge--window   { background: rgba(251,191,36,0.12); color: #fbbf24; }
+    .badge--goal     { background: rgba(167,139,250,0.12); color: #a78bfa; }
+    .badge--delayed  { background: rgba(252,165,165,0.12); color: #fca5a5; }
+    .mission-org {
+      font-size: 11px;
+      color: #5c5c64;
+      margin-bottom: 5px;
+    }
+    .mission-date {
+      font-size: 12px;
+      color: #8a8a92;
+    }
+    .mission-date strong { color: #b8b8c0; font-weight: 500; }
+    .mission-desc {
+      font-size: 12px;
+      color: #5c5c64;
+      margin-top: 7px;
+      line-height: 1.55;
+    }
 
-    /* ── News / Wild cards ── */
-    .news-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 12px;
-    }
-    .news-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 22px;
+    /* Wild card */
+    .wild-card {
+      background: #17171c;
+      border: 1px solid #222228;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
       display: flex;
-      flex-direction: column;
-      gap: 10px;
+      gap: 12px;
+      align-items: flex-start;
       transition: border-color 0.2s;
     }
-    .news-card:hover { border-color: var(--border); }
-    .news-card-icon {
-      font-size: 24px;
-      line-height: 1;
-    }
-    .news-card-title {
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--text);
-      line-height: 1.3;
-    }
-    .news-card-body {
+    .wild-card:hover { border-color: #2e2e38; }
+    .wild-icon { font-size: 18px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+    .wild-body {}
+    .wild-title {
       font-size: 13px;
-      color: var(--text-soft);
-      line-height: 1.6;
-      flex: 1;
-    }
-    .news-card-meta {
-      font-size: 11px;
-      color: var(--text-faint);
-      margin-top: 2px;
-    }
-
-    /* ── Stat row ── */
-    .stat-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 12px;
-      margin: 28px 0;
-    }
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 20px;
-      text-align: center;
-    }
-    .stat-value {
-      font-size: 28px;
       font-weight: 500;
-      letter-spacing: -0.02em;
-      color: var(--text);
+      color: #f2f2f3;
+      line-height: 1.3;
+      margin-bottom: 5px;
     }
-    .stat-label {
+    .wild-text {
       font-size: 12px;
-      color: var(--text-soft);
-      margin-top: 4px;
+      color: #5c5c64;
+      line-height: 1.55;
     }
 
-    /* ── Footer ── */
-    .sp-footer {
-      display: flex;
-      flex-wrap: nowrap;
-      justify-content: center;
-      align-items: center;
-      gap: 0;
-      padding: 16px 12px;
-      font-size: 12px;
-      color: var(--text-faint);
-      border-top: 1px solid var(--border);
-      white-space: nowrap;
-      overflow-x: auto;
-    }
-    .sp-footer a { color: var(--text-faint); margin: 0 6px; transition: color 0.15s; }
-    .sp-footer a:hover { color: var(--text-muted); }
-
-    /* ── Hidden panels ── */
-    .dest-panel[hidden] { display: none !important; }
-
-    @media (max-width: 600px) {
-      .globes-row { gap: 24px; }
-      .globe--earth { width: 90px; height: 90px; }
-      .globe--moon  { width: 60px; height: 60px; }
-      .globe--mars  { width: 76px; height: 76px; }
-      .sp-header { padding: 16px 20px; }
+    @media (max-width: 700px) {
+      .mfg-layout { flex-direction: column; }
+      .globes-panel { flex: 0 0 55%; }
+      .events-sidebar { border-left: none; border-top: 1px solid #1e1e26; }
+      body { overflow: auto; height: auto; }
+      .mfg-layout { overflow: visible; }
     }
   </style>
 </head>
@@ -500,460 +243,618 @@
     </a>
   </header>
 
-  <main class="mfg-content">
-
-    <!-- Hero -->
-    <div class="mfg-hero">
-      <p class="mfg-hero-label">Manufacturing · Space</p>
-      <h1>From factory floor<br>to the stars</h1>
-      <p class="mfg-hero-sub">Launch schedules, space events, and the wildest things happening in manufacturing right now.</p>
-
-      <div class="globes-row">
-        <div class="globe-wrap" data-dest="earth">
-          <div class="globe globe--earth">
-            <div class="globe-spin"></div>
-          </div>
-          <span class="globe-name">Earth</span>
-          <span class="globe-dist">Low orbit</span>
-        </div>
-        <div class="globe-wrap" data-dest="moon">
-          <div class="globe globe--moon">
-            <div class="globe-spin"></div>
-          </div>
-          <span class="globe-name">Moon</span>
-          <span class="globe-dist">384,400 km</span>
-        </div>
-        <div class="globe-wrap" data-dest="mars">
-          <div class="globe globe--mars">
-            <div class="globe-spin"></div>
-          </div>
-          <span class="globe-name">Mars</span>
-          <span class="globe-dist">~225M km</span>
-        </div>
-      </div>
+  <div class="mfg-layout">
+    <!-- Left: Three.js globes -->
+    <div class="globes-panel" id="globes-panel">
+      <canvas id="globe-canvas"></canvas>
+      <!-- Labels injected by JS -->
     </div>
 
-    <!-- Stats -->
-    <div class="stat-row">
-      <div class="stat-card">
-        <div class="stat-value">~260</div>
-        <div class="stat-label">Orbital launches in 2025</div>
+    <!-- Right: Sidebar -->
+    <aside class="events-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-dest-name" id="sidebar-title">Earth</div>
+        <div class="sidebar-dest-sub" id="sidebar-sub">Low Earth orbit & missions</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-value">26 mo</div>
-        <div class="stat-label">Mars launch window cycle</div>
+      <div class="sidebar-body">
+
+        <!-- Earth panel -->
+        <div class="sidebar-dest-panel active" id="panel-earth">
+          <p class="sb-section-label">Upcoming</p>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Starship IFT-9 / IFT-10</span>
+              <span class="mission-badge badge--planned">Planned</span>
+            </div>
+            <div class="mission-org">SpaceX · Boca Chica, TX</div>
+            <div class="mission-date"><strong>2026</strong> — ongoing cadence</div>
+            <div class="mission-desc">Integrated flight tests toward full Starship reusability. Booster catch and Ship splashdown both now demonstrated. Target: orbital payload delivery.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Falcon 9 / Falcon Heavy</span>
+              <span class="mission-badge badge--go">Active</span>
+            </div>
+            <div class="mission-org">SpaceX · Multiple pads</div>
+            <div class="mission-date"><strong>Weekly</strong> — ~60 launches/yr</div>
+            <div class="mission-desc">Crew Dragon, Starlink batches, commercial GEO, NASA science. Booster B1060 fleet leaders approaching 25+ reuses.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">New Glenn Block 2</span>
+              <span class="mission-badge badge--planned">Planned</span>
+            </div>
+            <div class="mission-org">Blue Origin · Cape Canaveral</div>
+            <div class="mission-date"><strong>2026</strong> — ramping cadence</div>
+            <div class="mission-desc">BE-4 engines built in-house. 7m fairing enables large GEO payloads. First operational commercial manifests after Jan 2025 debut.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Neutron (debut)</span>
+              <span class="mission-badge badge--goal">Announced</span>
+            </div>
+            <div class="mission-org">Rocket Lab · Wallops Island, VA</div>
+            <div class="mission-date"><strong>2026–2027</strong></div>
+            <div class="mission-desc">Medium-lift reusable rocket. Carbon composite structure manufactured at new Wallops facility. Targets human-rating in later variants.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Ariane 6 operational</span>
+              <span class="mission-badge badge--go">Active</span>
+            </div>
+            <div class="mission-org">ArianeGroup · Kourou, French Guiana</div>
+            <div class="mission-date"><strong>2026</strong> — 6–8 flights/yr</div>
+            <div class="mission-desc">Europe's heavy-lift workhorse post-2024 debut. Reignitable upper stage enables multi-orbit missions and compliant deorbit burns.</div>
+          </div>
+
+          <p class="sb-section-label">Manufacturing</p>
+
+          <div class="wild-card">
+            <div class="wild-icon">🚀</div>
+            <div class="wild-body">
+              <div class="wild-title">SpaceX makes a Raptor engine every 4 hours</div>
+              <div class="wild-text">~180 engines/month at peak. Each has ~100 parts — vs thousands in legacy engines — achieved by eliminating welds through additive manufacturing and precision casting.</div>
+            </div>
+          </div>
+
+          <div class="wild-card">
+            <div class="wild-icon">🤖</div>
+            <div class="wild-body">
+              <div class="wild-title">Fully robotic dark factories are real</div>
+              <div class="wild-text">FANUC and several Chinese fabs run "lights-out" 24/7 with zero humans on the floor. Error rates below 0.001%. Some factories autonomously reconfigure conveyor systems overnight based on next-day forecasts.</div>
+            </div>
+          </div>
+
+          <div class="wild-card">
+            <div class="wild-icon">⚡</div>
+            <div class="wild-body">
+              <div class="wild-title">Solid-state batteries finally being manufactured</div>
+              <div class="wild-text">Toyota, QuantumScape, and CATL scaling production in 2026. Energy density 2× lithium-ion, 10-minute charge, no fire risk. The challenge: perfect solid electrolyte layers at nanometer scale across GWh output.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Moon panel -->
+        <div class="sidebar-dest-panel" id="panel-moon">
+          <p class="sb-section-label">Upcoming</p>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Artemis II — crewed lunar flyby</span>
+              <span class="mission-badge badge--planned">Planned</span>
+            </div>
+            <div class="mission-org">NASA / ESA · Kennedy Space Center</div>
+            <div class="mission-date"><strong>2026</strong> — first humans beyond LEO since 1972</div>
+            <div class="mission-desc">Four astronauts fly around the Moon aboard Orion + SLS. No landing — a full dress rehearsal for Artemis III surface mission.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Artemis III — lunar landing</span>
+              <span class="mission-badge badge--planned">Planned</span>
+            </div>
+            <div class="mission-org">NASA / SpaceX HLS</div>
+            <div class="mission-date"><strong>2027</strong></div>
+            <div class="mission-desc">Two astronauts land near south pole using Starship Human Landing System. Science focused on water-ice prospecting and long-duration surface ops.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Blue Ghost Mission 2</span>
+              <span class="mission-badge badge--planned">Planned</span>
+            </div>
+            <div class="mission-org">Firefly Aerospace · CLPS</div>
+            <div class="mission-date"><strong>2026</strong></div>
+            <div class="mission-desc">Follow-on to the successful Mare Crisium landing. Carries NASA instruments studying lunar regolith and subsurface heat flow.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Chang'e 7 — south pole</span>
+              <span class="mission-badge badge--planned">Planned</span>
+            </div>
+            <div class="mission-org">CNSA · Wenchang</div>
+            <div class="mission-date"><strong>2026</strong></div>
+            <div class="mission-desc">Lander, rover, and a mini flying probe that enters permanently shadowed craters to search for water ice. Part of China's ILRS roadmap.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Lunar Gateway PPE + HALO</span>
+              <span class="mission-badge badge--goal">Announced</span>
+            </div>
+            <div class="mission-org">NASA / Maxar / Northrop · Falcon Heavy</div>
+            <div class="mission-date"><strong>2027</strong></div>
+            <div class="mission-desc">First elements of the Lunar Gateway station in NRHO orbit. Power & Propulsion Element + Habitation and Logistics Outpost, both US-built.</div>
+          </div>
+
+          <p class="sb-section-label">Manufacturing</p>
+
+          <div class="wild-card">
+            <div class="wild-icon">🌑</div>
+            <div class="wild-body">
+              <div class="wild-title">3D printing a base from moon dust</div>
+              <div class="wild-text">ESA and ICON are testing sintering lunar regolith into structural bricks using concentrated sunlight. ICON's Vulcan system — which prints homes on Earth — has been adapted for lunar ISRU. No material launched from Earth.</div>
+            </div>
+          </div>
+
+          <div class="wild-card">
+            <div class="wild-icon">💧</div>
+            <div class="wild-body">
+              <div class="wild-title">Water ice = rocket fuel</div>
+              <div class="wild-text">Confirmed water ice at the lunar south pole could be electrolyzed into hydrogen + oxygen — propellant for deep-space missions. The Moon becomes a fuel depot. Chang'e 7 and LUPEX are mapping exact reserves in 2026.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mars panel -->
+        <div class="sidebar-dest-panel" id="panel-mars">
+          <p class="sb-section-label">Upcoming</p>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Starship Mars Demo</span>
+              <span class="mission-badge badge--goal">Announced</span>
+            </div>
+            <div class="mission-org">SpaceX · Boca Chica</div>
+            <div class="mission-date"><strong>2026 window</strong> — opens June 2026</div>
+            <div class="mission-desc">SpaceX targets uncrewed Starships in the 2026 window. Goal: survive entry, descent, and landing; prove ISRU hardware can be delivered intact.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Crewed Mars Mission</span>
+              <span class="mission-badge badge--goal">SpaceX target</span>
+            </div>
+            <div class="mission-org">SpaceX</div>
+            <div class="mission-date"><strong>2028–2029 window</strong></div>
+            <div class="mission-desc">Elon Musk's stated goal. Requires ~5 Starship launches per mission for propellant depot fill. Depends on ISRU proving that return fuel can be made on Mars.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Tianwen-3 Sample Return</span>
+              <span class="mission-badge badge--planned">Planned</span>
+            </div>
+            <div class="mission-org">CNSA</div>
+            <div class="mission-date"><strong>2028 window</strong></div>
+            <div class="mission-desc">China's Mars sample return in two launches. Lander + ascent vehicle 2028, Earth return vehicle 2030. Would beat NASA's revised timeline by years.</div>
+          </div>
+
+          <div class="mission-card">
+            <div class="mission-card-top">
+              <span class="mission-name">Mars Sample Return</span>
+              <span class="mission-badge badge--delayed">Delayed</span>
+            </div>
+            <div class="mission-org">NASA / ESA</div>
+            <div class="mission-date"><strong>2030s</strong> — architecture redesign</div>
+            <div class="mission-desc">Retrieve Perseverance's cached samples. Redesigned after cost overruns. New approach explores commercial lander options. Samples are sealed in tubes on the surface now.</div>
+          </div>
+
+          <p class="sb-section-label">Manufacturing</p>
+
+          <div class="wild-card">
+            <div class="wild-icon">🏭</div>
+            <div class="wild-body">
+              <div class="wild-title">Factories arrive before the astronauts</div>
+              <div class="wild-text">SpaceX's Mars plan: ship ISRU plants first to pre-produce 30+ tonnes of liquid oxygen from CO₂ atmosphere before any crew arrives. MOXIE on Perseverance already proved it works at small scale.</div>
+            </div>
+          </div>
+
+          <div class="wild-card">
+            <div class="wild-icon">🧱</div>
+            <div class="wild-body">
+              <div class="wild-title">Building with Martian regolith</div>
+              <div class="wild-text">Mars soil contains perchlorates that are toxic but also useful — binders for construction. Researchers at Northwestern have 3D-printed load-bearing structures from simulated Mars regolith. First habitats will likely be half-buried for radiation shielding.</div>
+            </div>
+          </div>
+
+          <div class="wild-card">
+            <div class="wild-icon">🔬</div>
+            <div class="wild-body">
+              <div class="wild-title">Microgravity pharma manufacturing</div>
+              <div class="wild-text">Varda Space manufactured pharmaceuticals in orbit and re-entered them to Earth. Microgravity allows crystal structures impossible to grow under gravity — purer drugs, better fiber optics. Mars gravity (38% of Earth) opens entirely new material science.</div>
+            </div>
+          </div>
+        </div>
+
       </div>
-      <div class="stat-card">
-        <div class="stat-value">$1.8T</div>
-        <div class="stat-label">Space economy by 2035</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">180</div>
-        <div class="stat-label">Raptor engines built/month</div>
-      </div>
-    </div>
+    </aside>
+  </div>
 
-    <!-- Launch schedules -->
-    <section class="mfg-section" id="launches">
-      <p class="section-eyebrow">Schedules</p>
-      <h2 class="section-heading">Launch windows</h2>
-      <p class="section-sub">Confirmed, planned, and announced missions by destination.</p>
-
-      <div class="dest-tabs" role="tablist">
-        <button class="dest-tab" role="tab" aria-selected="true"  aria-controls="panel-earth" id="tab-earth">Earth orbit</button>
-        <button class="dest-tab" role="tab" aria-selected="false" aria-controls="panel-moon"  id="tab-moon">Moon</button>
-        <button class="dest-tab" role="tab" aria-selected="false" aria-controls="panel-mars"  id="tab-mars">Mars</button>
-      </div>
-
-      <!-- Earth orbit -->
-      <div class="dest-panel" id="panel-earth" role="tabpanel">
-        <div class="launches-grid">
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Starship IFT-9 / IFT-10</span>
-              <span class="launch-badge badge--planned">Planned</span>
-            </div>
-            <div class="launch-org">SpaceX · Boca Chica, TX</div>
-            <div class="launch-date"><strong>2026</strong> — ongoing cadence</div>
-            <div class="launch-desc">Integrated flight tests toward full reusability. Ship catch and booster re-use now routine. Target: orbital payload delivery and point-to-point.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Falcon 9 / Falcon Heavy</span>
-              <span class="launch-badge badge--confirmed">Active</span>
-            </div>
-            <div class="launch-org">SpaceX · Multiple pads</div>
-            <div class="launch-date"><strong>Weekly</strong> — ~60+ launches/yr</div>
-            <div class="launch-desc">Crew Dragon, Starlink batches, commercial GEO, NASA science. Booster B1060 fleet leaders approaching 25+ flights each.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">New Glenn Block 2</span>
-              <span class="launch-badge badge--planned">Planned</span>
-            </div>
-            <div class="launch-org">Blue Origin · Cape Canaveral</div>
-            <div class="launch-date"><strong>2026</strong> — ramping cadence</div>
-            <div class="launch-desc">BE-4 engines manufactured in-house. 7m fairing enables large GEO comms. First operational commercial payloads following debut in Jan 2025.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Neutron (debut)</span>
-              <span class="launch-badge badge--announced">Announced</span>
-            </div>
-            <div class="launch-org">Rocket Lab · Wallops Island, VA</div>
-            <div class="launch-date"><strong>2026–2027</strong></div>
-            <div class="launch-desc">Medium-lift reusable rocket. Carbon composite structure. Manufacturing at new Wallops facility. Targets human-rating in later variants.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Ariane 6 commercial ops</span>
-              <span class="launch-badge badge--confirmed">Active</span>
-            </div>
-            <div class="launch-org">ArianeGroup · Kourou, French Guiana</div>
-            <div class="launch-date"><strong>2026</strong> — 6–8 flights/yr target</div>
-            <div class="launch-desc">Europe's heavy-lift workhorse back after 2024 debut. Reignitable upper stage unlocks multi-orbit missions and deorbit burns.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">ISS Commercial Resupply</span>
-              <span class="launch-badge badge--confirmed">Active</span>
-            </div>
-            <div class="launch-org">SpaceX Dragon / Northrop Cygnus</div>
-            <div class="launch-date"><strong>2026</strong> — biannual each</div>
-            <div class="launch-desc">Science experiments, station hardware, crew provisions. ISS decommission expected ~2030; follow-on commercial stations in development.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Moon -->
-      <div class="dest-panel" id="panel-moon" role="tabpanel" hidden>
-        <div class="launches-grid">
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Artemis III</span>
-              <span class="launch-badge badge--planned">Planned</span>
-            </div>
-            <div class="launch-org">NASA / SpaceX HLS · Kennedy Space Center</div>
-            <div class="launch-date"><strong>2027</strong> — first crewed lunar landing since 1972</div>
-            <div class="launch-desc">Two astronauts land near south pole using Starship Human Landing System. Science focused on water-ice prospecting and long-duration surface ops.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Blue Ghost Mission 2</span>
-              <span class="launch-badge badge--planned">Planned</span>
-            </div>
-            <div class="launch-org">Firefly Aerospace · CLPS program</div>
-            <div class="launch-date"><strong>2026</strong></div>
-            <div class="launch-desc">CLPS Task Order follow-on to the successful Mare Crisium landing. Carries NASA instruments studying lunar regolith and subsurface structure.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">IM-3 Nova-C</span>
-              <span class="launch-badge badge--planned">Planned</span>
-            </div>
-            <div class="launch-org">Intuitive Machines · CLPS</div>
-            <div class="launch-date"><strong>2026</strong></div>
-            <div class="launch-desc">Third Intuitive Machines lander. Targets lunar south pole region. Carries ESA and NASA payloads including a drill for sub-surface sampling.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Lunar Gateway PPE + HALO</span>
-              <span class="launch-badge badge--announced">Announced</span>
-            </div>
-            <div class="launch-org">NASA / Maxar / Northrop · SpaceX Falcon Heavy</div>
-            <div class="launch-date"><strong>2027</strong></div>
-            <div class="launch-desc">First two elements of the Lunar Gateway space station in NRHO orbit. Power & Propulsion Element (PPE) and Habitation module manufactured in US.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Chang'e 7</span>
-              <span class="launch-badge badge--planned">Planned</span>
-            </div>
-            <div class="launch-org">CNSA · Wenchang Space Launch Center</div>
-            <div class="launch-date"><strong>2026</strong></div>
-            <div class="launch-desc">South pole lander + mini flying probe to search permanently shadowed craters for water ice. Part of China's International Lunar Research Station roadmap.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">LUPEX Rover</span>
-              <span class="launch-badge badge--announced">Announced</span>
-            </div>
-            <div class="launch-org">JAXA / ISRO</div>
-            <div class="launch-date"><strong>2026</strong></div>
-            <div class="launch-desc">Japan-India joint mission to explore water ice near lunar south pole. 350 kg rover carries ground-penetrating radar and neutron spectrometer.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Mars -->
-      <div class="dest-panel" id="panel-mars" role="tabpanel" hidden>
-        <div class="launches-grid">
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Starship Mars Demo</span>
-              <span class="launch-badge badge--announced">Announced</span>
-            </div>
-            <div class="launch-org">SpaceX · Boca Chica, TX</div>
-            <div class="launch-date"><strong>2026 window</strong> — opens June 2026</div>
-            <div class="launch-desc">SpaceX targets uncrewed Starships to Mars in the 2026 launch window. Primary mission: survive EDL and prove propellant production hardware for future crewed missions.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Mars Sample Return</span>
-              <span class="launch-badge badge--window">Delayed</span>
-            </div>
-            <div class="launch-org">NASA / ESA</div>
-            <div class="launch-date"><strong>2030s</strong> — redesigned architecture</div>
-            <div class="launch-desc">Retrieve Perseverance rover's cached samples. Mission architecture redesigned after cost overruns. New approach explores commercial lander options for sample retrieval.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Tianwen-3 (Sample Return)</span>
-              <span class="launch-badge badge--planned">Planned</span>
-            </div>
-            <div class="launch-org">CNSA</div>
-            <div class="launch-date"><strong>2028 window</strong></div>
-            <div class="launch-desc">China's Mars sample return mission in two launches. Lander + ascent vehicle in 2028, Earth return vehicle in 2030. Would beat NASA's revised timeline.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">Crewed Mars Mission</span>
-              <span class="launch-badge badge--announced">SpaceX target</span>
-            </div>
-            <div class="launch-org">SpaceX</div>
-            <div class="launch-date"><strong>2028–2029 window</strong></div>
-            <div class="launch-desc">Elon Musk's stated goal of crewed Mars landing. Depends on Starship full reusability and propellant depot tech at scale. Requires ~5 Starship launches per Mars mission.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">ExoMars Rosalind Franklin</span>
-              <span class="launch-badge badge--window">Uncertain</span>
-            </div>
-            <div class="launch-org">ESA (new partner sought)</div>
-            <div class="launch-date"><strong>2028 window</strong> — pending decision</div>
-            <div class="launch-desc">ESA's life-searching rover was originally a Russia partnership. New launch provider/partner being evaluated. Drill reaches 2m below surface where organics may survive.</div>
-          </div>
-          <div class="launch-card">
-            <div class="launch-card-header">
-              <span class="launch-mission">ISRU Demo on Mars</span>
-              <span class="launch-badge badge--announced">Goal</span>
-            </div>
-            <div class="launch-org">SpaceX (integrated with Starship)</div>
-            <div class="launch-date"><strong>2026–2028</strong></div>
-            <div class="launch-desc">In-Situ Resource Utilization: produce liquid oxygen from Martian CO₂ atmosphere. MOXIE on Perseverance already proved the concept. SpaceX needs full-scale production for return propellant.</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Space events -->
-    <section class="mfg-section" id="events">
-      <p class="section-eyebrow">Calendar</p>
-      <h2 class="section-heading">Space events 2026</h2>
-      <p class="section-sub">Key dates, windows, and milestones this year.</p>
-
-      <div class="events-list">
-        <div class="event-row">
-          <div class="event-date-col">
-            <div class="event-month">Jan</div>
-            <div class="event-day">–</div>
-            <div class="event-year">2026</div>
-          </div>
-          <div class="event-body">
-            <div class="event-title">Artemis II crew announced deep-space prep</div>
-            <div class="event-detail">Reid Wiseman, Victor Glover, Christina Koch and Jeremy Hansen continue crewed Orion training ahead of 2026 lunar flyby. First humans beyond LEO since Apollo 17.</div>
-            <span class="event-tag tag--space">Deep space</span>
-          </div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-col">
-            <div class="event-month">Mar</div>
-            <div class="event-day">~12</div>
-            <div class="event-year">2026</div>
-          </div>
-          <div class="event-body">
-            <div class="event-title">Starship IFT-9 integrated test flight</div>
-            <div class="event-detail">SpaceX targets next Starship integrated flight test with improved Ship tile system and extended booster catch attempt. Goal: first Ship splashdown in Indian Ocean.</div>
-            <span class="event-tag tag--launch">Launch</span>
-          </div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-col">
-            <div class="event-month">Jun</div>
-            <div class="event-day">–</div>
-            <div class="event-year">2026</div>
-          </div>
-          <div class="event-body">
-            <div class="event-title">Mars launch window opens</div>
-            <div class="event-detail">Earth–Mars alignment allows minimum-energy transfer orbits (Hohmann). Window lasts ~26 days. SpaceX targeting uncrewed Starship demo. Next window: ~late 2028.</div>
-            <span class="event-tag tag--space">Mars</span>
-          </div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-col">
-            <div class="event-month">Q3</div>
-            <div class="event-day">–</div>
-            <div class="event-year">2026</div>
-          </div>
-          <div class="event-body">
-            <div class="event-title">First commercial space station module</div>
-            <div class="event-detail">Axiom Space's Ax-4 module planned for ISS attachment. Forerunner of fully independent commercial station after ISS retirement. Built partly in collaboration with Thales Alenia Space.</div>
-            <span class="event-tag tag--space">Station</span>
-          </div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-col">
-            <div class="event-month">Q3</div>
-            <div class="event-day">–</div>
-            <div class="event-year">2026</div>
-          </div>
-          <div class="event-body">
-            <div class="event-title">Artemis II crewed lunar flyby</div>
-            <div class="event-detail">Four astronauts fly around the Moon aboard Orion + SLS. No landing — a dress rehearsal for Artemis III. First humans to leave Earth orbit in over 50 years.</div>
-            <span class="event-tag tag--launch">Crewed</span>
-          </div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-col">
-            <div class="event-month">Q4</div>
-            <div class="event-day">–</div>
-            <div class="event-year">2026</div>
-          </div>
-          <div class="event-body">
-            <div class="event-title">Chang'e 7 lunar south pole landing</div>
-            <div class="event-detail">CNSA lander, rover, and orbiter attempt first landing near the lunar south pole. Mini flying probe will enter permanently shadowed craters looking for water ice.</div>
-            <span class="event-tag tag--space">Moon</span>
-          </div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-col">
-            <div class="event-month">TBC</div>
-            <div class="event-day">–</div>
-            <div class="event-year">2026</div>
-          </div>
-          <div class="event-body">
-            <div class="event-title">Vulcan Centaur full operational certification</div>
-            <div class="event-detail">ULA's Vulcan reaches full certification for national security launches. BE-4 engines produced by Blue Origin — the same engines also powering New Glenn. First aft-body recovery trials.</div>
-            <span class="event-tag tag--launch">Launch</span>
-          </div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-col">
-            <div class="event-month">TBC</div>
-            <div class="event-day">–</div>
-            <div class="event-year">2026</div>
-          </div>
-          <div class="event-body">
-            <div class="event-title">SpaceX Starlink V3 Gen3 satellite debut</div>
-            <div class="event-detail">Next-generation Starlink satellites with direct-to-cell capability for standard mobile phones. Enables connectivity from any location on Earth without special hardware.</div>
-            <span class="event-tag tag--space">Comms</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Wild manufacturing -->
-    <section class="mfg-section" id="wild">
-      <p class="section-eyebrow">Manufacturing</p>
-      <h2 class="section-heading">Wild things happening in manufacturing</h2>
-      <p class="section-sub">The most unexpected developments on the factory floor and beyond.</p>
-
-      <div class="news-grid">
-        <div class="news-card">
-          <div class="news-card-icon">🚀</div>
-          <div class="news-card-title">SpaceX makes a Raptor engine every 4 hours</div>
-          <div class="news-card-body">SpaceX's Raptor engine factory in Hawthorne, CA produces over 1 engine per shift — around 180/month at peak. Each engine has ~100 parts compared to thousands in legacy rocket engines, achieved by eliminating welds through additive manufacturing and casting.</div>
-          <div class="news-card-meta">SpaceX · Manufacturing velocity</div>
-        </div>
-        <div class="news-card">
-          <div class="news-card-icon">🏗️</div>
-          <div class="news-card-title">ISRU: manufacturing fuel from Mars air</div>
-          <div class="news-card-body">NASA's MOXIE experiment on Perseverance proved oxygen can be extracted from Mars' CO₂ atmosphere. SpaceX's plan: ship ISRU plants to Mars before humans to pre-produce 30+ tonnes of liquid oxygen for the return trip. The factory arrives before the astronauts.</div>
-          <div class="news-card-meta">NASA · Mars ISRU · 2026 prep</div>
-        </div>
-        <div class="news-card">
-          <div class="news-card-icon">🔬</div>
-          <div class="news-card-title">Zero-gravity manufacturing in orbit</div>
-          <div class="news-card-body">Varda Space Industries manufactured pharmaceuticals in orbit aboard a Rocket Lab Photon satellite — then re-entered them to Earth. Microgravity allows crystal structures impossible on Earth, enabling purer drugs and fiber optics with no gravitational distortion during growth.</div>
-          <div class="news-card-meta">Varda Space · Commercial orbital manufacturing</div>
-        </div>
-        <div class="news-card">
-          <div class="news-card-icon">🤖</div>
-          <div class="news-card-title">Fully robotic dark factories are real</div>
-          <div class="news-card-body">FANUC in Japan and several Chinese factories now run "lights-out" manufacturing — no humans on the floor, no lighting needed, 24/7 operation. Error rates below 0.001%. The factories monitor themselves. Output is higher at 3am than during day shifts.</div>
-          <div class="news-card-meta">FANUC · Lights-out manufacturing</div>
-        </div>
-        <div class="news-card">
-          <div class="news-card-icon">🌑</div>
-          <div class="news-card-title">3D printing a lunar base from moon dust</div>
-          <div class="news-card-body">ESA and NASA are testing sintering lunar regolith (moon dust) into structural bricks using concentrated sunlight or microwave energy. ICON's Vulcan construction system — which 3D prints homes on Earth — has been adapted for lunar ISRU. No material needs to be launched from Earth.</div>
-          <div class="news-card-meta">ESA / ICON · Lunar construction</div>
-        </div>
-        <div class="news-card">
-          <div class="news-card-icon">⚡</div>
-          <div class="news-card-title">Solid-state batteries finally being manufactured</div>
-          <div class="news-card-body">Toyota, QuantumScape, and CATL are scaling solid-state battery production for EVs. Energy density 2× lithium-ion, charge in 10 minutes, no fire risk. The manufacturing challenge: creating perfect solid electrolyte layers at nanometer thickness across GWh-scale production.</div>
-          <div class="news-card-meta">Toyota / CATL · 2026 scale-up</div>
-        </div>
-        <div class="news-card">
-          <div class="news-card-icon">🧬</div>
-          <div class="news-card-title">Bioprinting organs in space</div>
-          <div class="news-card-body">Microgravity allows 3D bioprinters to print human tissue without scaffolding — cells self-assemble due to the absence of gravity collapse. Redwire Space's BioFabrication Facility on ISS has printed cardiac and kidney tissue. Goal: replacement organs grown in orbit.</div>
-          <div class="news-card-meta">Redwire Space · ISS BioFabrication Facility</div>
-        </div>
-        <div class="news-card">
-          <div class="news-card-icon">🏭</div>
-          <div class="news-card-title">AI-designed factories building themselves</div>
-          <div class="news-card-body">Siemens and Nvidia's "digital twin" platforms now auto-generate entire factory layouts optimized for a product — then simulate years of production before a single machine is purchased. Some factories now autonomously reconfigure their own conveyor systems overnight based on next-day order forecasts.</div>
-          <div class="news-card-meta">Siemens / Nvidia · Industrial AI</div>
-        </div>
-        <div class="news-card">
-          <div class="news-card-icon">🌊</div>
-          <div class="news-card-title">Underwater foundries and deep-sea mining</div>
-          <div class="news-card-body">The Clarion-Clipperton Zone in the Pacific contains more cobalt, nickel, and manganese than all land-based reserves combined. Companies like The Metals Company are developing robot collectors and seafloor processing units. Raw materials may soon be processed where they're found — thousands of meters down.</div>
-          <div class="news-card-meta">The Metals Company · Deep-sea ISRU</div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <footer class="sp-footer">
-    <a href="/supi">Supi</a>
-    <a href="/support">Support</a>
-    <a href="/faq">FAQ</a>
-    <a href="/privacy">Privacy Policy</a>
-    <a href="/terms">Terms of Service</a>
-  </footer>
-
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
-    (function () {
-      var tabs = document.querySelectorAll(".dest-tab");
-      var panels = document.querySelectorAll(".dest-panel");
+  (function () {
+    const panel = document.getElementById('globes-panel');
+    const canvas = document.getElementById('globe-canvas');
 
-      function setTab(id) {
-        tabs.forEach(function (t) {
-          t.setAttribute("aria-selected", t.getAttribute("aria-controls") === id ? "true" : "false");
-        });
-        panels.forEach(function (p) {
-          p.hidden = p.id !== id;
-        });
-      }
+    // ── Renderer ──────────────────────────────────────────────────────────
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x060610, 1);
 
-      tabs.forEach(function (t) {
-        t.addEventListener("click", function () { setTab(t.getAttribute("aria-controls")); });
-      });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
+    camera.position.z = 10;
 
-      document.querySelectorAll(".globe-wrap[data-dest]").forEach(function (el) {
-        el.addEventListener("click", function () {
-          var dest = el.dataset.dest;
-          var panelId = "panel-" + dest;
-          var targetEl = document.getElementById("launches");
-          if (targetEl) targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
-          setTimeout(function () { setTab(panelId); }, 300);
-        });
-      });
+    function resize() {
+      const w = panel.clientWidth;
+      const h = panel.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ── Stars ─────────────────────────────────────────────────────────────
+    (function addStars() {
+      const count = 2400;
+      const pos = new Float32Array(count * 3);
+      for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 80;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, sizeAttenuation: true });
+      scene.add(new THREE.Points(geo, mat));
     })();
+
+    // ── Lights ────────────────────────────────────────────────────────────
+    scene.add(new THREE.AmbientLight(0x223355, 0.9));
+    const sun = new THREE.DirectionalLight(0xffeedd, 1.6);
+    sun.position.set(10, 6, 8);
+    scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x224466, 0.25);
+    fill.position.set(-8, -4, -4);
+    scene.add(fill);
+
+    // ── Texture generators ────────────────────────────────────────────────
+    function makeEarthTex() {
+      const W = 1024, H = 512;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const x = c.getContext('2d');
+      // Ocean
+      const og = x.createLinearGradient(0, 0, W, H);
+      og.addColorStop(0, '#163b72'); og.addColorStop(0.5, '#1e5090'); og.addColorStop(1, '#122e60');
+      x.fillStyle = og; x.fillRect(0, 0, W, H);
+      // Mid-ocean variation
+      x.fillStyle = 'rgba(20,80,140,0.25)';
+      x.beginPath(); x.ellipse(W*0.5, H*0.55, 300, 180, 0, 0, Math.PI*2); x.fill();
+      // Continents
+      function land(cx, cy, rx, ry, rot, col) {
+        x.save(); x.translate(cx, cy); x.rotate(rot);
+        x.fillStyle = col;
+        x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); x.fill();
+        x.restore();
+      }
+      // North America
+      land(195, 155, 68, 95, -0.25, '#2e6e30');
+      land(175, 195, 50, 60, 0.1,  '#356b35');
+      land(205, 280, 48, 75, 0.2,  '#2d6a30');
+      // Greenland
+      land(300, 95,  38, 52, -0.1, '#5a9a7a');
+      // South America
+      land(245, 360, 52, 88, 0.15, '#2a6828');
+      // Europe
+      land(490, 165, 42, 52, -0.2, '#3a7a3e');
+      land(510, 145, 30, 35, 0.1,  '#3a7a3e');
+      // Africa
+      land(510, 275, 58, 110, 0.05, '#3d7a3a');
+      land(495, 360, 45, 60, 0,   '#4a8040');
+      // Middle East / arid
+      land(560, 218, 38, 28, 0.1,  '#8a7440');
+      land(578, 240, 25, 20, 0,    '#8a7040');
+      // Central Asia
+      land(660, 160, 130, 68, -0.08, '#3e7a38');
+      land(700, 130, 80, 45, 0,     '#3e7a38');
+      // India
+      land(620, 270, 32, 52, 0.1,  '#3a7a30');
+      // Southeast Asia
+      land(730, 270, 50, 40, 0.05, '#3a7a30');
+      // Australia
+      land(780, 348, 60, 44, 0,    '#9a7838');
+      // Antarctica
+      land(512, 490, 420, 45, 0,   '#d8edf5');
+      // Sahara overlay
+      x.fillStyle = 'rgba(160,130,60,0.3)';
+      x.beginPath(); x.ellipse(490, 238, 70, 35, 0, 0, Math.PI*2); x.fill();
+      // Ice caps
+      const in1 = x.createLinearGradient(0, 0, 0, 75);
+      in1.addColorStop(0, 'rgba(220,240,255,1)');
+      in1.addColorStop(1, 'rgba(220,240,255,0)');
+      x.fillStyle = in1; x.fillRect(0, 0, W, 75);
+      // Cloud wisps
+      x.fillStyle = 'rgba(255,255,255,0.13)';
+      [[180,100,110,25,0.3],[350,80,80,20,0],[600,120,120,22,0.6],[100,200,90,18,0.2],
+       [700,180,100,20,0.4],[450,320,110,22,0.1],[200,350,80,18,0.5],[800,280,90,20,0.2],
+       [550,380,130,24,0.3],[300,420,100,20,0.6]].forEach(([cx,cy,rx,ry,rot]) => {
+        x.save(); x.translate(cx,cy); x.rotate(rot);
+        x.beginPath(); x.ellipse(0,0,rx,ry,0,0,Math.PI*2); x.fill();
+        x.restore();
+      });
+      return c;
+    }
+
+    function makeMoonTex() {
+      const W = 1024, H = 512;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const x = c.getContext('2d');
+      x.fillStyle = '#8a8a8a'; x.fillRect(0, 0, W, H);
+      // Surface variation
+      const bg = x.createRadialGradient(W*0.35, H*0.4, 30, W*0.5, H*0.5, 380);
+      bg.addColorStop(0, 'rgba(160,160,160,0.3)');
+      bg.addColorStop(1, 'rgba(60,60,60,0.2)');
+      x.fillStyle = bg; x.fillRect(0, 0, W, H);
+      // Maria (dark plains)
+      function maria(cx, cy, rx, ry, rot, alpha) {
+        x.save(); x.translate(cx, cy); x.rotate(rot);
+        x.fillStyle = `rgba(70,70,75,${alpha})`;
+        x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); x.fill();
+        x.restore();
+      }
+      maria(540, 210, 85, 65, -0.2, 0.55);  // Mare Tranquillitatis
+      maria(390, 180, 78, 58, 0.1, 0.5);    // Mare Imbrium
+      maria(515, 170, 55, 40, 0, 0.45);     // Mare Serenitatis
+      maria(620, 225, 45, 35, 0.3, 0.4);    // Mare Crisium
+      maria(440, 240, 35, 28, 0, 0.35);     // Mare Vaporum
+      maria(700, 170, 40, 30, -0.1, 0.4);
+      // Craters
+      function crater(cx, cy, r) {
+        const g = x.createRadialGradient(cx-r*0.15, cy-r*0.15, 0, cx, cy, r*1.1);
+        g.addColorStop(0, 'rgba(55,55,58,0.85)');
+        g.addColorStop(0.5, 'rgba(65,65,68,0.6)');
+        g.addColorStop(0.82, 'rgba(100,100,100,0.1)');
+        g.addColorStop(0.9, 'rgba(160,160,160,0.35)');
+        g.addColorStop(1, 'rgba(140,140,140,0)');
+        x.fillStyle = g;
+        x.beginPath(); x.arc(cx, cy, r*1.1, 0, Math.PI*2); x.fill();
+      }
+      [[210,148,42],[350,305,32],[610,355,28],[765,198,36],[108,352,22],[460,408,30],
+       [690,128,24],[295,218,20],[838,308,33],[158,248,16],[508,288,13],[715,388,21],
+       [258,388,27],[595,82,20],[912,152,24],[430,152,16],[870,230,18],[120,165,30],
+       [670,300,15],[340,130,19],[550,440,25],[780,420,17],[480,65,14],[220,445,20],
+       [820,100,20],[150,410,14],[310,470,18],[700,460,12],[950,280,16]].forEach(([cx,cy,r]) => crater(cx,cy,r));
+      return c;
+    }
+
+    function makeMarsTex() {
+      const W = 1024, H = 512;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const x = c.getContext('2d');
+      // Base rust
+      const bg = x.createLinearGradient(0, 0, 0, H);
+      bg.addColorStop(0, '#6e2810');
+      bg.addColorStop(0.2, '#a03a18');
+      bg.addColorStop(0.5, '#b84820');
+      bg.addColorStop(0.8, '#a03818');
+      bg.addColorStop(1, '#6a2810');
+      x.fillStyle = bg; x.fillRect(0, 0, W, H);
+      // Tharsis rise (lighter bulge, Olympus Mons area)
+      const tharsis = x.createRadialGradient(310, 230, 0, 310, 230, 140);
+      tharsis.addColorStop(0, 'rgba(200,100,50,0.3)');
+      tharsis.addColorStop(1, 'rgba(200,100,50,0)');
+      x.fillStyle = tharsis; x.fillRect(0, 0, W, H);
+      // Olympus Mons
+      const oly = x.createRadialGradient(290, 218, 0, 290, 218, 35);
+      oly.addColorStop(0, 'rgba(210,120,70,0.45)');
+      oly.addColorStop(1, 'rgba(210,120,70,0)');
+      x.fillStyle = oly; x.fillRect(0, 0, W, H);
+      // Hellas Basin (dark depression south)
+      const hellas = x.createRadialGradient(715, 358, 0, 715, 358, 80);
+      hellas.addColorStop(0, 'rgba(50,15,5,0.5)');
+      hellas.addColorStop(1, 'rgba(50,15,5,0)');
+      x.fillStyle = hellas; x.fillRect(0, 0, W, H);
+      // Valles Marineris — long canyon system
+      x.save();
+      x.fillStyle = 'rgba(35,10,3,0.65)';
+      x.beginPath();
+      x.ellipse(555, 262, 215, 20, 0.08, 0, Math.PI*2);
+      x.fill();
+      x.fillStyle = 'rgba(35,10,3,0.35)';
+      x.beginPath();
+      x.ellipse(555, 262, 250, 30, 0.08, 0, Math.PI*2);
+      x.fill();
+      x.restore();
+      // Arabia Terra (lighter cratered region)
+      x.fillStyle = 'rgba(180,90,40,0.15)';
+      x.beginPath(); x.ellipse(580, 195, 130, 80, 0, 0, Math.PI*2); x.fill();
+      // Dust storm patches
+      x.fillStyle = 'rgba(200,120,55,0.12)';
+      [[150,200,100,50,0.2],[700,280,90,45,0.3],[400,350,80,40,0.1]].forEach(([cx,cy,rx,ry,rot]) => {
+        x.save(); x.translate(cx,cy); x.rotate(rot);
+        x.beginPath(); x.ellipse(0,0,rx,ry,0,0,Math.PI*2); x.fill();
+        x.restore();
+      });
+      // North polar cap
+      const pn = x.createLinearGradient(0, 0, 0, 85);
+      pn.addColorStop(0, 'rgba(215,230,240,0.92)');
+      pn.addColorStop(1, 'rgba(215,230,240,0)');
+      x.fillStyle = pn; x.fillRect(0, 0, W, 85);
+      // South polar cap
+      const ps = x.createLinearGradient(0, 435, 0, H);
+      ps.addColorStop(0, 'rgba(215,230,240,0)');
+      ps.addColorStop(1, 'rgba(215,230,240,0.88)');
+      x.fillStyle = ps; x.fillRect(0, 435, W, H - 435);
+      return c;
+    }
+
+    // ── Planet builder ────────────────────────────────────────────────────
+    function makePlanet(texCanvas, radius, atmoColor, atmoOpacity, axialTilt) {
+      const group = new THREE.Group();
+      const geo = new THREE.SphereGeometry(radius, 64, 64);
+      const tex = new THREE.CanvasTexture(texCanvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const mat = new THREE.MeshPhongMaterial({
+        map: tex,
+        shininess: 8,
+        specular: new THREE.Color(0x0a0a10),
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.z = axialTilt;
+      group.add(mesh);
+      // Atmosphere shell
+      const atGeo = new THREE.SphereGeometry(radius * 1.045, 32, 32);
+      const atMat = new THREE.MeshPhongMaterial({
+        color: atmoColor,
+        transparent: true,
+        opacity: atmoOpacity,
+        side: THREE.BackSide,
+        depthWrite: false,
+      });
+      group.add(new THREE.Mesh(atGeo, atMat));
+      // Selection ring
+      const ringGeo = new THREE.RingGeometry(radius * 1.18, radius * 1.24, 80);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x5599ff,
+        transparent: true,
+        opacity: 0,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+      scene.add(group);
+      return { group, mesh, ring, ringMat };
+    }
+
+    const earthObj = makePlanet(makeEarthTex(),  1.35, 0x4488cc, 0.18, 0.41);
+    const moonObj  = makePlanet(makeMoonTex(),   0.58, 0x888888, 0.04, 0.03);
+    const marsObj  = makePlanet(makeMarsTex(),   0.98, 0xcc6633, 0.10, 0.44);
+
+    // Positions: spread across wide left panel
+    earthObj.group.position.set(-2.2, 0.4, 0);
+    moonObj.group.position.set( 2.6, 1.4, 0);
+    marsObj.group.position.set( 2.2, -1.5, 0);
+
+    const planets = [
+      { ...earthObj, key: 'earth', rotSpeed: 0.0025, label: 'Earth',   dist: 'Low orbit' },
+      { ...moonObj,  key: 'moon',  rotSpeed: 0.0008, label: 'Moon',    dist: '384,400 km' },
+      { ...marsObj,  key: 'mars',  rotSpeed: 0.0022, label: 'Mars',    dist: '~225M km' },
+    ];
+
+    // ── Globe name labels (HTML overlay) ─────────────────────────────────
+    function projectToScreen(worldPos) {
+      const v = worldPos.clone().project(camera);
+      const rect = panel.getBoundingClientRect();
+      return {
+        x: ((v.x + 1) / 2) * rect.width,
+        y: ((-v.y + 1) / 2) * rect.height,
+      };
+    }
+
+    const labelEls = {};
+    planets.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'globe-label';
+      el.innerHTML = `<span class="globe-label-name">${p.label}</span><span class="globe-label-dist">${p.dist}</span>`;
+      el.dataset.key = p.key;
+      el.style.pointerEvents = 'none';
+      panel.appendChild(el);
+      labelEls[p.key] = el;
+    });
+
+    function updateLabels() {
+      planets.forEach(p => {
+        const worldPos = p.group.position.clone();
+        const sph = p.mesh.geometry.parameters.radius;
+        worldPos.y -= sph * 1.35;
+        const sc = projectToScreen(worldPos);
+        const el = labelEls[p.key];
+        el.style.left = sc.x + 'px';
+        el.style.top  = sc.y + 'px';
+      });
+    }
+
+    // ── Selection ─────────────────────────────────────────────────────────
+    const sidebarTitles = {
+      earth: ['Earth', 'Low Earth orbit & missions'],
+      moon:  ['Moon', 'Lunar surface & cislunar missions'],
+      mars:  ['Mars', 'Interplanetary missions & ISRU'],
+    };
+
+    let selected = null;
+
+    function selectPlanet(key) {
+      if (selected === key) return;
+      selected = key;
+      planets.forEach(p => {
+        p.ringMat.opacity = p.key === key ? 0.65 : 0;
+        if (labelEls[p.key]) {
+          labelEls[p.key].classList.toggle('selected', p.key === key);
+        }
+      });
+      document.querySelectorAll('.sidebar-dest-panel').forEach(el => el.classList.remove('active'));
+      document.getElementById('panel-' + key).classList.add('active');
+      document.getElementById('sidebar-title').textContent = sidebarTitles[key][0];
+      document.getElementById('sidebar-sub').textContent   = sidebarTitles[key][1];
+    }
+
+    selectPlanet('earth');
+
+    // ── Raycasting ────────────────────────────────────────────────────────
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    canvas.style.cursor = 'default';
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+      mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(planets.map(p => p.mesh));
+      canvas.style.cursor = hits.length ? 'pointer' : 'default';
+    });
+
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+      mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(planets.map(p => p.mesh));
+      if (hits.length) {
+        const planet = planets.find(p => p.mesh === hits[0].object);
+        if (planet) selectPlanet(planet.key);
+      }
+    });
+
+    // ── Animation ─────────────────────────────────────────────────────────
+    function animate() {
+      requestAnimationFrame(animate);
+      planets.forEach(p => { p.mesh.rotation.y += p.rotSpeed; });
+      updateLabels();
+      renderer.render(scene, camera);
+    }
+    animate();
+  })();
   </script>
 </body>
 </html>
