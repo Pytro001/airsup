@@ -32,24 +32,21 @@ type Target = {
 async function draftEmail(t: Target): Promise<{ subject: string; body: string } | null> {
   const anthropic = getAnthropicClient();
 
-  const customersLine = (t.named_customers && t.named_customers.length)
-    ? `Their site showcases these customers: ${t.named_customers.slice(0, 6).join(", ")}.`
-    : `No specific named customers were captured.`;
-
   const system =
-    "You write very short, personal cold outreach emails from Konstantin, the founder of Airsup (airsup.dev). " +
-    "Airsup is a curated B2B platform that matches vetted manufacturers with serious Western buyers and founders. It is free for suppliers. " +
-    "Your job: get this manufacturer to finish onboarding at https://airsup.dev/start.\n\n" +
+    "You write very short, friendly cold outreach emails from Konstantin, the founder of Airsup (airsup.dev). " +
+    "Airsup is a platform that matches manufacturers with Western founders and buyers. It is free for suppliers.\n\n" +
+    "TONE: nice and cool, like a casual hello from a real person. Never salesy. Never hypey. " +
+    "Do NOT brag about the company or list selling points. Do NOT name their customers back to them. Do NOT use phrases like 'speaks for itself', 'no commission', 'free to join', 'qualified leads', 'best in class'.\n\n" +
     "STYLE RULES (strict):\n" +
     "  - Plain text only. No markdown, no bullets, no asterisks.\n" +
-    "  - 50 to 90 words MAX. Keep it tight.\n" +
-    "  - Do NOT use em-dashes or en-dashes (— or –). Use a period or comma instead.\n" +
-    "  - Do NOT use forward slashes (e.g. 'anker / logitech'). Use the word 'and' or a comma. URLs are fine.\n" +
-    "  - First sentence references something specific about THIS company (a named customer, their product category, their country). Never generic openers.\n" +
-    "  - One short paragraph saying what Airsup does in simple words.\n" +
+    "  - 40 to 70 words MAX. Short.\n" +
+    "  - No em-dashes or en-dashes (— or –).\n" +
+    "  - No forward slashes for word separation. URLs are fine.\n" +
+    "  - First sentence is a friendly, low-key opener that just shows you actually looked at their site (their category or country is plenty).\n" +
+    "  - One short sentence about what Airsup is, in plain words. Mention it is free for suppliers exactly once, casually.\n" +
     "  - One soft CTA with the link https://airsup.dev/start.\n" +
-    "  - Sign 'Konstantin' on its own line. No footer, no signature block, no company address.\n" +
-    "  - Subject under 50 chars, lowercase, no em-dashes, no slashes, no clickbait.\n" +
+    "  - Sign 'Konstantin' on its own line. No footer, no signature block, no address.\n" +
+    "  - Subject under 50 chars, lowercase, friendly, no em-dashes, no slashes, no clickbait, no exclamation marks.\n" +
     "Return JSON: { \"subject\": string, \"body\": string }.";
 
   const user =
@@ -58,8 +55,7 @@ async function draftEmail(t: Target): Promise<{ subject: string; body: string } 
     `Region: ${t.region}${t.country ? " (" + t.country + ")" : ""}\n` +
     `Website: ${t.website || "unknown"}\n` +
     `Contact name: ${t.contact_name || "unknown"}\n` +
-    customersLine +
-    `\n\nWrite the email. JSON only.`;
+    `\nWrite the email. JSON only.`;
 
   try {
     const response = await anthropic.messages.create({

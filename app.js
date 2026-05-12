@@ -58,6 +58,8 @@
   let pendingFiles = [];
   /** File[] selected on onboarding brief step (any type; uploaded after project is created). */
   let onboardingProjectFiles = [];
+  /** File[] selected on supplier capabilities step; extracted text is appended to the capabilities description on save. */
+  let onboardingSupplierFiles = [];
   let latestProjectId = null;
   /** Cached /api/admin/overview result for fast re-render after soft-delete (avoids re-fetching). */
   let adminOverviewCache = null;
@@ -71,6 +73,7 @@
 
   function resetOnboardData() {
     onboardingProjectFiles = [];
+    onboardingSupplierFiles = [];
     onboardData = {
       role: "", fullName: "", phone: "", whatsapp1: "", companyName: "", location: "", website: "",
       briefUrl: "", briefPastedText: "", briefText: "", briefSource: "", briefFileName: "",
@@ -942,7 +945,7 @@
       ] },
     { id: "capabilities", type: "form", title: "What can you produce?", sub: "This helps our AI match you with the right projects. Be specific about what your team excels at.",
       fields: [
-        { key: "capabilities", label: "Additional information about your company", type: "textarea", compact: true },
+        { key: "capabilities", label: "Detailed description of what you can produce", type: "textarea", compact: true, withFiles: true },
         { key: "priceRange", label: "Project price range" },
         { key: "moqMin", label: "Minimal order quantity", type: "digits" },
         { key: "moqMax", label: "Maximal order quantity", type: "digits" },
@@ -1155,7 +1158,16 @@
       } else if (f.type === "textarea") {
         const rows = f.compact ? 2 : 4;
         const cls = f.compact ? " onboard-textarea--compact" : "";
-        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><textarea class="onboard-textarea onboard-input${cls}" data-key="${f.key}" rows="${rows}" ${f.required ? "required" : ""}>${escapeHtml(onboardData[f.key] || "")}</textarea></div>`;
+        html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><textarea class="onboard-textarea onboard-input${cls}" data-key="${f.key}" rows="${rows}" ${f.required ? "required" : ""}>${escapeHtml(onboardData[f.key] || "")}</textarea>`;
+        if (f.withFiles) {
+          const nf = onboardingSupplierFiles.length;
+          const btnLabel = nf === 0 ? "Add files" : nf === 1 ? (onboardingSupplierFiles[0].name || "1 file") : nf + " files selected";
+          html += '<div class="onboard-brief-upload-field" style="margin-top:8px;">' +
+            '<input class="onboard-brief-file-input" type="file" id="onboard-supplier-file" multiple ' +
+            'accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.tsv,.xlsx,.xls,.ppt,.pptx,.odt,.ods,.odp,.rtf,.html,.htm,.json,.xml,.heic" hidden />' +
+            '<button type="button" class="onboard-brief-file-btn" id="onboard-supplier-file-btn">' + escapeHtml(btnLabel) + '</button></div>';
+        }
+        html += `</div>`;
       } else if (f.type === "digits") {
         html += `<div class="onboard-field"><label class="onboard-label">${f.label}</label><input class="onboard-input onboard-input-digits" data-key="${f.key}" type="text" inputmode="numeric" pattern="[0-9]*" value="${escapeAttr(onboardData[f.key] || "")}" ${f.required ? "required" : ""} /></div>`;
       } else {
@@ -1180,6 +1192,30 @@
         inp.value = phoneDigits(inp.value);
       });
     });
+
+    (function wireSupplierFileBtn() {
+      const fileInput = stage.querySelector("#onboard-supplier-file");
+      const fileBtn = stage.querySelector("#onboard-supplier-file-btn");
+      if (!fileInput || !fileBtn) return;
+      fileBtn.addEventListener("click", function () { fileInput.click(); });
+      fileInput.addEventListener("change", function () {
+        const raw = fileInput.files && fileInput.files.length
+          ? Array.prototype.slice.call(fileInput.files, 0)
+          : [];
+        const v = validateOnboardingProjectFiles(raw);
+        if (!v.ok) {
+          setOnboardLineError("onboard-form-error", v.error);
+          fileInput.value = "";
+          return;
+        }
+        setOnboardLineError("onboard-form-error", "");
+        onboardingSupplierFiles = v.files;
+        const n = onboardingSupplierFiles.length;
+        fileBtn.textContent = n === 0
+          ? "Add files"
+          : n === 1 ? (onboardingSupplierFiles[0].name || "1 file") : n + " files selected";
+      });
+    })();
 
     function collectOnboardFormFields() {
       stage.querySelectorAll("[data-phone-key]").forEach((wrap) => {
@@ -1250,8 +1286,16 @@
       const contacts = [{ whatsapp: wa1 }];
       const siteRaw = (d.website || "").trim();
       const siteV = siteRaw ? validateOptionalHttpUrl(siteRaw) : { ok: true };
+      let supplierDocText = "";
+      if (onboardingSupplierFiles && onboardingSupplierFiles.length) {
+        try { supplierDocText = String((await buildTextForImportFromFiles(onboardingSupplierFiles)) || "").trim(); } catch (_) {}
+      }
+      const baseDesc = (d.capabilities || "").trim();
+      const fullDesc = supplierDocText
+        ? (baseDesc ? baseDesc + "\n\n--- From uploaded documents ---\n" + supplierDocText : supplierDocText)
+        : baseDesc;
       const cap = {
-        description: (d.capabilities || "").trim(),
+        description: fullDesc,
         project_price_range: (d.priceRange || "").trim(),
         moq_min: phoneDigits(d.moqMin || ""),
         moq_max: phoneDigits(d.moqMax || ""),
@@ -1267,6 +1311,7 @@
         active: true,
       };
       await apiCall("/api/factories/me", { method: "PUT", body: JSON.stringify(facPayload) });
+      onboardingSupplierFiles = [];
       currentUser.displayName = displayName;
       updateAuthUI();
       return {};
@@ -4138,7 +4183,7 @@
       <div class="settings-field"><label class="settings-label">Location</label><input type="text" id="fp-location" class="settings-input" value="${escapeAttr(factory.location)}" /></div>
       <div class="settings-field"><label class="settings-label">Website</label><input type="url" id="fp-website" class="settings-input" placeholder="https://example.com" value="${escapeAttr(websiteV)}" /></div>
       <div class="settings-field"><label class="settings-label">What do you manufacture?</label><input type="text" id="fp-category" class="settings-input" value="${escapeAttr(factory.category)}" /></div>
-      <div class="settings-field"><label class="settings-label">Additional information about your company</label><textarea id="fp-capabilities" class="settings-input onboard-textarea--compact" rows="2">${escapeHtml(c.description || "")}</textarea></div>
+      <div class="settings-field"><label class="settings-label">Detailed description of what you can produce</label><textarea id="fp-capabilities" class="settings-input onboard-textarea--compact" rows="2">${escapeHtml(c.description || "")}</textarea></div>
       <div class="settings-field"><label class="settings-label">Project price range</label><input type="text" id="fp-price-range" class="settings-input" value="${escapeAttr(priceR)}" /></div>
       <div class="settings-field"><label class="settings-label">Minimal order quantity</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="fp-moq-min" class="settings-input fp-digits" value="${escapeAttr(moqMinV)}" /></div>
       <div class="settings-field"><label class="settings-label">Maximal order quantity</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="fp-moq-max" class="settings-input fp-digits" value="${escapeAttr(moqMaxV)}" /></div>
