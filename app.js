@@ -3966,9 +3966,7 @@
       stats.innerHTML =
         `<div class="stat-card"><div class="stat-value">${customers.length}</div><div class="stat-label">Customers</div></div>` +
         `<div class="stat-card"><div class="stat-value">${factories.length}</div><div class="stat-label">Factories</div></div>` +
-        `<div class="stat-card"><div class="stat-value">${connections.length}</div><div class="stat-label">AI connections</div></div>` +
-        `<div class="stat-card"><div class="stat-value">${connectedBuyers}/${customers.length}</div><div class="stat-label">Customers matched</div></div>` +
-        `<div class="stat-card"><div class="stat-value">${connectedFactories}/${factories.length}</div><div class="stat-label">Factories matched</div></div>`;
+        `<div class="stat-card"><div class="stat-value">${connections.length}</div><div class="stat-label">AI connections</div></div>`;
     }
 
     const renderCustomerCard = (c) => {
