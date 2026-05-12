@@ -1063,7 +1063,7 @@
         escapeHtml(onboardData.briefPastedText || "") +
         "</textarea></div><p class=\"onboard-field-error\" id=\"onboard-brief-error\" role=\"status\" hidden></p></div>" +
         '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
-        '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
+        '</div></div>';
       stage.innerHTML = htmlB;
       if (onboardData._briefReturnHint) {
         setOnboardLineError("onboard-brief-error", String(onboardData._briefReturnHint));
@@ -1163,7 +1163,7 @@
       }
     });
     html += '<p class="onboard-field-error" id="onboard-form-error" role="status" hidden></p></div><div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>';
-    html += '<button type="button" class="onboard-skip" id="onboard-back">Back</button></div></div>';
+    html += '</div></div>';
     stage.innerHTML = html;
 
     stage.querySelectorAll(".onboard-input-digits").forEach((inp) => {
@@ -3707,19 +3707,46 @@
         if (!val) return "";
         return "<div class=\"admin-info-row\"><span class=\"admin-info-label\">" + escapeHtml(label) + "</span><span class=\"admin-info-val\">" + val + "</span></div>";
       }
-      const waDigits = (f.phone || "").replace(/[^0-9]/g, "");
-      const waLink = waDigits ? "<a href=\"https://wa.me/" + encodeURIComponent(waDigits) + "\" target=\"_blank\" rel=\"noopener\" class=\"admin-wa-link\">" + escapeHtml(f.phone) + "</a>" : "";
+      function waRow(label, num) {
+        if (!num) return "";
+        const digits = String(num).replace(/[^0-9]/g, "");
+        const link = digits ? "<a href=\"https://wa.me/" + digits + "\" target=\"_blank\" rel=\"noopener\" class=\"admin-wa-link\">" + escapeHtml(String(num)) + "</a>" : escapeHtml(String(num));
+        return "<div class=\"admin-info-row\"><span class=\"admin-info-label\">" + escapeHtml(label) + "</span><span class=\"admin-info-val\">" + link + "</span></div>";
+      }
+      // contact_info is jsonb: may have phone, whatsapp, email, wechat, name
+      const ci = (f.contact_info && typeof f.contact_info === "object") ? f.contact_info : {};
+      const waNum = f.whatsapp_id || ci.whatsapp || ci.phone || "";
+      // capabilities is jsonb or string
+      const caps = f.capabilities;
+      const capsText = caps ? (typeof caps === "string" ? caps : JSON.stringify(caps, null, 2)) : "";
+      const categoriesText = Array.isArray(f.categories) && f.categories.length ? f.categories.join(", ") : "";
+      const regionsText = Array.isArray(f.regions) && f.regions.length ? f.regions.join(", ") : "";
+      const joinedAt = f.created_at ? new Date(f.created_at).toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" }) : "";
       if (left) {
         left.innerHTML =
           "<section class=\"project-detail-section admin-customer-card\">" +
           "<h3 class=\"project-detail-h\">Supplier</h3>" +
           infoRow("Name", escapeHtml(f.name || "")) +
-          infoRow("Category", escapeHtml(f.category || "")) +
           infoRow("Location", escapeHtml(f.location || "")) +
-          infoRow("WhatsApp", waLink) +
-          infoRow("MOQ", escapeHtml(String(f.moq || ""))) +
+          infoRow("Category", escapeHtml(f.category || "")) +
+          infoRow("Categories", escapeHtml(categoriesText)) +
+          infoRow("Regions", escapeHtml(regionsText)) +
+          infoRow("Tier", escapeHtml(f.tier || "")) +
+          infoRow("Min order", f.min_order_qty != null ? escapeHtml(String(f.min_order_qty)) : "") +
+          infoRow("Language", escapeHtml(f.preferred_language || "")) +
+          infoRow("Trust score", f.trust_score != null ? escapeHtml(String(f.trust_score)) : "") +
+          infoRow("Active", f.active != null ? (f.active ? "Yes" : "No") : "") +
+          infoRow("Joined", escapeHtml(joinedAt)) +
           "</section>" +
-          (f.capabilities_description ? "<section class=\"project-detail-section\"><h3 class=\"project-detail-h\">Capabilities</h3><p class=\"project-detail-p\">" + escapeHtml(f.capabilities_description) + "</p></section>" : "") +
+          "<section class=\"project-detail-section\">" +
+          "<h3 class=\"project-detail-h\">Contact</h3>" +
+          waRow("WhatsApp", waNum) +
+          infoRow("Contact name", escapeHtml(ci.name || "")) +
+          infoRow("Email", escapeHtml(ci.email || "")) +
+          infoRow("WeChat", escapeHtml(ci.wechat || "")) +
+          infoRow("Phone", escapeHtml(ci.phone || "")) +
+          "</section>" +
+          (capsText ? "<section class=\"project-detail-section\"><h3 class=\"project-detail-h\">Capabilities</h3><pre class=\"admin-caps-pre\">" + escapeHtml(capsText) + "</pre></section>" : "") +
           buildMatchesSection(data.matches || []);
       }
       if (right) {
