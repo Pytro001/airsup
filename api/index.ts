@@ -15,6 +15,7 @@ import { factoriesRouter } from "../server/dist/routes/factories.js";
 import { profileRouter } from "../server/dist/routes/profile.js";
 import { intakeImportRouter } from "../server/dist/routes/intake-import.js";
 import { placesRouter } from "../server/dist/routes/places.js";
+import { coldRouter } from "../server/dist/routes/cold.js";
 
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
@@ -35,6 +36,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/factories", factoriesRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/intake", intakeImportRouter);
+app.use("/api/cold", coldRouter);
 app.use("/webhooks/whatsapp", whatsappWebhookRouter);
 app.use("/webhooks/stripe", stripeWebhookRouter);
 
