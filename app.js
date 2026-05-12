@@ -3716,27 +3716,34 @@
       // contact_info is jsonb: may have phone, whatsapp, email, wechat, name
       const ci = (f.contact_info && typeof f.contact_info === "object") ? f.contact_info : {};
       const waNum = f.whatsapp_id || ci.whatsapp || ci.phone || "";
-      // capabilities is jsonb or string
-      const caps = f.capabilities;
-      const capsText = caps ? (typeof caps === "string" ? caps : JSON.stringify(caps, null, 2)) : "";
+      // capabilities is jsonb with fields: description, moq, moq_min, moq_max, website, project_price_range
+      const caps = (f.capabilities && typeof f.capabilities === "object") ? f.capabilities : {};
+      const capsDesc = caps.description || (typeof f.capabilities === "string" ? f.capabilities : "");
+      const capsMoq = caps.moq_min || caps.moq || f.min_order_qty || "";
+      const capsWebsite = caps.website || "";
+      const capsPriceRange = caps.project_price_range || "";
       const categoriesText = Array.isArray(f.categories) && f.categories.length ? f.categories.join(", ") : "";
       const regionsText = Array.isArray(f.regions) && f.regions.length ? f.regions.join(", ") : "";
       const joinedAt = f.created_at ? new Date(f.created_at).toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" }) : "";
+      function linkRow(label, url) {
+        if (!url) return "";
+        return "<div class=\"admin-info-row\"><span class=\"admin-info-label\">" + escapeHtml(label) + "</span><span class=\"admin-info-val\"><a href=\"" + escapeAttr(url) + "\" target=\"_blank\" rel=\"noopener\">" + escapeHtml(url.replace(/^https?:\/\//, "")) + "</a></span></div>";
+      }
       if (left) {
         left.innerHTML =
           "<section class=\"project-detail-section admin-customer-card\">" +
           "<h3 class=\"project-detail-h\">Supplier</h3>" +
           infoRow("Name", escapeHtml(f.name || "")) +
           infoRow("Location", escapeHtml(f.location || "")) +
-          infoRow("Category", escapeHtml(f.category || "")) +
-          infoRow("Categories", escapeHtml(categoriesText)) +
+          infoRow("Category", escapeHtml(f.category || (categoriesText ? categoriesText : ""))) +
           infoRow("Regions", escapeHtml(regionsText)) +
           infoRow("Tier", escapeHtml(f.tier || "")) +
-          infoRow("Min order", f.min_order_qty != null ? escapeHtml(String(f.min_order_qty)) : "") +
+          infoRow("Min order", capsMoq ? escapeHtml(String(capsMoq)) : "") +
+          infoRow("Price range", escapeHtml(capsPriceRange)) +
           infoRow("Language", escapeHtml(f.preferred_language || "")) +
-          infoRow("Trust score", f.trust_score != null ? escapeHtml(String(f.trust_score)) : "") +
           infoRow("Active", f.active != null ? (f.active ? "Yes" : "No") : "") +
           infoRow("Joined", escapeHtml(joinedAt)) +
+          linkRow("Website", capsWebsite) +
           "</section>" +
           "<section class=\"project-detail-section\">" +
           "<h3 class=\"project-detail-h\">Contact</h3>" +
@@ -3746,7 +3753,7 @@
           infoRow("WeChat", escapeHtml(ci.wechat || "")) +
           infoRow("Phone", escapeHtml(ci.phone || "")) +
           "</section>" +
-          (capsText ? "<section class=\"project-detail-section\"><h3 class=\"project-detail-h\">Capabilities</h3><pre class=\"admin-caps-pre\">" + escapeHtml(capsText) + "</pre></section>" : "") +
+          (capsDesc ? "<section class=\"project-detail-section\"><h3 class=\"project-detail-h\">About</h3><p class=\"project-detail-p\">" + escapeHtml(capsDesc) + "</p></section>" : "") +
           buildMatchesSection(data.matches || []);
       }
       if (right) {
