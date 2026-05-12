@@ -11,228 +11,153 @@
   <script>document.documentElement.dataset.theme = "dark";</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { -webkit-text-size-adjust: 100%; height: 100%; }
+    html, body { height: 100%; overflow: hidden; }
     body {
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
       font-weight: 300;
-      background: #111111;
+      background: #0a0a12;
       color: #f2f2f3;
-      height: 100dvh;
       display: flex;
       flex-direction: column;
-      overflow: hidden;
       -webkit-font-smoothing: antialiased;
     }
-    a { color: inherit; text-decoration: none; }
 
-    /* ── Header ── */
     .sp-header {
       flex-shrink: 0;
       padding: 18px 28px;
       display: flex;
       align-items: center;
-      border-bottom: 1px solid #1e1e26;
-      background: #111111;
       z-index: 10;
     }
     .sp-brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 9px;
-      font-weight: 500;
-      font-size: 15px;
-      color: #f2f2f3;
+      display: inline-flex; align-items: center; gap: 9px;
+      font-weight: 500; font-size: 15px; color: #f2f2f3;
     }
     .sp-brand img {
-      height: 28px;
-      width: 28px;
-      border-radius: 7px;
+      height: 28px; width: 28px; border-radius: 7px;
       box-shadow: 0 0 0 1px rgba(255,255,255,0.1);
     }
 
-    /* ── Main layout ── */
     .mfg-layout {
       flex: 1;
       display: flex;
-      overflow: hidden;
       min-height: 0;
     }
 
     /* ── Globe panel ── */
-    .globes-panel {
-      flex: 0 0 62%;
+    .globe-panel {
+      flex: 0 0 60%;
       position: relative;
       overflow: hidden;
-      background: #080810;
+      cursor: grab;
+      user-select: none;
     }
+    .globe-panel:active { cursor: grabbing; }
     #globe-canvas {
       display: block;
       width: 100%;
       height: 100%;
     }
 
-    /* Globe name overlays */
-    .globe-label {
+    /* Nav arrows */
+    .nav-arrow {
       position: absolute;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      transform: translate(-50%, 0);
-      transition: opacity 0.3s;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.55);
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      z-index: 5;
+      line-height: 1;
     }
-    .globe-label-name {
-      font-size: 13px;
-      font-weight: 500;
-      letter-spacing: 0.06em;
-      color: rgba(242, 242, 243, 0.7);
-    }
-    .globe-label-dist {
-      font-size: 10px;
-      color: rgba(242, 242, 243, 0.35);
-      letter-spacing: 0.04em;
-    }
-    .globe-label.selected .globe-label-name { color: #f2f2f3; }
-    .globe-label.selected .globe-label-dist { color: rgba(242, 242, 243, 0.55); }
+    .nav-arrow:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .nav-arrow--left  { left: 20px; }
+    .nav-arrow--right { right: 20px; }
 
-    /* ── Sidebar ── */
-    .events-sidebar {
+    /* Planet dots */
+    .planet-dots {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      transition: background 0.3s, transform 0.3s;
+    }
+    .dot.active {
+      background: rgba(255,255,255,0.8);
+      transform: scale(1.3);
+    }
+
+    /* ── Info panel ── */
+    .info-panel {
       flex: 1;
       display: flex;
       flex-direction: column;
+      padding: 40px 36px 40px;
+      border-left: 1px solid rgba(255,255,255,0.06);
+      position: relative;
       overflow: hidden;
-      border-left: 1px solid #1e1e26;
-      background: #111114;
     }
-    .sidebar-header {
-      flex-shrink: 0;
-      padding: 24px 24px 16px;
-      border-bottom: 1px solid #1e1e26;
+
+    .planet-info {
+      position: absolute;
+      inset: 0;
+      padding: 40px 36px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
     }
-    .sidebar-dest-name {
-      font-size: 22px;
+    .planet-info.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .planet-info h2 {
+      font-size: clamp(36px, 4vw, 58px);
       font-weight: 500;
-      letter-spacing: -0.02em;
-      line-height: 1.1;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: #f2f2f3;
     }
-    .sidebar-dest-sub {
-      font-size: 13px;
-      color: #8a8a92;
-      margin-top: 5px;
-      font-weight: 300;
-    }
-    .sidebar-body {
+
+    .planet-photo-wrap {
       flex: 1;
-      overflow-y: auto;
-      padding: 16px 24px 24px;
+      min-height: 0;
+      border-radius: 20px;
+      overflow: hidden;
+      background: #111118;
     }
-    .sidebar-body::-webkit-scrollbar { width: 4px; }
-    .sidebar-body::-webkit-scrollbar-thumb { background: #2a2a32; border-radius: 4px; }
-
-    .sidebar-dest-panel { display: none; }
-    .sidebar-dest-panel.active { display: block; }
-
-    /* Section label */
-    .sb-section-label {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #5c5c64;
-      margin: 20px 0 10px;
-    }
-    .sb-section-label:first-child { margin-top: 4px; }
-
-    /* Mission card */
-    .mission-card {
-      background: #17171c;
-      border: 1px solid #222228;
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 8px;
-      transition: border-color 0.2s;
-    }
-    .mission-card:hover { border-color: #2e2e38; }
-    .mission-card-top {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 4px;
-    }
-    .mission-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: #f2f2f3;
-      line-height: 1.3;
-    }
-    .mission-badge {
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      padding: 2px 7px;
-      border-radius: 999px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .badge--go       { background: rgba(74,222,128,0.12); color: #4ade80; }
-    .badge--planned  { background: rgba(99,179,237,0.12); color: #63b3ed; }
-    .badge--window   { background: rgba(251,191,36,0.12); color: #fbbf24; }
-    .badge--goal     { background: rgba(167,139,250,0.12); color: #a78bfa; }
-    .badge--delayed  { background: rgba(252,165,165,0.12); color: #fca5a5; }
-    .mission-org {
-      font-size: 11px;
-      color: #5c5c64;
-      margin-bottom: 5px;
-    }
-    .mission-date {
-      font-size: 12px;
-      color: #8a8a92;
-    }
-    .mission-date strong { color: #b8b8c0; font-weight: 500; }
-    .mission-desc {
-      font-size: 12px;
-      color: #5c5c64;
-      margin-top: 7px;
-      line-height: 1.55;
-    }
-
-    /* Wild card */
-    .wild-card {
-      background: #17171c;
-      border: 1px solid #222228;
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 8px;
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-      transition: border-color 0.2s;
-    }
-    .wild-card:hover { border-color: #2e2e38; }
-    .wild-icon { font-size: 18px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
-    .wild-body {}
-    .wild-title {
-      font-size: 13px;
-      font-weight: 500;
-      color: #f2f2f3;
-      line-height: 1.3;
-      margin-bottom: 5px;
-    }
-    .wild-text {
-      font-size: 12px;
-      color: #5c5c64;
-      line-height: 1.55;
+    .planet-photo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.4s;
     }
 
     @media (max-width: 700px) {
-      .mfg-layout { flex-direction: column; }
-      .globes-panel { flex: 0 0 55%; }
-      .events-sidebar { border-left: none; border-top: 1px solid #1e1e26; }
-      body { overflow: auto; height: auto; }
-      .mfg-layout { overflow: visible; }
+      html, body { overflow: auto; height: auto; }
+      .mfg-layout { flex-direction: column; height: auto; }
+      .globe-panel { flex: 0 0 60vw; height: 60vw; }
+      .info-panel { padding: 24px 20px; min-height: 50vw; position: relative; }
+      .planet-info { position: relative; inset: auto; padding: 0; }
+      .planet-info:not(.active) { display: none; }
     }
   </style>
 </head>
@@ -244,245 +169,35 @@
   </header>
 
   <div class="mfg-layout">
-    <!-- Left: Three.js globes -->
-    <div class="globes-panel" id="globes-panel">
+    <div class="globe-panel" id="globe-panel">
       <canvas id="globe-canvas"></canvas>
-      <!-- Labels injected by JS -->
+      <button class="nav-arrow nav-arrow--left"  id="nav-prev" aria-label="Previous">&#8592;</button>
+      <button class="nav-arrow nav-arrow--right" id="nav-next" aria-label="Next">&#8594;</button>
+      <div class="planet-dots" id="planet-dots">
+        <span class="dot active"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
     </div>
 
-    <!-- Right: Sidebar -->
-    <aside class="events-sidebar">
-      <div class="sidebar-header">
-        <div class="sidebar-dest-name" id="sidebar-title">Earth</div>
-        <div class="sidebar-dest-sub" id="sidebar-sub">Low Earth orbit & missions</div>
+    <aside class="info-panel" id="info-panel">
+      <div class="planet-info active" id="info-earth">
+        <h2>Earth</h2>
+        <div class="planet-photo-wrap">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/1024px-The_Earth_seen_from_Apollo_17.jpg" alt="Earth from Apollo 17" />
+        </div>
       </div>
-      <div class="sidebar-body">
-
-        <!-- Earth panel -->
-        <div class="sidebar-dest-panel active" id="panel-earth">
-          <p class="sb-section-label">Upcoming</p>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Starship IFT-9 / IFT-10</span>
-              <span class="mission-badge badge--planned">Planned</span>
-            </div>
-            <div class="mission-org">SpaceX · Boca Chica, TX</div>
-            <div class="mission-date"><strong>2026</strong> — ongoing cadence</div>
-            <div class="mission-desc">Integrated flight tests toward full Starship reusability. Booster catch and Ship splashdown both now demonstrated. Target: orbital payload delivery.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Falcon 9 / Falcon Heavy</span>
-              <span class="mission-badge badge--go">Active</span>
-            </div>
-            <div class="mission-org">SpaceX · Multiple pads</div>
-            <div class="mission-date"><strong>Weekly</strong> — ~60 launches/yr</div>
-            <div class="mission-desc">Crew Dragon, Starlink batches, commercial GEO, NASA science. Booster B1060 fleet leaders approaching 25+ reuses.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">New Glenn Block 2</span>
-              <span class="mission-badge badge--planned">Planned</span>
-            </div>
-            <div class="mission-org">Blue Origin · Cape Canaveral</div>
-            <div class="mission-date"><strong>2026</strong> — ramping cadence</div>
-            <div class="mission-desc">BE-4 engines built in-house. 7m fairing enables large GEO payloads. First operational commercial manifests after Jan 2025 debut.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Neutron (debut)</span>
-              <span class="mission-badge badge--goal">Announced</span>
-            </div>
-            <div class="mission-org">Rocket Lab · Wallops Island, VA</div>
-            <div class="mission-date"><strong>2026–2027</strong></div>
-            <div class="mission-desc">Medium-lift reusable rocket. Carbon composite structure manufactured at new Wallops facility. Targets human-rating in later variants.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Ariane 6 operational</span>
-              <span class="mission-badge badge--go">Active</span>
-            </div>
-            <div class="mission-org">ArianeGroup · Kourou, French Guiana</div>
-            <div class="mission-date"><strong>2026</strong> — 6–8 flights/yr</div>
-            <div class="mission-desc">Europe's heavy-lift workhorse post-2024 debut. Reignitable upper stage enables multi-orbit missions and compliant deorbit burns.</div>
-          </div>
-
-          <p class="sb-section-label">Manufacturing</p>
-
-          <div class="wild-card">
-            <div class="wild-icon">🚀</div>
-            <div class="wild-body">
-              <div class="wild-title">SpaceX makes a Raptor engine every 4 hours</div>
-              <div class="wild-text">~180 engines/month at peak. Each has ~100 parts — vs thousands in legacy engines — achieved by eliminating welds through additive manufacturing and precision casting.</div>
-            </div>
-          </div>
-
-          <div class="wild-card">
-            <div class="wild-icon">🤖</div>
-            <div class="wild-body">
-              <div class="wild-title">Fully robotic dark factories are real</div>
-              <div class="wild-text">FANUC and several Chinese fabs run "lights-out" 24/7 with zero humans on the floor. Error rates below 0.001%. Some factories autonomously reconfigure conveyor systems overnight based on next-day forecasts.</div>
-            </div>
-          </div>
-
-          <div class="wild-card">
-            <div class="wild-icon">⚡</div>
-            <div class="wild-body">
-              <div class="wild-title">Solid-state batteries finally being manufactured</div>
-              <div class="wild-text">Toyota, QuantumScape, and CATL scaling production in 2026. Energy density 2× lithium-ion, 10-minute charge, no fire risk. The challenge: perfect solid electrolyte layers at nanometer scale across GWh output.</div>
-            </div>
-          </div>
+      <div class="planet-info" id="info-moon">
+        <h2>Moon</h2>
+        <div class="planet-photo-wrap">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/FullMoon2010.jpg/1024px-FullMoon2010.jpg" alt="Full Moon" />
         </div>
-
-        <!-- Moon panel -->
-        <div class="sidebar-dest-panel" id="panel-moon">
-          <p class="sb-section-label">Upcoming</p>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Artemis II — crewed lunar flyby</span>
-              <span class="mission-badge badge--planned">Planned</span>
-            </div>
-            <div class="mission-org">NASA / ESA · Kennedy Space Center</div>
-            <div class="mission-date"><strong>2026</strong> — first humans beyond LEO since 1972</div>
-            <div class="mission-desc">Four astronauts fly around the Moon aboard Orion + SLS. No landing — a full dress rehearsal for Artemis III surface mission.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Artemis III — lunar landing</span>
-              <span class="mission-badge badge--planned">Planned</span>
-            </div>
-            <div class="mission-org">NASA / SpaceX HLS</div>
-            <div class="mission-date"><strong>2027</strong></div>
-            <div class="mission-desc">Two astronauts land near south pole using Starship Human Landing System. Science focused on water-ice prospecting and long-duration surface ops.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Blue Ghost Mission 2</span>
-              <span class="mission-badge badge--planned">Planned</span>
-            </div>
-            <div class="mission-org">Firefly Aerospace · CLPS</div>
-            <div class="mission-date"><strong>2026</strong></div>
-            <div class="mission-desc">Follow-on to the successful Mare Crisium landing. Carries NASA instruments studying lunar regolith and subsurface heat flow.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Chang'e 7 — south pole</span>
-              <span class="mission-badge badge--planned">Planned</span>
-            </div>
-            <div class="mission-org">CNSA · Wenchang</div>
-            <div class="mission-date"><strong>2026</strong></div>
-            <div class="mission-desc">Lander, rover, and a mini flying probe that enters permanently shadowed craters to search for water ice. Part of China's ILRS roadmap.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Lunar Gateway PPE + HALO</span>
-              <span class="mission-badge badge--goal">Announced</span>
-            </div>
-            <div class="mission-org">NASA / Maxar / Northrop · Falcon Heavy</div>
-            <div class="mission-date"><strong>2027</strong></div>
-            <div class="mission-desc">First elements of the Lunar Gateway station in NRHO orbit. Power & Propulsion Element + Habitation and Logistics Outpost, both US-built.</div>
-          </div>
-
-          <p class="sb-section-label">Manufacturing</p>
-
-          <div class="wild-card">
-            <div class="wild-icon">🌑</div>
-            <div class="wild-body">
-              <div class="wild-title">3D printing a base from moon dust</div>
-              <div class="wild-text">ESA and ICON are testing sintering lunar regolith into structural bricks using concentrated sunlight. ICON's Vulcan system — which prints homes on Earth — has been adapted for lunar ISRU. No material launched from Earth.</div>
-            </div>
-          </div>
-
-          <div class="wild-card">
-            <div class="wild-icon">💧</div>
-            <div class="wild-body">
-              <div class="wild-title">Water ice = rocket fuel</div>
-              <div class="wild-text">Confirmed water ice at the lunar south pole could be electrolyzed into hydrogen + oxygen — propellant for deep-space missions. The Moon becomes a fuel depot. Chang'e 7 and LUPEX are mapping exact reserves in 2026.</div>
-            </div>
-          </div>
+      </div>
+      <div class="planet-info" id="info-mars">
+        <h2>Mars</h2>
+        <div class="planet-photo-wrap">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/OSIRIS_Mars_true_color.jpg/1024px-OSIRIS_Mars_true_color.jpg" alt="Mars true color" />
         </div>
-
-        <!-- Mars panel -->
-        <div class="sidebar-dest-panel" id="panel-mars">
-          <p class="sb-section-label">Upcoming</p>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Starship Mars Demo</span>
-              <span class="mission-badge badge--goal">Announced</span>
-            </div>
-            <div class="mission-org">SpaceX · Boca Chica</div>
-            <div class="mission-date"><strong>2026 window</strong> — opens June 2026</div>
-            <div class="mission-desc">SpaceX targets uncrewed Starships in the 2026 window. Goal: survive entry, descent, and landing; prove ISRU hardware can be delivered intact.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Crewed Mars Mission</span>
-              <span class="mission-badge badge--goal">SpaceX target</span>
-            </div>
-            <div class="mission-org">SpaceX</div>
-            <div class="mission-date"><strong>2028–2029 window</strong></div>
-            <div class="mission-desc">Elon Musk's stated goal. Requires ~5 Starship launches per mission for propellant depot fill. Depends on ISRU proving that return fuel can be made on Mars.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Tianwen-3 Sample Return</span>
-              <span class="mission-badge badge--planned">Planned</span>
-            </div>
-            <div class="mission-org">CNSA</div>
-            <div class="mission-date"><strong>2028 window</strong></div>
-            <div class="mission-desc">China's Mars sample return in two launches. Lander + ascent vehicle 2028, Earth return vehicle 2030. Would beat NASA's revised timeline by years.</div>
-          </div>
-
-          <div class="mission-card">
-            <div class="mission-card-top">
-              <span class="mission-name">Mars Sample Return</span>
-              <span class="mission-badge badge--delayed">Delayed</span>
-            </div>
-            <div class="mission-org">NASA / ESA</div>
-            <div class="mission-date"><strong>2030s</strong> — architecture redesign</div>
-            <div class="mission-desc">Retrieve Perseverance's cached samples. Redesigned after cost overruns. New approach explores commercial lander options. Samples are sealed in tubes on the surface now.</div>
-          </div>
-
-          <p class="sb-section-label">Manufacturing</p>
-
-          <div class="wild-card">
-            <div class="wild-icon">🏭</div>
-            <div class="wild-body">
-              <div class="wild-title">Factories arrive before the astronauts</div>
-              <div class="wild-text">SpaceX's Mars plan: ship ISRU plants first to pre-produce 30+ tonnes of liquid oxygen from CO₂ atmosphere before any crew arrives. MOXIE on Perseverance already proved it works at small scale.</div>
-            </div>
-          </div>
-
-          <div class="wild-card">
-            <div class="wild-icon">🧱</div>
-            <div class="wild-body">
-              <div class="wild-title">Building with Martian regolith</div>
-              <div class="wild-text">Mars soil contains perchlorates that are toxic but also useful — binders for construction. Researchers at Northwestern have 3D-printed load-bearing structures from simulated Mars regolith. First habitats will likely be half-buried for radiation shielding.</div>
-            </div>
-          </div>
-
-          <div class="wild-card">
-            <div class="wild-icon">🔬</div>
-            <div class="wild-body">
-              <div class="wild-title">Microgravity pharma manufacturing</div>
-              <div class="wild-text">Varda Space manufactured pharmaceuticals in orbit and re-entered them to Earth. Microgravity allows crystal structures impossible to grow under gravity — purer drugs, better fiber optics. Mars gravity (38% of Earth) opens entirely new material science.</div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </aside>
   </div>
@@ -490,369 +205,204 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script>
   (function () {
-    const panel = document.getElementById('globes-panel');
-    const canvas = document.getElementById('globe-canvas');
+    const PLANETS = [
+      {
+        key:      'earth',
+        texUrl:   'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/earth_atmos_2048.jpg',
+        atmo:     0x3a88cc,
+        atmoOp:   0.18,
+        rotSpeed: 0.0022,
+        tilt:     0.41,
+      },
+      {
+        key:      'moon',
+        texUrl:   'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/moon_1024.jpg',
+        atmo:     0x888888,
+        atmoOp:   0.03,
+        rotSpeed: 0.0007,
+        tilt:     0.03,
+      },
+      {
+        key:      'mars',
+        texUrl:   'https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg',
+        atmo:     0xcc5522,
+        atmoOp:   0.10,
+        rotSpeed: 0.0020,
+        tilt:     0.44,
+      },
+    ];
 
-    // ── Renderer ──────────────────────────────────────────────────────────
+    const panel    = document.getElementById('globe-panel');
+    const canvas   = document.getElementById('globe-canvas');
+    const dotsEl   = document.getElementById('planet-dots');
+    const infoPanels = {
+      earth: document.getElementById('info-earth'),
+      moon:  document.getElementById('info-moon'),
+      mars:  document.getElementById('info-mars'),
+    };
+
+    // ── Renderer ────────────────────────────────────────────────────────
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x060610, 1);
+    renderer.setClearColor(0x07070f, 1);
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 200);
-    camera.position.z = 10;
+    const scene  = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 200);
+    camera.position.z = 6.5;
 
-    function resize() {
-      const w = panel.clientWidth;
-      const h = panel.clientHeight;
+    function onResize() {
+      const w = panel.clientWidth, h = panel.clientHeight;
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
     }
-    resize();
-    window.addEventListener('resize', resize);
+    onResize();
+    window.addEventListener('resize', onResize);
 
-    // ── Stars ─────────────────────────────────────────────────────────────
-    (function addStars() {
-      const count = 2400;
-      const pos = new Float32Array(count * 3);
-      for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 80;
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, sizeAttenuation: true });
-      scene.add(new THREE.Points(geo, mat));
-    })();
+    // ── Stars ────────────────────────────────────────────────────────────
+    const starsGeo = new THREE.BufferGeometry();
+    const starPos  = new Float32Array(3000 * 3);
+    for (let i = 0; i < 3000 * 3; i++) starPos[i] = (Math.random() - 0.5) * 120;
+    starsGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    scene.add(new THREE.Points(starsGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.07, sizeAttenuation: true })));
 
-    // ── Lights ────────────────────────────────────────────────────────────
-    scene.add(new THREE.AmbientLight(0x223355, 0.9));
-    const sun = new THREE.DirectionalLight(0xffeedd, 1.6);
-    sun.position.set(10, 6, 8);
+    // ── Lights ───────────────────────────────────────────────────────────
+    scene.add(new THREE.AmbientLight(0x1a2a44, 1.0));
+    const sun = new THREE.DirectionalLight(0xfff0e0, 2.0);
+    sun.position.set(8, 5, 8);
     scene.add(sun);
-    const fill = new THREE.DirectionalLight(0x224466, 0.25);
-    fill.position.set(-8, -4, -4);
+    const fill = new THREE.DirectionalLight(0x224466, 0.2);
+    fill.position.set(-6, -3, -4);
     scene.add(fill);
 
-    // ── Texture generators ────────────────────────────────────────────────
-    function makeEarthTex() {
-      const W = 1024, H = 512;
-      const c = document.createElement('canvas');
-      c.width = W; c.height = H;
-      const x = c.getContext('2d');
-      // Ocean
-      const og = x.createLinearGradient(0, 0, W, H);
-      og.addColorStop(0, '#163b72'); og.addColorStop(0.5, '#1e5090'); og.addColorStop(1, '#122e60');
-      x.fillStyle = og; x.fillRect(0, 0, W, H);
-      // Mid-ocean variation
-      x.fillStyle = 'rgba(20,80,140,0.25)';
-      x.beginPath(); x.ellipse(W*0.5, H*0.55, 300, 180, 0, 0, Math.PI*2); x.fill();
-      // Continents
-      function land(cx, cy, rx, ry, rot, col) {
-        x.save(); x.translate(cx, cy); x.rotate(rot);
-        x.fillStyle = col;
-        x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); x.fill();
-        x.restore();
-      }
-      // North America
-      land(195, 155, 68, 95, -0.25, '#2e6e30');
-      land(175, 195, 50, 60, 0.1,  '#356b35');
-      land(205, 280, 48, 75, 0.2,  '#2d6a30');
-      // Greenland
-      land(300, 95,  38, 52, -0.1, '#5a9a7a');
-      // South America
-      land(245, 360, 52, 88, 0.15, '#2a6828');
-      // Europe
-      land(490, 165, 42, 52, -0.2, '#3a7a3e');
-      land(510, 145, 30, 35, 0.1,  '#3a7a3e');
-      // Africa
-      land(510, 275, 58, 110, 0.05, '#3d7a3a');
-      land(495, 360, 45, 60, 0,   '#4a8040');
-      // Middle East / arid
-      land(560, 218, 38, 28, 0.1,  '#8a7440');
-      land(578, 240, 25, 20, 0,    '#8a7040');
-      // Central Asia
-      land(660, 160, 130, 68, -0.08, '#3e7a38');
-      land(700, 130, 80, 45, 0,     '#3e7a38');
-      // India
-      land(620, 270, 32, 52, 0.1,  '#3a7a30');
-      // Southeast Asia
-      land(730, 270, 50, 40, 0.05, '#3a7a30');
-      // Australia
-      land(780, 348, 60, 44, 0,    '#9a7838');
-      // Antarctica
-      land(512, 490, 420, 45, 0,   '#d8edf5');
-      // Sahara overlay
-      x.fillStyle = 'rgba(160,130,60,0.3)';
-      x.beginPath(); x.ellipse(490, 238, 70, 35, 0, 0, Math.PI*2); x.fill();
-      // Ice caps
-      const in1 = x.createLinearGradient(0, 0, 0, 75);
-      in1.addColorStop(0, 'rgba(220,240,255,1)');
-      in1.addColorStop(1, 'rgba(220,240,255,0)');
-      x.fillStyle = in1; x.fillRect(0, 0, W, 75);
-      // Cloud wisps
-      x.fillStyle = 'rgba(255,255,255,0.13)';
-      [[180,100,110,25,0.3],[350,80,80,20,0],[600,120,120,22,0.6],[100,200,90,18,0.2],
-       [700,180,100,20,0.4],[450,320,110,22,0.1],[200,350,80,18,0.5],[800,280,90,20,0.2],
-       [550,380,130,24,0.3],[300,420,100,20,0.6]].forEach(([cx,cy,rx,ry,rot]) => {
-        x.save(); x.translate(cx,cy); x.rotate(rot);
-        x.beginPath(); x.ellipse(0,0,rx,ry,0,0,Math.PI*2); x.fill();
-        x.restore();
+    // ── Globe mesh ────────────────────────────────────────────────────────
+    const RADIUS = 2.2;
+    const globeGroup = new THREE.Group();
+    scene.add(globeGroup);
+
+    const tiltGroup = new THREE.Group();
+    globeGroup.add(tiltGroup);
+
+    const sphereGeo = new THREE.SphereGeometry(RADIUS, 128, 128);
+    const sphereMat = new THREE.MeshPhongMaterial({ shininess: 10, specular: new THREE.Color(0x080810) });
+    const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+    tiltGroup.add(sphereMesh);
+
+    // Atmosphere
+    const atmoGeo  = new THREE.SphereGeometry(RADIUS * 1.04, 64, 64);
+    const atmoMat  = new THREE.MeshPhongMaterial({ transparent: true, side: THREE.BackSide, depthWrite: false });
+    const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
+    tiltGroup.add(atmoMesh);
+
+    // ── Texture loading ───────────────────────────────────────────────────
+    const loader   = new THREE.TextureLoader();
+    loader.crossOrigin = 'anonymous';
+    const texCache = {};
+
+    function loadTex(url, onDone) {
+      if (texCache[url]) { onDone(texCache[url]); return; }
+      loader.load(url, tex => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        texCache[url]  = tex;
+        onDone(tex);
       });
-      return c;
     }
 
-    function makeMoonTex() {
-      const W = 1024, H = 512;
-      const c = document.createElement('canvas');
-      c.width = W; c.height = H;
-      const x = c.getContext('2d');
-      x.fillStyle = '#8a8a8a'; x.fillRect(0, 0, W, H);
-      // Surface variation
-      const bg = x.createRadialGradient(W*0.35, H*0.4, 30, W*0.5, H*0.5, 380);
-      bg.addColorStop(0, 'rgba(160,160,160,0.3)');
-      bg.addColorStop(1, 'rgba(60,60,60,0.2)');
-      x.fillStyle = bg; x.fillRect(0, 0, W, H);
-      // Maria (dark plains)
-      function maria(cx, cy, rx, ry, rot, alpha) {
-        x.save(); x.translate(cx, cy); x.rotate(rot);
-        x.fillStyle = `rgba(70,70,75,${alpha})`;
-        x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2); x.fill();
-        x.restore();
-      }
-      maria(540, 210, 85, 65, -0.2, 0.55);  // Mare Tranquillitatis
-      maria(390, 180, 78, 58, 0.1, 0.5);    // Mare Imbrium
-      maria(515, 170, 55, 40, 0, 0.45);     // Mare Serenitatis
-      maria(620, 225, 45, 35, 0.3, 0.4);    // Mare Crisium
-      maria(440, 240, 35, 28, 0, 0.35);     // Mare Vaporum
-      maria(700, 170, 40, 30, -0.1, 0.4);
-      // Craters
-      function crater(cx, cy, r) {
-        const g = x.createRadialGradient(cx-r*0.15, cy-r*0.15, 0, cx, cy, r*1.1);
-        g.addColorStop(0, 'rgba(55,55,58,0.85)');
-        g.addColorStop(0.5, 'rgba(65,65,68,0.6)');
-        g.addColorStop(0.82, 'rgba(100,100,100,0.1)');
-        g.addColorStop(0.9, 'rgba(160,160,160,0.35)');
-        g.addColorStop(1, 'rgba(140,140,140,0)');
-        x.fillStyle = g;
-        x.beginPath(); x.arc(cx, cy, r*1.1, 0, Math.PI*2); x.fill();
-      }
-      [[210,148,42],[350,305,32],[610,355,28],[765,198,36],[108,352,22],[460,408,30],
-       [690,128,24],[295,218,20],[838,308,33],[158,248,16],[508,288,13],[715,388,21],
-       [258,388,27],[595,82,20],[912,152,24],[430,152,16],[870,230,18],[120,165,30],
-       [670,300,15],[340,130,19],[550,440,25],[780,420,17],[480,65,14],[220,445,20],
-       [820,100,20],[150,410,14],[310,470,18],[700,460,12],[950,280,16]].forEach(([cx,cy,r]) => crater(cx,cy,r));
-      return c;
+    // ── State & transition ────────────────────────────────────────────────
+    let currentIdx  = 0;
+    let anim        = null; // { phase:'out'|'in', t, dir, nextIdx }
+    let rotSpeed    = PLANETS[0].rotSpeed;
+
+    function easeInQuad(t)  { return t * t; }
+    function easeOutQuad(t) { return 1 - (1 - t) * (1 - t); }
+    const SLIDE_DIST = 9;
+
+    function applyPlanet(idx) {
+      const p = PLANETS[idx];
+      tiltGroup.rotation.z = p.tilt;
+      rotSpeed = p.rotSpeed;
+      atmoMat.color.setHex(p.atmo);
+      atmoMat.opacity = p.atmoOp;
+      loadTex(p.texUrl, tex => { sphereMat.map = tex; sphereMat.needsUpdate = true; });
     }
 
-    function makeMarsTex() {
-      const W = 1024, H = 512;
-      const c = document.createElement('canvas');
-      c.width = W; c.height = H;
-      const x = c.getContext('2d');
-      // Base rust
-      const bg = x.createLinearGradient(0, 0, 0, H);
-      bg.addColorStop(0, '#6e2810');
-      bg.addColorStop(0.2, '#a03a18');
-      bg.addColorStop(0.5, '#b84820');
-      bg.addColorStop(0.8, '#a03818');
-      bg.addColorStop(1, '#6a2810');
-      x.fillStyle = bg; x.fillRect(0, 0, W, H);
-      // Tharsis rise (lighter bulge, Olympus Mons area)
-      const tharsis = x.createRadialGradient(310, 230, 0, 310, 230, 140);
-      tharsis.addColorStop(0, 'rgba(200,100,50,0.3)');
-      tharsis.addColorStop(1, 'rgba(200,100,50,0)');
-      x.fillStyle = tharsis; x.fillRect(0, 0, W, H);
-      // Olympus Mons
-      const oly = x.createRadialGradient(290, 218, 0, 290, 218, 35);
-      oly.addColorStop(0, 'rgba(210,120,70,0.45)');
-      oly.addColorStop(1, 'rgba(210,120,70,0)');
-      x.fillStyle = oly; x.fillRect(0, 0, W, H);
-      // Hellas Basin (dark depression south)
-      const hellas = x.createRadialGradient(715, 358, 0, 715, 358, 80);
-      hellas.addColorStop(0, 'rgba(50,15,5,0.5)');
-      hellas.addColorStop(1, 'rgba(50,15,5,0)');
-      x.fillStyle = hellas; x.fillRect(0, 0, W, H);
-      // Valles Marineris — long canyon system
-      x.save();
-      x.fillStyle = 'rgba(35,10,3,0.65)';
-      x.beginPath();
-      x.ellipse(555, 262, 215, 20, 0.08, 0, Math.PI*2);
-      x.fill();
-      x.fillStyle = 'rgba(35,10,3,0.35)';
-      x.beginPath();
-      x.ellipse(555, 262, 250, 30, 0.08, 0, Math.PI*2);
-      x.fill();
-      x.restore();
-      // Arabia Terra (lighter cratered region)
-      x.fillStyle = 'rgba(180,90,40,0.15)';
-      x.beginPath(); x.ellipse(580, 195, 130, 80, 0, 0, Math.PI*2); x.fill();
-      // Dust storm patches
-      x.fillStyle = 'rgba(200,120,55,0.12)';
-      [[150,200,100,50,0.2],[700,280,90,45,0.3],[400,350,80,40,0.1]].forEach(([cx,cy,rx,ry,rot]) => {
-        x.save(); x.translate(cx,cy); x.rotate(rot);
-        x.beginPath(); x.ellipse(0,0,rx,ry,0,0,Math.PI*2); x.fill();
-        x.restore();
-      });
-      // North polar cap
-      const pn = x.createLinearGradient(0, 0, 0, 85);
-      pn.addColorStop(0, 'rgba(215,230,240,0.92)');
-      pn.addColorStop(1, 'rgba(215,230,240,0)');
-      x.fillStyle = pn; x.fillRect(0, 0, W, 85);
-      // South polar cap
-      const ps = x.createLinearGradient(0, 435, 0, H);
-      ps.addColorStop(0, 'rgba(215,230,240,0)');
-      ps.addColorStop(1, 'rgba(215,230,240,0.88)');
-      x.fillStyle = ps; x.fillRect(0, 435, W, H - 435);
-      return c;
+    function updateUI(idx) {
+      const key = PLANETS[idx].key;
+      Object.values(infoPanels).forEach(el => el.classList.remove('active'));
+      infoPanels[key].classList.add('active');
+      Array.from(dotsEl.children).forEach((d, i) => d.classList.toggle('active', i === idx));
     }
 
-    // ── Planet builder ────────────────────────────────────────────────────
-    function makePlanet(texCanvas, radius, atmoColor, atmoOpacity, axialTilt) {
-      const group = new THREE.Group();
-      const geo = new THREE.SphereGeometry(radius, 64, 64);
-      const tex = new THREE.CanvasTexture(texCanvas);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const mat = new THREE.MeshPhongMaterial({
-        map: tex,
-        shininess: 8,
-        specular: new THREE.Color(0x0a0a10),
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.rotation.z = axialTilt;
-      group.add(mesh);
-      // Atmosphere shell
-      const atGeo = new THREE.SphereGeometry(radius * 1.045, 32, 32);
-      const atMat = new THREE.MeshPhongMaterial({
-        color: atmoColor,
-        transparent: true,
-        opacity: atmoOpacity,
-        side: THREE.BackSide,
-        depthWrite: false,
-      });
-      group.add(new THREE.Mesh(atGeo, atMat));
-      // Selection ring
-      const ringGeo = new THREE.RingGeometry(radius * 1.18, radius * 1.24, 80);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: 0x5599ff,
-        transparent: true,
-        opacity: 0,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.rotation.x = Math.PI / 2;
-      group.add(ring);
-      scene.add(group);
-      return { group, mesh, ring, ringMat };
+    function navigate(dir) {
+      if (anim) return;
+      const nextIdx = (currentIdx + dir + PLANETS.length) % PLANETS.length;
+      anim = { phase: 'out', t: 0, dir, nextIdx };
     }
 
-    const earthObj = makePlanet(makeEarthTex(),  1.35, 0x4488cc, 0.18, 0.41);
-    const moonObj  = makePlanet(makeMoonTex(),   0.58, 0x888888, 0.04, 0.03);
-    const marsObj  = makePlanet(makeMarsTex(),   0.98, 0xcc6633, 0.10, 0.44);
+    // Init first planet
+    applyPlanet(0);
+    updateUI(0);
 
-    // Positions: spread across wide left panel
-    earthObj.group.position.set(-2.2, 0.4, 0);
-    moonObj.group.position.set( 2.6, 1.4, 0);
-    marsObj.group.position.set( 2.2, -1.5, 0);
+    // Pre-load all textures
+    PLANETS.forEach(p => loadTex(p.texUrl, () => {}));
 
-    const planets = [
-      { ...earthObj, key: 'earth', rotSpeed: 0.0025, label: 'Earth',   dist: 'Low orbit' },
-      { ...moonObj,  key: 'moon',  rotSpeed: 0.0008, label: 'Moon',    dist: '384,400 km' },
-      { ...marsObj,  key: 'mars',  rotSpeed: 0.0022, label: 'Mars',    dist: '~225M km' },
-    ];
+    // ── Controls ──────────────────────────────────────────────────────────
+    document.getElementById('nav-prev').addEventListener('click', () => navigate(-1));
+    document.getElementById('nav-next').addEventListener('click', () => navigate(1));
 
-    // ── Globe name labels (HTML overlay) ─────────────────────────────────
-    function projectToScreen(worldPos) {
-      const v = worldPos.clone().project(camera);
-      const rect = panel.getBoundingClientRect();
-      return {
-        x: ((v.x + 1) / 2) * rect.width,
-        y: ((-v.y + 1) / 2) * rect.height,
-      };
-    }
-
-    const labelEls = {};
-    planets.forEach(p => {
-      const el = document.createElement('div');
-      el.className = 'globe-label';
-      el.innerHTML = `<span class="globe-label-name">${p.label}</span><span class="globe-label-dist">${p.dist}</span>`;
-      el.dataset.key = p.key;
-      el.style.pointerEvents = 'none';
-      panel.appendChild(el);
-      labelEls[p.key] = el;
+    // Keyboard
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') navigate(1);
+      if (e.key === 'ArrowLeft')  navigate(-1);
     });
 
-    function updateLabels() {
-      planets.forEach(p => {
-        const worldPos = p.group.position.clone();
-        const sph = p.mesh.geometry.parameters.radius;
-        worldPos.y -= sph * 1.35;
-        const sc = projectToScreen(worldPos);
-        const el = labelEls[p.key];
-        el.style.left = sc.x + 'px';
-        el.style.top  = sc.y + 'px';
-      });
+    // Touch / mouse drag swipe
+    let dragStartX = null;
+    function onDragStart(x) { dragStartX = x; }
+    function onDragEnd(x) {
+      if (dragStartX === null) return;
+      const dx = x - dragStartX;
+      dragStartX = null;
+      if (Math.abs(dx) > 50) navigate(dx < 0 ? 1 : -1);
     }
+    panel.addEventListener('mousedown',  e => onDragStart(e.clientX));
+    window.addEventListener('mouseup',   e => onDragEnd(e.clientX));
+    panel.addEventListener('touchstart', e => onDragStart(e.touches[0].clientX), { passive: true });
+    panel.addEventListener('touchend',   e => onDragEnd(e.changedTouches[0].clientX), { passive: true });
 
-    // ── Selection ─────────────────────────────────────────────────────────
-    const sidebarTitles = {
-      earth: ['Earth', 'Low Earth orbit & missions'],
-      moon:  ['Moon', 'Lunar surface & cislunar missions'],
-      mars:  ['Mars', 'Interplanetary missions & ISRU'],
-    };
+    // ── Animation loop ────────────────────────────────────────────────────
+    const SPEED = 0.055;
 
-    let selected = null;
-
-    function selectPlanet(key) {
-      if (selected === key) return;
-      selected = key;
-      planets.forEach(p => {
-        p.ringMat.opacity = p.key === key ? 0.65 : 0;
-        if (labelEls[p.key]) {
-          labelEls[p.key].classList.toggle('selected', p.key === key);
-        }
-      });
-      document.querySelectorAll('.sidebar-dest-panel').forEach(el => el.classList.remove('active'));
-      document.getElementById('panel-' + key).classList.add('active');
-      document.getElementById('sidebar-title').textContent = sidebarTitles[key][0];
-      document.getElementById('sidebar-sub').textContent   = sidebarTitles[key][1];
-    }
-
-    selectPlanet('earth');
-
-    // ── Raycasting ────────────────────────────────────────────────────────
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    canvas.style.cursor = 'default';
-
-    canvas.addEventListener('mousemove', e => {
-      const rect = canvas.getBoundingClientRect();
-      mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-      mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects(planets.map(p => p.mesh));
-      canvas.style.cursor = hits.length ? 'pointer' : 'default';
-    });
-
-    canvas.addEventListener('click', e => {
-      const rect = canvas.getBoundingClientRect();
-      mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-      mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects(planets.map(p => p.mesh));
-      if (hits.length) {
-        const planet = planets.find(p => p.mesh === hits[0].object);
-        if (planet) selectPlanet(planet.key);
-      }
-    });
-
-    // ── Animation ─────────────────────────────────────────────────────────
     function animate() {
       requestAnimationFrame(animate);
-      planets.forEach(p => { p.mesh.rotation.y += p.rotSpeed; });
-      updateLabels();
+
+      if (anim) {
+        anim.t = Math.min(anim.t + SPEED, 1);
+
+        if (anim.phase === 'out') {
+          globeGroup.position.x = easeInQuad(anim.t) * SLIDE_DIST * -anim.dir;
+          if (anim.t >= 1) {
+            // Swap planet
+            currentIdx = anim.nextIdx;
+            applyPlanet(currentIdx);
+            updateUI(currentIdx);
+            globeGroup.position.x = SLIDE_DIST * anim.dir;
+            anim = { phase: 'in', t: 0, dir: anim.dir, nextIdx: anim.nextIdx };
+          }
+        } else {
+          const ease = easeOutQuad(anim.t);
+          globeGroup.position.x = (1 - ease) * SLIDE_DIST * anim.dir;
+          if (anim.t >= 1) {
+            globeGroup.position.x = 0;
+            anim = null;
+          }
+        }
+      }
+
+      sphereMesh.rotation.y += rotSpeed;
       renderer.render(scene, camera);
     }
+
     animate();
   })();
   </script>
