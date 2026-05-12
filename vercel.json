@@ -44,6 +44,8 @@
     { "source": "/terms/", "destination": "/terms.html" },
     { "source": "/faq", "destination": "/faq.html" },
     { "source": "/faq/", "destination": "/faq.html" },
+    { "source": "/manufacturing", "destination": "/manufacturing.html" },
+    { "source": "/manufacturing/", "destination": "/manufacturing.html" },
     { "source": "/", "destination": "/landingpage.html" }
   ]
 }
