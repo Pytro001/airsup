@@ -1059,7 +1059,7 @@
         'accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.mdown,.csv,.tsv,.xlsx,.xls,.ppt,.pptx,.odt,.ods,.odp,.rtf,.html,.htm,.json,.xml,.heic" hidden />' +
         '<button type="button" class="onboard-brief-file-btn" id="onboard-brief-file-btn">' + fileBtnLabel + "</button></div>" +
         '<div class="onboard-field"><label class="onboard-label" for="onboard-brief-paste">Project requirements</label>' +
-        '<textarea class="onboard-textarea onboard-input" id="onboard-brief-paste" rows="5" placeholder="If a share link fails to import, paste the chat here. You can also paste only, without a link.">' +
+        '<textarea class="onboard-textarea onboard-input" id="onboard-brief-paste" rows="5" placeholder="Details of where and how your product should be made">' +
         escapeHtml(onboardData.briefPastedText || "") +
         "</textarea></div><p class=\"onboard-field-error\" id=\"onboard-brief-error\" role=\"status\" hidden></p></div>" +
         '<div class="onboard-actions"><button type="button" class="btn-primary" id="onboard-next">Continue</button>' +
