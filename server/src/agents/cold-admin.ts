@@ -82,12 +82,15 @@ async function discoverLeads(p: Parsed, skipEmails: string[]): Promise<Lead[]> {
     : "";
 
   const system =
-    "You research real manufacturers and return high quality leads only. " +
-    "Return JSON array. Each lead: company_name, website (root URL), email (real visible contact email, must be on their own domain), " +
-    "country, contact_name if shown, named_customers (array of brand names they show on their site), reasoning (one short sentence why they qualify). " +
-    "STRICT quality bar: the supplier's own website must be in English, modern, professional, and show at least one named brand customer. " +
-    "Skip Alibaba, Made-in-China, Global Sources storefronts and trading-company resellers. " +
-    "If you cannot find a real contact email, OMIT that supplier. Do not invent emails or URLs." +
+    "You research real manufacturers and return leads. " +
+    "Return a JSON array. Each item: company_name, website (root URL, e.g. https://example.com), " +
+    "email (a real contact email visible on the site — info@, sales@, contact@, or a named person), " +
+    "country, contact_name (if shown), named_customers (brands they mention, can be empty array), " +
+    "reasoning (one sentence why they qualify). " +
+    "Quality bar: real manufacturer (not a trading company or marketplace), has a website. " +
+    "Skip Alibaba, Made-in-China, Global Sources, AliExpress listings. " +
+    "If you cannot find any contact email for a supplier, omit them. Do not invent emails. " +
+    "Return ONLY the JSON array, no prose before or after." +
     skipLine;
 
   const user =
@@ -111,12 +114,17 @@ async function discoverLeads(p: Parsed, skipEmails: string[]): Promise<Lead[]> {
     });
     let txt = "";
     for (const b of r.content) if (b.type === "text") txt += b.text;
+    console.log("[cold-admin] discover raw (first 500):", txt.slice(0, 500));
     txt = txt.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const s = txt.indexOf("[");
     const e = txt.lastIndexOf("]");
-    if (s === -1 || e === -1) return [];
+    if (s === -1 || e === -1) {
+      console.error("[cold-admin] discover: no JSON array found in response");
+      return [];
+    }
     const arr = JSON.parse(txt.slice(s, e + 1));
     if (!Array.isArray(arr)) return [];
+    console.log(`[cold-admin] discover: parsed ${arr.length} raw leads`);
     const out: Lead[] = [];
     for (const raw of arr) {
       if (!raw || typeof raw !== "object") continue;
@@ -124,7 +132,8 @@ async function discoverLeads(p: Parsed, skipEmails: string[]): Promise<Lead[]> {
       const name = String(o.company_name || "").trim();
       const site = String(o.website || "").trim();
       const email = typeof o.email === "string" ? o.email.trim().toLowerCase() : "";
-      if (!name || !site || !email.includes("@")) continue;
+      if (!name || !site) continue;
+      if (!email.includes("@")) { console.log(`[cold-admin] skip no-email: ${name}`); continue; }
       if (/alibaba|made-in-china|globalsources|aliexpress/i.test(site)) continue;
       out.push({
         company_name: name.slice(0, 200),
@@ -226,11 +235,13 @@ export async function runColdAdminTask(instruction: string): Promise<AdminTaskRe
   const parsed = await parseInstruction(instruction);
   if (!parsed) return { ok: false, parsed: null, discovered: 0, sent: [], skipped: [], error: "Could not parse instruction." };
 
-  // Fetch all known emails so discovery avoids them
+  // Fetch recently contacted emails so discovery avoids them (cap at 100 to keep prompt sane)
   const { data: knownRows } = await supabaseAdmin
     .from("cold_targets")
     .select("email")
-    .not("status", "eq", "discovered");
+    .not("status", "eq", "discovered")
+    .order("created_at", { ascending: false })
+    .limit(100);
   const skipEmails = (knownRows || []).map((r: { email: string }) => r.email).filter(Boolean);
 
   const leads = await discoverLeads(parsed, skipEmails);
