@@ -166,61 +166,48 @@ async function draftCustomEmail(lead: Lead, p: Parsed): Promise<{ subject: strin
 
   const system =
     "You write very short, friendly cold outreach emails from Konstantin, founder of Airsup (airsup.dev). " +
-    "Airsup is a platform that matches manufacturers with Western founders and buyers. It is free for suppliers.\n\n" +
-    "TONE: nice and cool, like a casual hello from a real person. Never salesy. Never hypey. " +
-    "Do NOT brag. Do NOT name their customers back to them. Do NOT use phrases like 'speaks for itself', 'no commission', 'free to join', 'qualified leads'.\n\n" +
-    "STYLE RULES (strict):\n" +
-    "  - Plain text only. No markdown, no bullets, no asterisks.\n" +
-    "  - 40 to 80 words MAX.\n" +
-    "  - No em-dashes or en-dashes (— or –).\n" +
-    "  - No forward slashes for word separation. URLs are fine.\n" +
-    "  - First sentence is a low-key opener that shows you looked at their site.\n" +
-    "  - Honour the admin's specific angle and CTA in the body.\n" +
-    "  - Sign 'Konstantin' on its own line. No footer, no signature block, no address.\n" +
-    "  - Subject under 50 chars, lowercase, friendly, no em-dashes, no slashes, no clickbait, no exclamation marks.\n" +
-    "Return JSON: { \"subject\": string, \"body\": string }.";
+    "Airsup matches manufacturers with Western buyers. Free for suppliers.\n\n" +
+    "TONE: casual and real, like a hello from a founder. Not salesy. Not hypey.\n" +
+    "RULES: plain text only, 40-80 words, no em-dashes, no markdown, no bullets.\n" +
+    "Sign 'Konstantin' on its own line. No footer.\n\n" +
+    "Reply in this exact format and nothing else:\n" +
+    "SUBJECT: <subject line under 50 chars, lowercase>\n" +
+    "BODY:\n" +
+    "<email body>";
 
   const user =
     `Company: ${lead.company_name}\n` +
-    `Category: ${p.category}\n` +
-    `Country: ${lead.country || p.country || "unknown"}\n` +
     `Website: ${lead.website}\n` +
-    `Contact name: ${lead.contact_name || "unknown"}\n\n` +
-    `Admin's angle for this outreach: ${p.angle}\n` +
-    `Specific call to action to include: ${p.cta}\n\n` +
-    `Write the email. JSON only.`;
+    `Country: ${lead.country || p.country || "unknown"}\n` +
+    `Contact: ${lead.contact_name || "team"}\n` +
+    `Angle: ${p.angle}\n` +
+    `CTA: ${p.cta}`;
 
-  const tryDraft = async (sys: string, usr: string) => {
+  try {
     const r = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 800,
-      system: sys,
-      messages: [{ role: "user", content: usr }],
+      max_tokens: 600,
+      system,
+      messages: [{ role: "user", content: user }],
     });
     let txt = "";
     for (const b of r.content) if (b.type === "text") txt += b.text;
+    txt = txt.trim();
     console.log(`[cold-admin] draft raw for ${lead.email}:`, txt.slice(0, 300));
-    txt = txt.replace(/```json\n?/g, "").replace(/```/g, "").trim();
-    const s = txt.indexOf("{");
-    const e = txt.lastIndexOf("}");
-    if (s === -1 || e === -1) throw new Error("no JSON object in response");
-    const v = JSON.parse(txt.slice(s, e + 1)) as { subject?: string; body?: string };
-    if (!v.subject || !v.body) throw new Error("missing subject or body");
-    return { subject: v.subject.slice(0, 80), body: v.body };
-  };
 
-  try {
-    return await tryDraft(system, user);
-  } catch (err) {
-    console.error(`[cold-admin] draft attempt 1 failed for ${lead.email}:`, err);
-    // Retry with a simpler prompt
-    try {
-      const fallbackUser = `Write a short cold email (40-70 words, plain text) from Konstantin at Airsup (airsup.dev) to ${lead.company_name} (${lead.website}). ${p.angle}. Sign just "Konstantin". Return JSON: { "subject": string, "body": string }`;
-      return await tryDraft('Return JSON only: { "subject": string, "body": string }. Plain text email body, 40-70 words, no markdown.', fallbackUser);
-    } catch (err2) {
-      console.error(`[cold-admin] draft attempt 2 failed for ${lead.email}:`, err2);
+    const subjectMatch = txt.match(/^SUBJECT:\s*(.+)/im);
+    const bodyMatch = txt.match(/^BODY:\s*\n([\s\S]+)/im);
+    if (!subjectMatch || !bodyMatch) {
+      console.error(`[cold-admin] draft parse failed for ${lead.email}: missing SUBJECT or BODY marker`);
       return null;
     }
+    const subject = subjectMatch[1].trim().slice(0, 80);
+    const body = bodyMatch[1].trim();
+    if (!subject || !body) return null;
+    return { subject, body };
+  } catch (err) {
+    console.error(`[cold-admin] draft failed for ${lead.email}:`, err);
+    return null;
   }
 }
 
