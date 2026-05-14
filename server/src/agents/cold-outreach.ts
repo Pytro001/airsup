@@ -121,7 +121,7 @@ export async function runColdOutreach(limit = 10): Promise<number> {
         subject: draft.subject,
         text: draft.body,
         unsubscribeToken: t.unsub_token || undefined,
-        bcc: process.env.COLD_BCC_EMAIL || "pytrobusiness@gmail.com",
+        bcc: process.env.COLD_BCC_EMAIL || "konstantin@airsup.dev",
       });
 
       await supabaseAdmin.from("cold_emails").insert({

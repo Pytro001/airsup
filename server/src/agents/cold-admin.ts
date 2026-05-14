@@ -289,7 +289,7 @@ export async function runColdAdminTask(instruction: string): Promise<AdminTaskRe
         to: lead.email,
         subject: draft.subject,
         text: draft.body,
-        bcc: process.env.COLD_BCC_EMAIL || "pytrobusiness@gmail.com",
+        bcc: process.env.COLD_BCC_EMAIL || "konstantin@airsup.dev",
       });
       await supabaseAdmin.from("cold_emails").insert({
         target_id: targetId,
