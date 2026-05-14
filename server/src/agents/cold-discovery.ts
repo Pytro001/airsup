@@ -63,12 +63,14 @@ async function discoverOne(category: string, region: Region): Promise<Hit[]> {
   } as unknown;
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await (anthropic as unknown as { messages: { create: (p: unknown, o: unknown) => Promise<{ content: Array<{ type: string; text?: string }> }> } }).messages.create({
       model: MODEL,
       max_tokens: 6000,
       system,
-      tools: [webSearchTool] as Parameters<typeof anthropic.messages.create>[0]["tools"],
+      tools: [webSearchTool],
       messages: [{ role: "user", content: user }],
+    }, {
+      headers: { "anthropic-beta": "web-search-2025-03-05" },
     });
 
     let text = "";

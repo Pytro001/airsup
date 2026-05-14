@@ -105,12 +105,14 @@ async function discoverLeads(p: Parsed, skipEmails: string[]): Promise<Lead[]> {
   } as unknown;
 
   try {
-    const r = await anthropic.messages.create({
+    const r = await (anthropic as unknown as { messages: { create: (p: unknown, o: unknown) => Promise<{ content: Array<{ type: string; text?: string }> }> } }).messages.create({
       model: MODEL,
       max_tokens: 8000,
       system,
-      tools: [webSearchTool] as Parameters<typeof anthropic.messages.create>[0]["tools"],
+      tools: [webSearchTool],
       messages: [{ role: "user", content: user }],
+    }, {
+      headers: { "anthropic-beta": "web-search-2025-03-05" },
     });
     let txt = "";
     for (const b of r.content) if (b.type === "text") txt += b.text;
