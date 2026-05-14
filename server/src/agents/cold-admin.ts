@@ -35,7 +35,25 @@ type Lead = {
   reasoning?: string;
 };
 
-async function parseInstruction(instruction: string): Promise<Parsed | null> {
+function fallbackParse(instruction: string): Parsed {
+  const lower = instruction.toLowerCase();
+  const countMatch = lower.match(/\b(\d+)\b/);
+  const count = countMatch ? Math.max(1, Math.min(30, parseInt(countMatch[1]))) : 10;
+  const region: Parsed["region"] =
+    /china|cn|hong.?kong|shenzhen|guangzhou|shanghai|beijing/i.test(instruction) ? "CN"
+    : /usa|us |united.states|america/i.test(instruction) ? "US"
+    : /europe|eu |germany|france|italy|spain|poland/i.test(instruction) ? "EU"
+    : "OTHER";
+  const country =
+    /hong.?kong/i.test(instruction) ? "Hong Kong"
+    : /shenzhen/i.test(instruction) ? "Shenzhen"
+    : /guangzhou/i.test(instruction) ? "Guangzhou"
+    : /shanghai/i.test(instruction) ? "Shanghai"
+    : null;
+  return { count, region, country, category: "manufacturing", angle: instruction.slice(0, 400), cta: "Take a look at https://airsup.dev/start" };
+}
+
+async function parseInstruction(instruction: string): Promise<Parsed> {
   const anthropic = getAnthropicClient();
   const system =
     "Parse an admin instruction for a cold outreach run. Return JSON only with fields: " +
@@ -57,7 +75,7 @@ async function parseInstruction(instruction: string): Promise<Parsed | null> {
     txt = txt.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const s = txt.indexOf("{");
     const e = txt.lastIndexOf("}");
-    if (s === -1 || e === -1) return null;
+    if (s === -1 || e === -1) throw new Error("no JSON in parse response");
     const v = JSON.parse(txt.slice(s, e + 1)) as Partial<Parsed>;
     return {
       count: Math.max(1, Math.min(30, Number(v.count) || 10)),
@@ -68,8 +86,8 @@ async function parseInstruction(instruction: string): Promise<Parsed | null> {
       cta: typeof v.cta === "string" ? v.cta.slice(0, 200) : "Take a look at https://airsup.dev/start",
     };
   } catch (err) {
-    console.error("[cold-admin] parse failed:", err);
-    return null;
+    console.error("[cold-admin] parse failed, using fallback:", err);
+    return fallbackParse(instruction);
   }
 }
 
@@ -222,7 +240,6 @@ export type AdminTaskResult = {
 
 export async function runColdAdminTask(instruction: string): Promise<AdminTaskResult> {
   const parsed = await parseInstruction(instruction);
-  if (!parsed) return { ok: false, parsed: null, discovered: 0, sent: [], skipped: [], error: "Could not parse instruction." };
 
   // Fetch recently contacted emails so discovery avoids them (cap at 100 to keep prompt sane)
   const { data: knownRows } = await supabaseAdmin
