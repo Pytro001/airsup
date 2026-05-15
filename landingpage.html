@@ -668,9 +668,12 @@
       function movePill(el, instant) {
         if (!el) return;
         var nr = nav.getBoundingClientRect(), er = el.getBoundingClientRect();
+        var cs = getComputedStyle(nav);
+        var bl = parseFloat(cs.borderLeftWidth) || 0;
+        var bt = parseFloat(cs.borderTopWidth) || 0;
         if (instant) pill.style.transition = 'none';
-        pill.style.left   = (er.left - nr.left) + 'px';
-        pill.style.top    = (er.top  - nr.top)  + 'px';
+        pill.style.left   = (er.left - nr.left - bl) + 'px';
+        pill.style.top    = (er.top  - nr.top  - bt) + 'px';
         pill.style.width  = er.width  + 'px';
         pill.style.height = er.height + 'px';
         if (instant) { pill.getBoundingClientRect(); pill.style.transition = ''; }
