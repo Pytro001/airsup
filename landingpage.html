@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Airsup</title>
+  <meta name="description" content="Airsup — find manufacturers in the US, China, and Europe for your project." />
   <meta property="og:title" content="Airsup" />
+  <meta property="og:description" content="Find manufacturers in the US, China, and Europe for your project." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="/assets/brand/og-cover.png" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -440,7 +442,7 @@
     .site-floatnav-logo img { width: 24px; height: 24px; border-radius: 6px; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; cursor: default; }
     .site-floatnav-item {
       position: relative; z-index: 1;
-      padding: 8px 16px; border-radius: 100px; font-size: 15.5px; font-weight: 400;
+      padding: 0 16px; height: 38px; border-radius: 100px; font-size: 15.5px; font-weight: 400;
       color: #fff; text-decoration: none; cursor: default;
       transition: none;
     }
@@ -521,7 +523,7 @@
       <img src="assets/brand/logo-air-sup.png" alt="" />
     </a>
     <a href="/pricing" class="site-floatnav-item" data-nav="pricing">Pricing</a>
-    <a href="/how-it-works" class="site-floatnav-item" data-nav="how-it-works">How it works</a>
+    <a href="/how-it-works" class="site-floatnav-item" data-nav="how-it-works">How it Works</a>
     <a href="/start" class="site-floatnav-item site-floatnav-cta" data-nav="start">Launch Program</a>
   </nav>
 
@@ -547,8 +549,8 @@
     const LERP = 0.018; // lower = lazier / more delayed
 
     const eyeDefs = [
-      { group: document.getElementById("pupil-l-g"), ecx: 59,  ecy: 75, cx: 0, cy: 0, tx: 0, ty: 0 },
-      { group: document.getElementById("pupil-r-g"), ecx: 142, ecy: 75, cx: 0, cy: 0, tx: 0, ty: 0 },
+      { group: document.getElementById("pupil-l-g"), ecx: 59,  ecy: 75, cx: 0, cy: 8, tx: 0, ty: 0 },
+      { group: document.getElementById("pupil-r-g"), ecx: 142, ecy: 75, cx: 0, cy: 8, tx: 0, ty: 0 },
     ];
 
     let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
