@@ -73,15 +73,13 @@
     .start-choice {
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      padding: 24px 22px; border-radius: 14px;
-      border: 1.5px solid var(--text-soft); background: transparent;
-      text-align: center; cursor: pointer; transition: border-color 0.15s, transform 0.1s;
+      padding: 22px 32px; border-radius: 100px;
+      border: none; background: rgba(255,255,255,0.07);
+      text-align: center; cursor: default; transition: background 0.15s;
       color: var(--text);
     }
-    .start-choice:hover {
-      border-color: var(--text);
-    }
-    .start-choice-title { font-size: 16px; font-weight: 500; }
+    .start-choice:hover { background: rgba(255,255,255,0.12); }
+    .start-choice-title { font-size: 16px; font-weight: 400; }
     @media (max-width: 520px) {
       .start-choices { grid-template-columns: 1fr; }
     }

@@ -49,13 +49,23 @@
       display: flex;
       flex-direction: column;
       gap: 0;
+      position: relative;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 17px;
+      top: 18px;
+      bottom: 18px;
+      width: 1px;
+      background: #1e1e1e;
+      z-index: 0;
     }
 
     .step {
       display: flex;
       gap: 20px;
       align-items: flex-start;
-      position: relative;
     }
 
     .step-left {
@@ -79,17 +89,9 @@
       font-weight: 500;
       color: #8a8a8a;
       flex-shrink: 0;
+      position: relative;
       z-index: 1;
     }
-
-    .step-line {
-      width: 1px;
-      flex: 1;
-      min-height: 20px;
-      background: #1e1e1e;
-    }
-
-    .step:last-child .step-line { display: none; }
 
     .step-body {
       padding-top: 6px;
@@ -185,7 +187,7 @@
     <div class="step">
       <div class="step-left">
         <div class="step-num">1</div>
-        <div class="step-line"></div>
+
       </div>
       <div class="step-body">
         <div class="step-title">Describe what you need</div>
@@ -196,7 +198,7 @@
     <div class="step">
       <div class="step-left">
         <div class="step-num">2</div>
-        <div class="step-line"></div>
+
       </div>
       <div class="step-body">
         <div class="step-title">We find matched suppliers</div>
@@ -207,7 +209,7 @@
     <div class="step">
       <div class="step-left">
         <div class="step-num">3</div>
-        <div class="step-line"></div>
+
       </div>
       <div class="step-body">
         <div class="step-title">Supplier reviews and responds</div>
