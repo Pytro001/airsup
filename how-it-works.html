@@ -255,11 +255,12 @@
       var nav = document.querySelector('.site-floatnav');
       if (!nav) return;
       var items = Array.prototype.slice.call(nav.querySelectorAll('.site-floatnav-item[data-nav]'));
+      var pillItems = items.filter(function(el) { return !el.classList.contains('site-floatnav-cta'); });
       var activeItem = null;
       items.forEach(function(el) {
-        if (el.dataset.nav === slug) { el.classList.add('is-active'); activeItem = el; }
+        if (el.dataset.nav === slug) { el.classList.add('is-active'); if (!el.classList.contains('site-floatnav-cta')) activeItem = el; }
       });
-      var homeItem = activeItem || items[0];
+      var homeItem = activeItem || pillItems[0];
       var pill = document.createElement('div');
       pill.className = 'site-floatnav-hover-pill';
       nav.insertBefore(pill, nav.firstChild);
@@ -274,7 +275,7 @@
         if (instant) { pill.getBoundingClientRect(); pill.style.transition = ''; }
       }
       if (homeItem) requestAnimationFrame(function() { movePill(homeItem, true); });
-      items.forEach(function(el) {
+      pillItems.forEach(function(el) {
         el.addEventListener('mouseenter', function() { movePill(el, false); });
       });
       nav.addEventListener('mouseleave', function() { movePill(homeItem, false); });
