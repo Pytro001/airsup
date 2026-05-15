@@ -107,7 +107,15 @@
       transition-delay: 0.05s;
     }
     @media (max-width: 560px) { .pricing-grid { grid-template-columns: 1fr; } .page-title { font-size: 28px; } }
-    @media (max-width: 480px) { .site-floatnav { bottom: 16px; padding: 7px 9px; } .site-floatnav-item { padding: 8px 14px; font-size: 13px; } }
+    @media (max-width: 480px) {
+      body { height: auto; overflow: auto; padding-bottom: 160px; }
+      .pricing-footer { position: static; transform: none; margin-top: 24px; white-space: normal; text-align: center; }
+      .site-floatnav { bottom: 80px; padding: 5px 6px; }
+      .site-floatnav-logo { width: 30px; height: 30px; margin-right: 2px; }
+      .site-floatnav-logo img { width: 18px; height: 18px; }
+      .site-floatnav-item { padding: 0 11px; height: 30px; font-size: 13px; }
+      .site-floatnav-item.site-floatnav-cta { height: 30px; margin-left: 4px; }
+    }
   </style>
 </head>
 <body>
