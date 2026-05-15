@@ -69,12 +69,8 @@
       min-height: 0;
       position: relative;
       z-index: 0;
-      background-image: radial-gradient(circle, rgba(255,255,255,0.09) 1px, transparent 1px);
-      background-size: 28px 28px;
-      background-position: 0 0;
     }
     html[data-theme="dark"] .lp-body-inner {
-      background-image: radial-gradient(circle, rgba(255,255,255,0.09) 1px, transparent 1px);
     }
     .lp-main {
       flex: 1;
@@ -734,18 +730,20 @@
         dots.push({
           x: Math.random(),
           y: Math.random(),
-          r: Math.random() * 1.2 + 0.4,
+          r: Math.random() * 1.0 + 0.5,
           phase: Math.random() * Math.PI * 2,
-          speed: Math.random() * 0.4 + 0.2,
-          peak: Math.random() * 0.3 + 0.05
+          speed: Math.random() * 0.6 + 0.3,
+          peak: Math.random() * 0.5 + 0.3
         });
       }
 
       function tick(t) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        var ts = t * 0.001;
         for (var i = 0; i < dots.length; i++) {
           var d = dots[i];
-          var a = Math.max(0, Math.sin(t * 0.001 * d.speed + d.phase)) * d.peak;
+          var s = Math.sin(ts * d.speed + d.phase);
+          var a = Math.max(0, s * s * s) * d.peak;
           ctx.beginPath();
           ctx.arc(d.x * canvas.width, d.y * canvas.height, d.r, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255,255,255,' + a + ')';
