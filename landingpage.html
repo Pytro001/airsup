@@ -428,6 +428,7 @@
       align-items: center;
       position: relative;
       z-index: 1;
+    }
     .lp-pricing-title {
       font-size: 36px;
       font-weight: 500;
@@ -531,11 +532,14 @@
       color: var(--text-soft);
       text-align: center;
     }
-    .lp-pricing-footer a {
-      color: var(--text);
-      text-decoration: none;
-      pointer-events: none;
+    .lp-pricing-footer-link {
+      color: #c0c0c0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      text-decoration-color: rgba(255,255,255,0.2);
+      transition: color 0.15s;
     }
+    .lp-pricing-footer-link:hover { color: #f2f2f3; }
     @media (max-width: 560px) {
       .lp-pricing-grid { grid-template-columns: 1fr; }
       .lp-pricing-title { font-size: 28px; }
@@ -702,7 +706,7 @@
       </div>
 
     </div>
-    <p class="lp-pricing-footer">Questions? <a href="mailto:konstantin@airsup.dev">konstantin@airsup.dev</a></p>
+    <p class="lp-pricing-footer">Questions? <a href="https://wa.me/4917643666380" target="_blank" rel="noopener" class="lp-pricing-footer-link">Write us on WhatsApp</a> or <a href="https://calendly.com/konstantin-airsup/onboarding-airsup" target="_blank" rel="noopener" class="lp-pricing-footer-link">Schedule a call</a></p>
   </section>
 
   </div>
