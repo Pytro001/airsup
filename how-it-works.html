@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>How it works · Airsup</title>
   <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
+  <link rel="preload" as="image" href="assets/brand/logo-air-sup.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
@@ -140,35 +141,39 @@
 
     /* ── Floating nav bar ── */
     .site-floatnav {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
       display: flex; align-items: center; gap: 2px;
       background: rgba(14,14,14,0.96); border: 1px solid rgba(255,255,255,0.13);
-      border-radius: 100px; padding: 5px 6px; z-index: 1000;
+      border-radius: 100px; padding: 9px 11px; z-index: 1000;
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); white-space: nowrap;
     }
-    .site-floatnav-logo { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; margin-right: 2px; flex-shrink: 0; }
-    .site-floatnav-logo img { width: 20px; height: 20px; border-radius: 5px; display: block; }
+    .site-floatnav-logo { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; cursor: grab; }
+    .site-floatnav-logo img { width: 24px; height: 24px; border-radius: 6px; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; }
     .site-floatnav-item {
-      padding: 6px 14px; border-radius: 100px; font-size: 13.5px; font-weight: 400;
-      color: rgba(255,255,255,0.55); text-decoration: none;
-      transition: background 0.15s, color 0.15s;
+      position: relative; z-index: 1;
+      padding: 9px 20px; border-radius: 100px; font-size: 14.5px; font-weight: 400;
+      color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.15s;
     }
-    .site-floatnav-item:hover { background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.85); }
-    .site-floatnav-item.is-active { background: #fff; color: #000; }
-    .site-floatnav-item.is-active:hover { background: rgba(255,255,255,0.92); color: #000; }
-    .site-floatnav-cta { background: #fff; color: #111; }
+    .site-floatnav-item.is-active,
+    .site-floatnav-item.is-lit { color: #000; }
+    .site-floatnav-cta { position: relative; z-index: 1; background: #fff; color: #111; transition: background 0.2s; }
     .site-floatnav-cta:hover { background: rgba(255,255,255,0.88); color: #111; }
-
+    .site-floatnav-pill {
+      position: absolute; border-radius: 100px; background: #fff;
+      pointer-events: none; z-index: 0;
+      transition: left 0.3s cubic-bezier(0.34,1.1,0.64,1), width 0.3s cubic-bezier(0.34,1.1,0.64,1),
+                  top 0.3s cubic-bezier(0.34,1.1,0.64,1), height 0.3s cubic-bezier(0.34,1.1,0.64,1), opacity 0.2s;
+      opacity: 0;
+    }
     @media (max-width: 480px) {
       .page-title { font-size: 28px; }
-      .site-floatnav { bottom: 16px; }
-      .site-floatnav-item { padding: 6px 10px; font-size: 12.5px; }
+      .site-floatnav { bottom: 16px; padding: 7px 9px; }
+      .site-floatnav-item { padding: 8px 14px; font-size: 13px; }
     }
   </style>
 </head>
 <body>
   <h1 class="page-title">How it works</h1>
-  <p class="page-sub">From idea to supplier contact in a few steps.</p>
 
   <div class="steps">
 
@@ -179,7 +184,7 @@
       </div>
       <div class="step-body">
         <div class="step-title">Describe what you need</div>
-        <div class="step-desc">Tell us what you're building — product type, materials, quantities, target regions. Upload drawings or files if you have them.</div>
+        <div class="step-desc">Tell us what you're building: product type, materials, quantities, target regions. Upload drawings or files if you have them.</div>
       </div>
     </div>
 
@@ -189,8 +194,8 @@
         <div class="step-line"></div>
       </div>
       <div class="step-body">
-        <div class="step-title">AI finds matched suppliers</div>
-        <div class="step-desc">Our AI searches vetted manufacturers across China, the US, and Europe — matching your brief to the right capabilities and capacity.</div>
+        <div class="step-title">We find matched suppliers</div>
+        <div class="step-desc">We search manufacturers across China, the US, and Europe and match your brief to the right capabilities and capacity.</div>
       </div>
     </div>
 
@@ -212,7 +217,7 @@
       </div>
       <div class="step-body">
         <div class="step-title">Supplier reviews and responds</div>
-        <div class="step-desc">Each supplier reviews your request and either accepts, declines, or asks clarifying questions — on their end, not yours.</div>
+        <div class="step-desc">Each supplier reviews your request and either accepts, declines, or asks clarifying questions. You don't need to chase anyone.</div>
       </div>
     </div>
 
@@ -223,7 +228,7 @@
       </div>
       <div class="step-body">
         <div class="step-title">Contact handed over once aligned</div>
-        <div class="step-desc">When both sides are aligned, we hand over direct contact details. From there, you move fast — no middlemen in the conversation.</div>
+        <div class="step-desc">When both sides are aligned, we hand over direct contact details. From there, you move fast with no middlemen in the conversation.</div>
       </div>
     </div>
 
@@ -245,10 +250,67 @@
 
   <script>
     (function() {
-      var slug = location.pathname.replace(/^\/|\/$/g, "") || "";
-      document.querySelectorAll(".site-floatnav-item[data-nav]").forEach(function(el) {
-        if (el.dataset.nav === slug) el.classList.add("is-active");
+      var nav = document.querySelector('.site-floatnav');
+      if (!nav) return;
+      var pill = document.createElement('div');
+      pill.className = 'site-floatnav-pill';
+      nav.insertBefore(pill, nav.firstChild);
+      var items = Array.prototype.slice.call(nav.querySelectorAll('.site-floatnav-item[data-nav]'));
+      var slug = location.pathname.replace(/^\/|\/$/g, '') || '';
+      var activeItem = null;
+      items.forEach(function(el) {
+        if (el.dataset.nav === slug) { el.classList.add('is-active'); activeItem = el; }
       });
+      function movePill(el, instant) {
+        if (!el) { pill.style.opacity = '0'; return; }
+        var nr = nav.getBoundingClientRect(), er = el.getBoundingClientRect();
+        if (instant) pill.style.transition = 'none';
+        pill.style.left   = (er.left - nr.left) + 'px';
+        pill.style.top    = (er.top  - nr.top)  + 'px';
+        pill.style.width  = er.width  + 'px';
+        pill.style.height = er.height + 'px';
+        pill.style.opacity = '1';
+        if (instant) { pill.getBoundingClientRect(); pill.style.transition = ''; }
+      }
+      if (activeItem) requestAnimationFrame(function() { movePill(activeItem, true); });
+      items.forEach(function(el) {
+        el.addEventListener('mouseenter', function() {
+          items.forEach(function(i) { i.classList.remove('is-lit'); });
+          el.classList.add('is-lit');
+          movePill(el, false);
+        });
+        el.addEventListener('mouseleave', function() { el.classList.remove('is-lit'); });
+      });
+      nav.addEventListener('mouseleave', function() {
+        items.forEach(function(i) { i.classList.remove('is-lit'); });
+        activeItem ? movePill(activeItem, false) : (pill.style.opacity = '0');
+      });
+      var logoImg = nav.querySelector('.site-floatnav-logo img');
+      if (logoImg) {
+        var holdTimer = null, dragging = false, sx = 0, sy = 0;
+        function startHold(cx, cy) {
+          holdTimer = setTimeout(function() { dragging = true; sx = cx; sy = cy; logoImg.style.transition = 'none'; }, 280);
+        }
+        function onMove(cx, cy) {
+          if (!dragging) return;
+          var dx = cx - sx, dy = cy - sy;
+          logoImg.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx * 0.12) + 'deg)';
+        }
+        function onRelease() {
+          clearTimeout(holdTimer);
+          if (!dragging) return;
+          dragging = false;
+          logoImg.style.transition = 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1)';
+          logoImg.style.transform = 'translate(0,0) rotate(0deg)';
+        }
+        logoImg.addEventListener('mousedown', function(e) { e.preventDefault(); startHold(e.clientX, e.clientY); });
+        document.addEventListener('mousemove', function(e) { onMove(e.clientX, e.clientY); });
+        document.addEventListener('mouseup', onRelease);
+        logoImg.addEventListener('touchstart', function(e) { var t = e.touches[0]; startHold(t.clientX, t.clientY); }, {passive: true});
+        document.addEventListener('touchmove', function(e) { if (!dragging) return; e.preventDefault(); var t = e.touches[0]; onMove(t.clientX, t.clientY); }, {passive: false});
+        document.addEventListener('touchend', onRelease);
+        document.addEventListener('touchcancel', onRelease);
+      }
     })();
   </script>
 </body>
