@@ -159,12 +159,12 @@
       var nav = document.querySelector('.site-floatnav');
       if (!nav) return;
       var items = Array.prototype.slice.call(nav.querySelectorAll('.site-floatnav-item[data-nav]'));
-      var pillItems = items.filter(function(el) { return !el.classList.contains('site-floatnav-cta'); });
       var activeItem = null;
       items.forEach(function(el) {
         if (el.dataset.nav === slug) { el.classList.add('is-active'); if (!el.classList.contains('site-floatnav-cta')) activeItem = el; }
       });
-      var homeItem = activeItem || pillItems[0];
+      var pillItems = items.filter(function(el) { return !el.classList.contains('site-floatnav-cta') && el !== activeItem; });
+      var homeItem = pillItems[0];
       var pill = document.createElement('div');
       pill.className = 'site-floatnav-hover-pill';
       nav.insertBefore(pill, nav.firstChild);
