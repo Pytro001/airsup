@@ -167,8 +167,8 @@
       text-align: center;
       color: var(--text);
       width: max-content;
-      max-width: min(94vw, 38rem);
-      white-space: nowrap;
+      max-width: min(94vw, 52rem);
+      white-space: normal;
       pointer-events: none;
       text-shadow:
         0 0 14px rgba(36, 36, 36, 0.85),
@@ -405,7 +405,7 @@
         margin-bottom: 8px;
       }
       .lp-headline {
-        white-space: nowrap;
+        white-space: normal;
         top: 72%;
       }
       .lp-hero-layer--supi { top: 44%; }
@@ -428,12 +428,6 @@
       align-items: center;
       position: relative;
       z-index: 1;
-      opacity: 0.15;
-      transition: opacity 0.6s ease;
-    }
-    .lp-pricing.is-visible {
-      opacity: 1;
-    }
     .lp-pricing-title {
       font-size: 36px;
       font-weight: 500;
@@ -590,10 +584,6 @@
       <h1 class="lp-headline">Suppliers for Builders</h1>
     </div>
 
-    <div class="lp-social-proof">
-      <span class="lp-stars">★★★★★</span>
-      <span>Trusted Suppliers from US 🇺🇸 &nbsp;CN 🇨🇳 &nbsp;EU 🇪🇺</span>
-    </div>
 
     <div class="lp-start-wrap">
       <a href="/start" class="lp-start-link" aria-label="Start">
@@ -759,14 +749,6 @@
     // First blink after 1.5s so it's visible quickly
     setTimeout(animateBlink, 1500);
 
-    // Pricing fade-in on scroll
-    const pricingEl = document.querySelector('.lp-pricing');
-    if (pricingEl) {
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach(e => { if (e.isIntersecting) pricingEl.classList.add('is-visible'); });
-      }, { threshold: 0.08 });
-      observer.observe(pricingEl);
-    }
   </script>
 </body>
 </html>
