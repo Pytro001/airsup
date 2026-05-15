@@ -117,7 +117,7 @@
 
     /* Hero: three independent layers. z ordering: Supi(1) < shadow-blob(2) < headline(3) */
     .lp-hero-stack {
-      --hero-shift-x: clamp(155px, 22vw, 220px);
+      --hero-shift-x: clamp(185px, 27vw, 260px);
       position: relative;
       width: 100%;
       min-height: 260px;
@@ -404,7 +404,7 @@
     }
     @media (max-width: 560px) {
       .lp-hero-stack {
-        --hero-shift-x: clamp(120px, 28vw, 180px);
+        --hero-shift-x: clamp(140px, 32vw, 200px);
         min-height: 190px;
         margin-bottom: 8px;
       }
@@ -529,7 +529,7 @@
     // LERP = 0.06 → pupils lag ~16 frames behind → feels fluid, not instant.
     const SVG_SIZE  = 200;
     const MAX_OFFSET = 20;
-    const LERP = 0.035; // lower = lazier / more delayed
+    const LERP = 0.018; // lower = lazier / more delayed
 
     const eyeDefs = [
       { group: document.getElementById("pupil-l-g"), ecx: 59,  ecy: 75, cx: 0, cy: 0, tx: 0, ty: 0 },
