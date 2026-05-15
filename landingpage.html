@@ -411,17 +411,19 @@
     }
     @media (max-width: 560px) {
       .lp-hero-stack {
-        --hero-shift-x: clamp(140px, 32vw, 200px);
-        min-height: 190px;
+        --hero-shift-x: clamp(100px, 24vw, 150px);
+        min-height: 160px;
         margin-bottom: 8px;
       }
+      #face-svg { width: 72px; height: 72px; border-radius: 15px; }
+      .lp-hero-layer--shadow { width: 130px; height: 100px; }
       .lp-headline {
         white-space: nowrap;
         font-size: clamp(28px, 8.5vw, 48px);
         top: 72%;
       }
       .lp-hero-layer--supi { top: 26%; }
-      .lp-hero-layer--shadow { top: 34%; transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 18px)); }
+      .lp-hero-layer--shadow { top: 34%; transform: translate(calc(-50% + var(--hero-shift-x)), calc(-50% + 12px)); }
     }
     @media (max-width: 480px) {
       .lp-footer { font-size: 10px; padding: 14px 12px; }
