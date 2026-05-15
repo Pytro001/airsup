@@ -82,21 +82,13 @@
     .site-floatnav-logo { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; cursor: grab; }
     .site-floatnav-logo img { width: 24px; height: 24px; border-radius: 6px; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; }
     .site-floatnav-item {
-      position: relative; z-index: 1;
       padding: 9px 20px; border-radius: 100px; font-size: 14.5px; font-weight: 400;
-      color: rgba(255,255,255,0.55); text-decoration: none; transition: color 0.15s;
+      color: rgba(255,255,255,0.55); text-decoration: none;
+      transition: background 0.2s, color 0.15s;
     }
-    .site-floatnav-item.is-active,
-    .site-floatnav-item.is-lit { color: #000; }
-    .site-floatnav-cta { position: relative; z-index: 1; background: #fff; color: #111; transition: background 0.2s; }
-    .site-floatnav-cta:hover { background: rgba(255,255,255,0.88); color: #111; }
-    .site-floatnav-pill {
-      position: absolute; border-radius: 100px; background: #fff;
-      pointer-events: none; z-index: 0;
-      transition: left 0.3s cubic-bezier(0.34,1.1,0.64,1), width 0.3s cubic-bezier(0.34,1.1,0.64,1),
-                  top 0.3s cubic-bezier(0.34,1.1,0.64,1), height 0.3s cubic-bezier(0.34,1.1,0.64,1), opacity 0.2s;
-      opacity: 0;
-    }
+    .site-floatnav-item:hover { background: rgba(255,255,255,0.11); color: rgba(255,255,255,0.9); }
+    .site-floatnav-item.is-active { background: #fff; color: #000; }
+    .site-floatnav-item.is-active:hover { background: rgba(255,255,255,0.92); color: #000; }
     @media (max-width: 560px) { .pricing-grid { grid-template-columns: 1fr; } .page-title { font-size: 28px; } }
     @media (max-width: 480px) { .site-floatnav { bottom: 16px; padding: 7px 9px; } .site-floatnav-item { padding: 8px 14px; font-size: 13px; } }
   </style>
@@ -143,49 +135,18 @@
     <a href="/" class="site-floatnav-logo" aria-label="Airsup home">
       <img src="assets/brand/logo-air-sup.png" alt="" />
     </a>
-    <a href="/start" class="site-floatnav-item site-floatnav-cta">Launch Program</a>
+    <a href="/start" class="site-floatnav-item" data-nav="start">Launch Program</a>
     <a href="/pricing" class="site-floatnav-item" data-nav="pricing">Pricing</a>
     <a href="/how-it-works" class="site-floatnav-item" data-nav="how-it-works">How it works</a>
   </nav>
 
   <script>
     (function() {
-      var nav = document.querySelector('.site-floatnav');
-      if (!nav) return;
-      var pill = document.createElement('div');
-      pill.className = 'site-floatnav-pill';
-      nav.insertBefore(pill, nav.firstChild);
-      var items = Array.prototype.slice.call(nav.querySelectorAll('.site-floatnav-item[data-nav]'));
       var slug = location.pathname.replace(/^\/|\/$/g, '') || '';
-      var activeItem = null;
-      items.forEach(function(el) {
-        if (el.dataset.nav === slug) { el.classList.add('is-active'); activeItem = el; }
+      document.querySelectorAll('.site-floatnav-item[data-nav]').forEach(function(el) {
+        if (el.dataset.nav === slug) el.classList.add('is-active');
       });
-      function movePill(el, instant) {
-        if (!el) { pill.style.opacity = '0'; return; }
-        var nr = nav.getBoundingClientRect(), er = el.getBoundingClientRect();
-        if (instant) pill.style.transition = 'none';
-        pill.style.left   = (er.left - nr.left) + 'px';
-        pill.style.top    = (er.top  - nr.top)  + 'px';
-        pill.style.width  = er.width  + 'px';
-        pill.style.height = er.height + 'px';
-        pill.style.opacity = '1';
-        if (instant) { pill.getBoundingClientRect(); pill.style.transition = ''; }
-      }
-      if (activeItem) requestAnimationFrame(function() { movePill(activeItem, true); });
-      items.forEach(function(el) {
-        el.addEventListener('mouseenter', function() {
-          items.forEach(function(i) { i.classList.remove('is-lit'); });
-          el.classList.add('is-lit');
-          movePill(el, false);
-        });
-        el.addEventListener('mouseleave', function() { el.classList.remove('is-lit'); });
-      });
-      nav.addEventListener('mouseleave', function() {
-        items.forEach(function(i) { i.classList.remove('is-lit'); });
-        activeItem ? movePill(activeItem, false) : (pill.style.opacity = '0');
-      });
-      var logoImg = nav.querySelector('.site-floatnav-logo img');
+      var logoImg = document.querySelector('.site-floatnav-logo img');
       if (logoImg) {
         var holdTimer = null, dragging = false, sx = 0, sy = 0;
         function startHold(cx, cy) {
