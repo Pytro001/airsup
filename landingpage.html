@@ -126,6 +126,15 @@
       margin-bottom: 8px;
       overflow: visible;
     }
+    .lp-hero-stack::after {
+      content: '';
+      position: absolute;
+      left: -10vw; right: -10vw; bottom: -40px;
+      height: 65%;
+      background: linear-gradient(to top, #000 0%, #000 20%, transparent 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
 
     /* painted first (behind) via DOM order — no z-index needed */
     .lp-hero-layer--supi {
