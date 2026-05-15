@@ -418,6 +418,127 @@
       .lp-login-row { flex-direction: column; }
       .lp-email-btn { border-radius: 999px; }
     }
+
+    /* ── Pricing ── */
+    .lp-pricing {
+      width: 100%;
+      padding: 96px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+    .lp-pricing-title {
+      font-size: 36px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin-bottom: 48px;
+      color: var(--text);
+    }
+    .lp-pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      width: 100%;
+      max-width: 680px;
+    }
+    .lp-plan {
+      border: 1.5px solid var(--border);
+      border-radius: 16px;
+      background: var(--card-bg);
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .lp-plan--enterprise {
+      border-color: rgba(255,255,255,0.12);
+      background: #0d0d0d;
+    }
+    .lp-plan-name {
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .lp-plan-sub {
+      font-size: 13px;
+      color: var(--text-soft);
+      margin-bottom: 28px;
+    }
+    .lp-plan-price {
+      font-size: 40px;
+      font-weight: 500;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+    .lp-plan-price-note {
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-bottom: 28px;
+    }
+    .lp-plan-btn {
+      display: block;
+      width: 100%;
+      padding: 11px 0;
+      border-radius: 999px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 400;
+      text-decoration: none;
+      margin-bottom: 28px;
+      transition: opacity 0.15s;
+    }
+    .lp-plan-btn:hover { opacity: 0.8; }
+    .lp-plan-btn--free {
+      background: var(--primary);
+      color: var(--on-primary);
+    }
+    .lp-plan-btn--enterprise {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.18);
+      color: var(--text);
+    }
+    .lp-plan-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .lp-plan-features li {
+      font-size: 13px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.4;
+    }
+    .lp-plan-features li::before {
+      content: "✓";
+      color: var(--text-soft);
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .lp-pricing-footer {
+      margin-top: 32px;
+      font-size: 13px;
+      color: var(--text-soft);
+      text-align: center;
+    }
+    .lp-pricing-footer a {
+      color: var(--text-muted);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .lp-pricing-footer a:hover { color: var(--text); }
+    @media (max-width: 560px) {
+      .lp-pricing-grid { grid-template-columns: 1fr; }
+      .lp-pricing-title { font-size: 28px; }
+    }
   </style>
 </head>
 <body>
@@ -477,6 +598,44 @@
     </div>
 
   </main>
+
+  <section class="lp-pricing">
+    <h2 class="lp-pricing-title">Pricing</h2>
+    <div class="lp-pricing-grid">
+
+      <div class="lp-plan">
+        <div class="lp-plan-name">Beta</div>
+        <div class="lp-plan-sub">For builders getting started</div>
+        <div class="lp-plan-price">Free</div>
+        <div class="lp-plan-price-note">No credit card required</div>
+        <a href="/start" class="lp-plan-btn lp-plan-btn--free">Get started</a>
+        <ul class="lp-plan-features">
+          <li>AI-powered supplier sourcing</li>
+          <li>Manufacturers in CN, US and EU</li>
+          <li>Direct chat with factory engineers</li>
+          <li>File and drawing uploads</li>
+          <li>Factory visit scheduling</li>
+        </ul>
+      </div>
+
+      <div class="lp-plan lp-plan--enterprise">
+        <div class="lp-plan-name">Enterprise</div>
+        <div class="lp-plan-sub">For teams with serious volume</div>
+        <div class="lp-plan-price">Custom</div>
+        <div class="lp-plan-price-note">Talk to us about your needs</div>
+        <a href="mailto:konstantin@airsup.dev?subject=Enterprise" class="lp-plan-btn lp-plan-btn--enterprise">Schedule a call</a>
+        <ul class="lp-plan-features">
+          <li>Everything in Beta</li>
+          <li>Dedicated sourcing manager</li>
+          <li>Custom supplier vetting</li>
+          <li>NDA-protected sourcing</li>
+          <li>Priority support</li>
+        </ul>
+      </div>
+
+    </div>
+    <p class="lp-pricing-footer">Questions? <a href="mailto:konstantin@airsup.dev">konstantin@airsup.dev</a></p>
+  </section>
 
   </div>
 
