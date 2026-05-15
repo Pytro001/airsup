@@ -800,9 +800,8 @@
     const nav = $("bottom-nav");
     if (nav) nav.hidden = !(loggedIn && !inOnboarding);
     const onThankyou = currentView === "thankyou";
-    // Hide header on board (buyers use rail) and thankyou page
     const header = $("site-header");
-    if (header) header.hidden = onThankyou || (isBuyer && loggedIn && !inOnboarding && currentView === "board");
+    if (header) header.hidden = onThankyou || inOnboarding || (isBuyer && loggedIn && !inOnboarding && currentView === "board");
   }
 
   function buildNav() {
