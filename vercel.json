@@ -46,6 +46,10 @@
     { "source": "/faq/", "destination": "/faq.html" },
     { "source": "/manufacturing", "destination": "/manufacturing.html" },
     { "source": "/manufacturing/", "destination": "/manufacturing.html" },
+    { "source": "/pricing", "destination": "/pricing.html" },
+    { "source": "/pricing/", "destination": "/pricing.html" },
+    { "source": "/how-it-works", "destination": "/how-it-works.html" },
+    { "source": "/how-it-works/", "destination": "/how-it-works.html" },
     { "source": "/", "destination": "/landingpage.html" }
   ]
 }

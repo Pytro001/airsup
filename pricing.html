@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing · Airsup</title>
+  <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <script>document.documentElement.dataset.theme = "dark";</script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 300;
+      background: #000;
+      color: #f2f2f3;
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 80px 24px 120px;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .page-title {
+      font-size: 36px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      width: 100%;
+      max-width: 680px;
+    }
+    .plan {
+      border: 1.5px solid #282828;
+      border-radius: 16px;
+      background: #0a0a0a;
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+    }
+    .plan-name { font-size: 18px; font-weight: 500; margin-bottom: 4px; }
+    .plan-sub { font-size: 13px; font-weight: 400; color: #8a8a8a; margin-bottom: 28px; }
+    .plan-price { font-size: 40px; font-weight: 500; letter-spacing: -0.03em; line-height: 1; margin-bottom: 4px; }
+    .plan-price-note { font-size: 12px; font-weight: 400; color: #8a8a8a; margin-bottom: 28px; }
+    .plan-btn {
+      display: block; width: 100%; padding: 11px 0;
+      border-radius: 100px; text-align: center;
+      font-size: 14px; font-weight: 400; font-family: inherit;
+      margin-bottom: 28px; cursor: pointer; transition: opacity 0.15s;
+      background: #f2f2f3; color: #111; border: none;
+    }
+    .plan-btn:hover { opacity: 0.85; }
+    .plan-features { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .plan-features li {
+      font-size: 13px; font-weight: 400; color: #b0b0b0;
+      display: flex; align-items: flex-start; gap: 8px; line-height: 1.4;
+    }
+    .plan-features li::before { content: "✓"; color: #8a8a8a; font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+    .pricing-footer { margin-top: 32px; font-size: 13px; font-weight: 400; color: #8a8a8a; text-align: center; }
+
+    /* ── Floating nav bar ── */
+    .site-floatnav {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 2px;
+      background: rgba(14,14,14,0.96); border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 100px; padding: 5px 6px; z-index: 1000;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); white-space: nowrap;
+    }
+    .site-floatnav-logo { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; margin-right: 2px; flex-shrink: 0; }
+    .site-floatnav-logo img { width: 20px; height: 20px; border-radius: 5px; display: block; }
+    .site-floatnav-item {
+      padding: 6px 14px; border-radius: 100px; font-size: 13.5px; font-weight: 400;
+      color: rgba(255,255,255,0.55); text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .site-floatnav-item:hover { background: rgba(255,255,255,0.09); color: rgba(255,255,255,0.85); }
+    .site-floatnav-item.is-active { background: #fff; color: #000; }
+    .site-floatnav-item.is-active:hover { background: rgba(255,255,255,0.92); color: #000; }
+    .site-floatnav-cta { background: #fff; color: #111; }
+    .site-floatnav-cta:hover { background: rgba(255,255,255,0.88); color: #111; }
+    @media (max-width: 560px) { .pricing-grid { grid-template-columns: 1fr; } .page-title { font-size: 28px; } }
+    @media (max-width: 480px) { .site-floatnav { bottom: 16px; } .site-floatnav-item { padding: 6px 10px; font-size: 12.5px; } }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">Pricing</h1>
+  <div class="pricing-grid">
+
+    <div class="plan">
+      <div class="plan-name">Beta</div>
+      <div class="plan-sub">For builders getting started</div>
+      <div class="plan-price">Free</div>
+      <div class="plan-price-note">No credit card required</div>
+      <a href="/start" class="plan-btn">Get started</a>
+      <ul class="plan-features">
+        <li>AI-powered supplier sourcing</li>
+        <li>Manufacturers in CN, US and EU</li>
+        <li>Your brief is sent to matched suppliers</li>
+        <li>Supplier reviews and accepts or asks questions</li>
+        <li>Direct contact handed over once both sides align</li>
+        <li>File and drawing uploads</li>
+      </ul>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Enterprise</div>
+      <div class="plan-sub">For teams with serious volume</div>
+      <div class="plan-price">Custom</div>
+      <div class="plan-price-note">Talk to us about your needs</div>
+      <a href="https://calendly.com/konstantin-airsup/onboarding-airsup" target="_blank" rel="noopener" class="plan-btn">Schedule a call</a>
+      <ul class="plan-features">
+        <li>Everything in Beta</li>
+        <li>Dedicated sourcing manager</li>
+        <li>Custom supplier vetting</li>
+        <li>NDA-protected sourcing</li>
+        <li>Priority support</li>
+      </ul>
+    </div>
+
+  </div>
+  <p class="pricing-footer">Questions? konstantin@airsup.dev</p>
+
+  <nav class="site-floatnav" aria-label="Site navigation">
+    <a href="/" class="site-floatnav-logo" aria-label="Airsup home">
+      <img src="assets/brand/logo-air-sup.png" alt="" />
+    </a>
+    <a href="/start" class="site-floatnav-item site-floatnav-cta">Launch Program</a>
+    <a href="/pricing" class="site-floatnav-item" data-nav="pricing">Pricing</a>
+    <a href="/how-it-works" class="site-floatnav-item" data-nav="how-it-works">How it works</a>
+  </nav>
+
+  <script>
+    (function() {
+      var slug = location.pathname.replace(/^\/|\/$/g, "") || "";
+      document.querySelectorAll(".site-floatnav-item[data-nav]").forEach(function(el) {
+        if (el.dataset.nav === slug) el.classList.add("is-active");
+      });
+    })();
+  </script>
+</body>
+</html>
