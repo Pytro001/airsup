@@ -422,12 +422,17 @@
     /* ── Pricing ── */
     .lp-pricing {
       width: 100%;
-      padding: 96px 24px 80px;
+      padding: 32px 24px 80px;
       display: flex;
       flex-direction: column;
       align-items: center;
       position: relative;
       z-index: 1;
+      opacity: 0.15;
+      transition: opacity 0.6s ease;
+    }
+    .lp-pricing.is-visible {
+      opacity: 1;
     }
     .lp-pricing-title {
       font-size: 36px;
@@ -530,11 +535,10 @@
       text-align: center;
     }
     .lp-pricing-footer a {
-      color: var(--text-muted);
-      text-decoration: underline;
-      text-underline-offset: 3px;
+      color: var(--text);
+      text-decoration: none;
+      pointer-events: none;
     }
-    .lp-pricing-footer a:hover { color: var(--text); }
     @media (max-width: 560px) {
       .lp-pricing-grid { grid-template-columns: 1fr; }
       .lp-pricing-title { font-size: 28px; }
@@ -753,6 +757,15 @@
     }
     // First blink after 1.5s so it's visible quickly
     setTimeout(animateBlink, 1500);
+
+    // Pricing fade-in on scroll
+    const pricingEl = document.querySelector('.lp-pricing');
+    if (pricingEl) {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => { if (e.isIntersecting) pricingEl.classList.add('is-visible'); });
+      }, { threshold: 0.08 });
+      observer.observe(pricingEl);
+    }
   </script>
 </body>
 </html>
