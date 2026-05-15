@@ -113,6 +113,42 @@
     .sp-footer > a { flex-shrink: 0; }
     .sp-footer a { color: var(--text-faint); margin: 0 6px; transition: color 0.15s; }
     .sp-footer a:hover { color: var(--text-muted); }
+    .sp-content { padding-bottom: 120px; }
+
+    /* ── Floating nav bar ── */
+    .site-floatnav {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 4px;
+      background: rgba(12,12,12,0.45); border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 100px; padding: 6px 7px; z-index: 1000;
+      backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%); white-space: nowrap;
+    }
+    .site-floatnav-logo { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; margin-right: 4px; flex-shrink: 0; cursor: default; }
+    .site-floatnav-logo img { width: 24px; height: 24px; border-radius: 6px; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; cursor: default; }
+    .site-floatnav-item {
+      position: relative; z-index: 1;
+      padding: 0 16px; height: 36px; display: flex; align-items: center; border-radius: 100px; font-size: 15.5px; font-weight: 400;
+      color: #fff; text-decoration: none; cursor: default; transition: none;
+    }
+    .site-floatnav-item:hover { color: #fff; }
+    .site-floatnav-item.is-active { background: #484848; color: #fff; z-index: 2; }
+    .site-floatnav-item.site-floatnav-cta { background: #fff; color: #000; margin-left: 6px; height: 36px; }
+    .site-floatnav-item.site-floatnav-cta:hover { color: #000; }
+    .site-floatnav-hover-pill {
+      position: absolute; border-radius: 100px;
+      background: rgba(255,255,255,0.11);
+      pointer-events: none; z-index: 0;
+      transition: left 0.5s cubic-bezier(0.25,0.8,0.25,1), width 0.5s cubic-bezier(0.25,0.8,0.25,1),
+                  top 0.5s cubic-bezier(0.25,0.8,0.25,1), height 0.5s cubic-bezier(0.25,0.8,0.25,1);
+      transition-delay: 0.05s;
+    }
+    @media (max-width: 480px) {
+      .site-floatnav { bottom: 80px; padding: 5px 6px; }
+      .site-floatnav-logo { width: 30px; height: 30px; margin-right: 2px; }
+      .site-floatnav-logo img { width: 18px; height: 18px; }
+      .site-floatnav-item { padding: 0 11px; height: 30px; font-size: 13px; }
+      .site-floatnav-item.site-floatnav-cta { height: 30px; margin-left: 4px; }
+    }
   </style>
 </head>
 <body>
@@ -182,11 +218,20 @@
   </main>
 
   <footer class="sp-footer">
-
     <a href="/support">Support</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms of Service</a>
   </footer>
+
+  <nav class="site-floatnav" aria-label="Site navigation">
+    <a href="/" class="site-floatnav-logo" aria-label="Airsup home">
+      <img src="assets/brand/logo-air-sup.png" alt="" />
+    </a>
+    <a href="/pricing" class="site-floatnav-item" data-nav="pricing">Pricing</a>
+    <a href="/how-it-works" class="site-floatnav-item" data-nav="how-it-works">How it Works</a>
+    <a href="/faq" class="site-floatnav-item is-active" data-nav="faq">FAQ</a>
+    <a href="/start" class="site-floatnav-item site-floatnav-cta" data-nav="start">Launch Program</a>
+  </nav>
 
   <script>
     (function () {
@@ -222,6 +267,32 @@
       document.querySelectorAll(".faq-item[data-faq-item]").forEach(function (el) {
         el.addEventListener("click", function (e) { el.classList.toggle("open"); });
       });
+    })();
+
+    (function() {
+      var nav = document.querySelector('.site-floatnav');
+      if (!nav) return;
+      var items = Array.prototype.slice.call(nav.querySelectorAll('.site-floatnav-item[data-nav]'));
+      var pillItems = items.filter(function(el) { return !el.classList.contains('site-floatnav-cta'); });
+      var activeItem = pillItems.find(function(el) { return el.classList.contains('is-active'); }) || pillItems[0];
+      var pill = document.createElement('div');
+      pill.className = 'site-floatnav-hover-pill';
+      nav.insertBefore(pill, nav.firstChild);
+      function movePill(el, instant) {
+        if (!el) return;
+        var nr = nav.getBoundingClientRect(), er = el.getBoundingClientRect();
+        if (instant) pill.style.transition = 'none';
+        pill.style.left = (er.left - nr.left) + 'px';
+        pill.style.top = (er.top - nr.top) + 'px';
+        pill.style.width = er.width + 'px';
+        pill.style.height = er.height + 'px';
+        if (instant) { pill.getBoundingClientRect(); pill.style.transition = ''; }
+      }
+      if (activeItem) requestAnimationFrame(function() { movePill(activeItem, true); });
+      pillItems.forEach(function(el) {
+        el.addEventListener('mouseenter', function() { movePill(el, false); });
+      });
+      nav.addEventListener('mouseleave', function() { movePill(activeItem, false); });
     })();
   </script>
 </body>
