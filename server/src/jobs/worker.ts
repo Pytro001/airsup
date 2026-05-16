@@ -3,8 +3,8 @@ import { tickColdLoop } from "./cold-loop.js";
 import { runXPoster, runXReplier } from "./x-automation.js";
 
 const POLL_INTERVAL = 15_000;
-const POST_INTERVAL_MS = 2 * 60 * 60 * 1000;   // every 2h
-const REPLY_INTERVAL_MS = 30 * 60 * 1000;       // every 30min
+const POST_INTERVAL_MS = 30 * 60 * 1000;        // every 30min
+const REPLY_INTERVAL_MS = 20 * 60 * 1000;       // every 20min
 
 let lastDigestDate = "";
 
