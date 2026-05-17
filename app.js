@@ -935,7 +935,7 @@
   ];
 
   const SUPPLIER_STEPS = [
-    { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers hate talking to sales. Our AI briefs your designers and engineers directly. Less overhead, faster iterations.",
+    { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers hate talking to sales. Supi briefs your designers and engineers directly. Less overhead, faster iterations.",
       fields: [
         { key: "companyName", label: "Company name", required: true },
         { key: "whatsapp1", label: "Phone / WhatsApp", type: "phone", required: true },
@@ -943,7 +943,7 @@
         { key: "website", label: "Website", type: "url" },
         { key: "specialization", label: "What do you manufacture?", required: true },
       ] },
-    { id: "capabilities", type: "form", title: "What can you produce?", sub: "This helps our AI match you with the right projects. Be specific about what your team excels at.",
+    { id: "capabilities", type: "form", title: "What can you produce?", sub: "This helps Supi match you with the right projects. Be specific about what your team excels at.",
       fields: [
         { key: "capabilities", label: "Detailed description of what you can produce", type: "textarea", compact: true, withFiles: true },
         { key: "priceRange", label: "Project price range" },
@@ -966,7 +966,7 @@
       stage.innerHTML = `
         <div class="onboard-question">
           <h1 class="onboard-title">Welcome to Airsup.</h1>
-          <p class="onboard-sub">We use AI to connect startups directly with factory engineers. No sales people, no middlemen. Faster iterations, better products.</p>
+          <p class="onboard-sub">Supi connects startups directly with factory engineers. No sales people, no middlemen. Faster iterations, better products.</p>
           <div class="onboard-choices">
             <button type="button" class="onboard-choice" data-value="startup">I need something manufactured</button>
             <button type="button" class="onboard-choice" data-value="supplier">I\u2019m a factory / supplier</button>
