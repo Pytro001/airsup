@@ -924,7 +924,7 @@
      ONBOARDING
      ══════════════════════════════════════ */
   const STARTUP_STEPS = [
-    { id: "company", type: "form", title: "Tell us about your project.", sub: "Your info is stored securely and only shared when we find a real match.",
+    { id: "company", type: "form", title: "Tell us about your project", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { key: "fullName", label: "Full name", required: true },
         { key: "phone", label: "Phone / WhatsApp", type: "phone", required: true },
