@@ -69,7 +69,13 @@
       flex: 1;
       width: 1px;
       min-height: 20px;
-      background: #1e1e1e;
+      background: repeating-linear-gradient(
+        to bottom,
+        #444 0px,
+        #444 4px,
+        transparent 4px,
+        transparent 9px
+      );
     }
     .step:last-child .step-left::after { display: none; }
 
