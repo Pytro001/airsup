@@ -1,4 +1,4 @@
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient } from "../services/openai.js";
 
 interface CallClaudeOptions {
   model: string;
@@ -13,18 +13,18 @@ export async function callClaude({
   messages,
   expectJSON = true,
 }: CallClaudeOptions): Promise<any> {
-  const client = getAnthropicClient();
-  const response = await client.messages.create({
+  const client = getOpenAIClient();
+
+  const response = await client.chat.completions.create({
     model,
     max_tokens: 2048,
-    system,
-    messages,
+    messages: [
+      { role: "system", content: system },
+      ...messages.map(m => ({ role: m.role as "user" | "assistant", content: m.content })),
+    ],
   });
 
-  const text = response.content
-    .filter((b: any) => b.type === "text")
-    .map((b: any) => b.text)
-    .join("");
+  const text = response.choices[0]?.message?.content ?? "";
 
   if (!expectJSON) return text;
 

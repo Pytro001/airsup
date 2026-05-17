@@ -8,11 +8,10 @@
  * Rate limited by COLD_DAILY_LIMIT (default 40) per UTC day.
  */
 
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_FAST } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { sendEmail } from "../services/email.js";
 
-const MODEL = "claude-sonnet-4-6";
 const ONBOARD_URL = "https://airsup.dev/start";
 const DAILY_LIMIT = parseInt(process.env.COLD_DAILY_LIMIT || "40", 10);
 
@@ -30,7 +29,7 @@ type Target = {
 };
 
 async function draftEmail(t: Target): Promise<{ subject: string; body: string } | null> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
 
   const system =
     "You write very short, friendly cold outreach emails from Konstantin, the founder of Airsup (airsup.dev). " +
@@ -58,16 +57,15 @@ async function draftEmail(t: Target): Promise<{ subject: string; body: string } 
     `\nWrite the email. JSON only.`;
 
   try {
-    const response = await anthropic.messages.create({
-      model: MODEL,
+    const response = await client.chat.completions.create({
+      model: MODEL_FAST,
       max_tokens: 1000,
-      system,
-      messages: [{ role: "user", content: user }],
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
     });
-    let text = "";
-    for (const block of response.content) {
-      if (block.type === "text") text += block.text;
-    }
+    let text = response.choices[0]?.message?.content ?? "";
     text = text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");

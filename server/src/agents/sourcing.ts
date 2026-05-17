@@ -10,7 +10,7 @@
  * an admin can approve/reject before any outreach starts.
  */
 
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_HEAVY } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 
 type Project = {
@@ -43,7 +43,6 @@ type WebHit = {
 const PLATFORM_LIMIT = 8;
 const WEB_FETCH_LIMIT = 12; // ask for more so filtering still leaves enough
 const WEB_LIMIT = 6;        // max kept after contact-quality filter
-const MODEL = "claude-sonnet-4-6";
 
 function sanitizeIlikeToken(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9\- ]/g, "").trim();
@@ -113,7 +112,7 @@ function buildSearchQuery(project: Project): string {
 }
 
 async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
   const query = buildSearchQuery(project);
 
   const requirementsBlock = JSON.stringify(project.requirements || {}, null, 2).slice(0, 1500);
@@ -151,33 +150,13 @@ async function searchWebForSuppliers(project: Project): Promise<WebHit[]> {
     `Search query intent: ${query}`;
 
   try {
-    // Anthropic server-side web_search tool with domain allowlist.
-    // SDK 0.39 may not have typings yet, so cast via unknown.
-    const webSearchTool = {
-      type: "web_search_20250305",
-      name: "web_search",
-      max_uses: 20,
-      allowed_domains: [
-        "jd.com",
-        "cantonfair.org.cn",
-        "cantonfair.net",
-        "made-in-china.com",
-        "global-sources.com",
-      ],
-    } as unknown;
-
-    const response = await anthropic.messages.create({
-      model: MODEL,
+    const response = await client.chat.completions.create({
+      model: MODEL_HEAVY,
       max_tokens: 6000,
-      system,
-      tools: [webSearchTool] as Parameters<typeof anthropic.messages.create>[0]["tools"],
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
     });
 
-    let text = "";
-    for (const block of response.content) {
-      if (block.type === "text") text += block.text;
-    }
+    let text = response.choices[0]?.message?.content ?? "";
     text = text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const start = text.indexOf("[");
     const end = text.lastIndexOf("]");

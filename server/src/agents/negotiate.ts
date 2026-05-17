@@ -1,4 +1,4 @@
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_HEAVY } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 
 export async function runNegotiation(outreachId: string): Promise<void> {
@@ -51,12 +51,15 @@ About: ${co?.description || "N/A"}
 Sector: ${co?.industry || "N/A"}
 ${akLines ? `Other notes:\n${akLines}` : ""}`;
 
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+  const response = await client.chat.completions.create({
+    model: MODEL_HEAVY,
     max_tokens: 1024,
-    system: `You are negotiating with a factory on behalf of a buyer. Your goal is to:
+    messages: [
+      {
+        role: "system",
+        content: `You are negotiating with a factory on behalf of a buyer. Your goal is to:
 1. Confirm the factory can handle the project
 2. Get a preliminary quote (unit price, total, timeline)
 3. Negotiate iteration terms: how many free or included design iterations, turnaround for first drawing or sample
@@ -80,7 +83,7 @@ Respond with JSON:
   "next_message_to_factory": "...",
   "summary_for_buyer": "..."
 }`,
-    messages: [
+      },
       {
         role: "user",
         content: `${buyerCompanyBlock}
@@ -104,7 +107,7 @@ Negotiate and provide your assessment.`,
     ],
   });
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.choices[0]?.message?.content ?? "";
   let result;
   try {
     result = JSON.parse(text.replace(/```json\n?/g, "").replace(/```/g, "").trim());

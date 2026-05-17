@@ -5,10 +5,8 @@
  * Inserts into `cold_targets` with status='discovered'. The quality agent runs next.
  */
 
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_HEAVY } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
-
-const MODEL = "claude-sonnet-4-6";
 
 export const CATEGORIES = [
   "medical-devices",
@@ -36,7 +34,7 @@ type Hit = {
 };
 
 async function discoverOne(category: string, region: Region): Promise<Hit[]> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
 
   const regionHint =
     region === "CN" ? "in China (Guangdong, Zhejiang, Jiangsu, Shanghai, Shandong)"
@@ -56,27 +54,14 @@ async function discoverOne(category: string, region: Region): Promise<Hit[]> {
     `Find 8 small-to-medium manufacturers ${regionHint} that produce in the category: "${category}". ` +
     `They must have their own modern website with named customers shown. Return JSON array.`;
 
-  const webSearchTool = {
-    type: "web_search_20250305",
-    name: "web_search",
-    max_uses: 15,
-  } as unknown;
-
   try {
-    const response = await (anthropic as unknown as { messages: { create: (p: unknown, o: unknown) => Promise<{ content: Array<{ type: string; text?: string }> }> } }).messages.create({
-      model: MODEL,
+    const response = await client.chat.completions.create({
+      model: MODEL_HEAVY,
       max_tokens: 6000,
-      system,
-      tools: [webSearchTool],
-      messages: [{ role: "user", content: user }],
-    }, {
-      headers: { "anthropic-beta": "web-search-2025-03-05" },
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
     });
 
-    let text = "";
-    for (const block of response.content) {
-      if (block.type === "text") text += block.text;
-    }
+    let text = response.choices[0]?.message?.content ?? "";
     text = text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const start = text.indexOf("[");
     const end = text.lastIndexOf("]");

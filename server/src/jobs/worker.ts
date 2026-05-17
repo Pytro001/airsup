@@ -3,8 +3,8 @@ import { tickColdLoop } from "./cold-loop.js";
 import { runXPoster, runXReplier } from "./x-automation.js";
 
 const POLL_INTERVAL = 15_000;
-const POST_INTERVAL_MS = 60 * 60 * 1000;        // every 1h
-const REPLY_INTERVAL_MS = 20 * 60 * 1000;       // every 20min
+const POST_INTERVAL_MS = 3 * 60 * 60 * 1000;    // every 3h
+const REPLY_INTERVAL_MS = 10 * 60 * 1000;       // every 10min
 
 let lastDigestDate = "";
 
@@ -41,11 +41,7 @@ export function startWorker(): void {
   setInterval(poll, POLL_INTERVAL);
 
   if (process.env.X_API_KEY) {
-    console.log("[Worker] X automation enabled");
-    runXPoster().catch(err => console.error("[XPoster] Initial run failed:", err.message));
-    setInterval(() => {
-      runXPoster().catch(err => console.error("[XPoster] Error:", err.message));
-    }, POST_INTERVAL_MS);
+    console.log("[Worker] X automation enabled (replies only)");
     setInterval(() => {
       runXReplier().catch(err => console.error("[XReplier] Error:", err.message));
     }, REPLY_INTERVAL_MS);

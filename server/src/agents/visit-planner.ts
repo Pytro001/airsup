@@ -1,4 +1,4 @@
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_HEAVY } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import {
   amapGeocodeAddress,
@@ -482,7 +482,7 @@ export async function planVisits(
   const endStr = endD.toISOString().split("T")[0]!;
   const existingBusy: ExistingStop[] = [...(await loadExistingVisitBusyIntervals(userId, startStr, endStr))];
 
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
   const clusterForAi = await Promise.all(
     clusters.map(async (c) => {
       const ordered = await optimizeClusterOrder(c);
@@ -501,14 +501,17 @@ export async function planVisits(
     })),
   }));
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+  const response = await client.chat.completions.create({
+    model: MODEL_HEAVY,
     max_tokens: 2048,
-    system:
-      "You are a travel logistics planner for factory visits. You receive ordered daily clusters. " +
-      "Return ONLY a JSON object of shape { \"days\": [ { \"day_index\": 1, \"slots\": [ { \"factory_id\": number, \"notes\": string } ] } ] }. " +
-      "factory_id must be the exact integer from input. Notes: one short English line per stop (visit focus or question).",
     messages: [
+      {
+        role: "system",
+        content:
+          "You are a travel logistics planner for factory visits. You receive ordered daily clusters. " +
+          "Return ONLY a JSON object of shape { \"days\": [ { \"day_index\": 1, \"slots\": [ { \"factory_id\": number, \"notes\": string } ] } ] }. " +
+          "factory_id must be the exact integer from input. Notes: one short English line per stop (visit focus or question).",
+      },
       {
         role: "user",
         content: `Plan visit times starting from ${input.startDate} (day 1 = first travel day). Data:\n${JSON.stringify(
@@ -518,7 +521,7 @@ export async function planVisits(
     ],
   });
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "{}";
+  const text = response.choices[0]?.message?.content ?? "{}";
   let parsed: { days?: Array<{ day_index?: number; slots?: Array<{ factory_id: number; notes?: string; suggested_time?: string }> }> } = {};
   try {
     parsed = JSON.parse(text.replace(/```json\n?/g, "").replace(/```/g, "").trim());

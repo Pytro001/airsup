@@ -1,4 +1,4 @@
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_FAST } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { criteriaHasSearchSignals, type SearchCriteria } from "../lib/search-criteria.js";
 
@@ -46,7 +46,7 @@ async function extractSearchHints(
   },
   criteria: SearchCriteria
 ): Promise<SearchCriteria> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
   const userBlock = `## Project
 Title: ${project.title}
 Description: ${project.description}
@@ -56,14 +56,19 @@ AI summary: ${JSON.stringify(project.ai_summary || {})}
 Respond with JSON only: { "category_guess": "short manufacturing category or process", "region_guess": "preferred region if any or empty string", "keywords": ["up to 8 lowercase single-word or short tokens for factory search, e.g. pcb, injection, apparel"] }`;
 
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+    const response = await client.chat.completions.create({
+      model: MODEL_FAST,
       max_tokens: 256,
-      system:
-        "You output only valid JSON for manufacturing sourcing. category_guess is one short phrase (e.g. CNC machining, PCB assembly). keywords must be safe for database ilike (letters, numbers, hyphens; no quotes or commas inside tokens).",
-      messages: [{ role: "user", content: userBlock }],
+      messages: [
+        {
+          role: "system",
+          content:
+            "You output only valid JSON for manufacturing sourcing. category_guess is one short phrase (e.g. CNC machining, PCB assembly). keywords must be safe for database ilike (letters, numbers, hyphens; no quotes or commas inside tokens).",
+        },
+        { role: "user", content: userBlock },
+      ],
     });
-    const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+    const text = response.choices[0]?.message?.content ?? "";
     let parsed: { category_guess?: string; region_guess?: string; keywords?: string[] };
     try {
       parsed = JSON.parse(text.replace(/```json\n?/g, "").replace(/```/g, "").trim()) as typeof parsed;
@@ -164,7 +169,7 @@ export async function runFactorySearch(searchId: string): Promise<void> {
     return;
   }
 
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
   const company = (project as unknown as { companies?: Record<string, unknown> | Record<string, unknown>[] }).companies;
   const companyBlock = formatCompanyBlock(company);
   const req = project.requirements || {};
@@ -172,17 +177,20 @@ export async function runFactorySearch(searchId: string): Promise<void> {
 
   for (const factory of candidates) {
     try {
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+      const response = await client.chat.completions.create({
+        model: MODEL_FAST,
         max_tokens: 512,
-        system: `You are an expert manufacturing sourcing analyst. Evaluate whether a factory is a good potential match for a sourcing project.
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert manufacturing sourcing analyst. Evaluate whether a factory is a good potential match for a sourcing project.
 
 Key priority: we connect buyers DIRECTLY to the factory's designer or engineer, not sales staff. Evaluate whether this factory can provide direct technical contact for fast iteration. Factories with in-house design/engineering teams score higher.
 
 Respond with JSON: { "match_score": 0-100, "reasoning": "...", "suggested_brief": "...", "ideal_contact_role": "..." }.
 - suggested_brief: 2-3 sentences for the factory's technical team. MUST mention product type, quantity/timeline if known from requirements or AI summary, and what you need from them first (e.g. first CAD, sample, DFM). Not a sales pitch.
 - ideal_contact_role: the specific role at the factory (e.g. "mechanical engineer", "mold designer").`,
-        messages: [
+          },
           {
             role: "user",
             content: `## Buyer / project
@@ -206,7 +214,7 @@ Evaluate the match.`,
         ],
       });
 
-      const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+      const text = response.choices[0]?.message?.content ?? "";
       let evaluation: { match_score?: number; reasoning?: string; suggested_brief?: string; ideal_contact_role?: string };
       try {
         evaluation = JSON.parse(text.replace(/```json\n?/g, "").replace(/```/g, "").trim());

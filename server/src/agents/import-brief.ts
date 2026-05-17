@@ -1,4 +1,4 @@
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_FAST } from "../services/openai.js";
 
 export type ImportedBrief = {
   title: string;
@@ -15,19 +15,20 @@ export type ImportedBrief = {
   key_requirements: string[];
 };
 
-const MODEL = "claude-sonnet-4-20250514";
-
 /**
  * Turn raw conversation (from a share page or paste) into a structured manufacturing brief.
  */
 export async function importBriefFromText(raw: string, _userId: string): Promise<ImportedBrief> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
   const trimmed = raw.slice(0, 200_000);
 
-  const response = await anthropic.messages.create({
-    model: MODEL,
+  const response = await client.chat.completions.create({
+    model: MODEL_FAST,
     max_tokens: 2000,
-    system: `You extract a manufacturing / sourcing project brief from a conversation between a founder and a general-purpose AI (ChatGPT, Claude, Grok, etc.).
+    messages: [
+      {
+        role: "system",
+        content: `You extract a manufacturing / sourcing project brief from a conversation between a founder and a general-purpose AI (ChatGPT, Claude, Grok, etc.).
 
 Output a single JSON object with these keys only (use null for unknown strings, [] for key_requirements if none):
 - title: short project name (5-8 words)
@@ -44,10 +45,12 @@ Output a single JSON object with these keys only (use null for unknown strings, 
 - key_requirements: array of up to 8 short strings (must-haves)
 
 Rules: Never invent MOQ, deadlines, or budget. If the chat is not about a product, still extract the best possible manufacturing-sourcing summary from what is there.`,
-    messages: [{ role: "user", content: `Conversation / notes:\n\n${trimmed}` }],
+      },
+      { role: "user", content: `Conversation / notes:\n\n${trimmed}` },
+    ],
   });
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.choices[0]?.message?.content ?? "";
   const cleaned = text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
   let parsed: Record<string, unknown>;
   try {

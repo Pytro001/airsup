@@ -9,10 +9,8 @@
  * Certificates do NOT count toward quality. Named customers do.
  */
 
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_FAST } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
-
-const MODEL = "claude-sonnet-4-6";
 
 type Verdict = {
   qualified: boolean;
@@ -24,7 +22,7 @@ type Verdict = {
 };
 
 async function judgeWebsite(website: string): Promise<Verdict | null> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
 
   const system =
     "You evaluate manufacturer websites for B2B buyer outreach. You fetch the homepage and any 'customers', 'clients', 'about', or 'partners' page if linked. " +
@@ -38,24 +36,13 @@ async function judgeWebsite(website: string): Promise<Verdict | null> {
     "Certificates (ISO, BSCI, FDA, etc.) do NOT count toward quality. Only named customers do. " +
     "If the site is offline, all-Chinese, or just a templated catalog page with no brand names, qualified=false.";
 
-  const webFetchTool = {
-    type: "web_search_20250305",
-    name: "web_search",
-    max_uses: 5,
-  } as unknown;
-
   try {
-    const response = await anthropic.messages.create({
-      model: MODEL,
+    const response = await client.chat.completions.create({
+      model: MODEL_FAST,
       max_tokens: 2000,
-      system,
-      tools: [webFetchTool] as Parameters<typeof anthropic.messages.create>[0]["tools"],
-      messages: [{ role: "user", content: `Evaluate this manufacturer's website: ${website}\n\nReturn JSON only.` }],
+      messages: [{ role: "system", content: system }, { role: "user", content: `Evaluate this manufacturer's website: ${website}\n\nReturn JSON only.` }],
     });
-    let text = "";
-    for (const block of response.content) {
-      if (block.type === "text") text += block.text;
-    }
+    let text = response.choices[0]?.message?.content ?? "";
     text = text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");

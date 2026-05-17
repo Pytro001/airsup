@@ -1,4 +1,4 @@
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_HEAVY } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { DISALLOWED_MATCH_STATUSES } from "./visit-planner.js";
 
@@ -90,16 +90,19 @@ export async function draftProposalsForVisitPlan(
     };
   });
 
-  const anthropic = getAnthropicClient();
-  const res = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+  const client = getOpenAIClient();
+  const res = await client.chat.completions.create({
+    model: MODEL_HEAVY,
     max_tokens: 4096,
-    system:
-      "You help buyers message factories on Airsup. Return ONLY a JSON array of objects: " +
-      "[{ \"match_id\": string (UUID), \"en\": string, \"zh\": string }]. " +
-      "Each message proposes visiting on the plan date at the given time, references the project, and stays under 4 sentences in each language. " +
-      "Professional, concise, one factory supplier tone.",
     messages: [
+      {
+        role: "system",
+        content:
+          "You help buyers message factories on Airsup. Return ONLY a JSON array of objects: " +
+          "[{ \"match_id\": string (UUID), \"en\": string, \"zh\": string }]. " +
+          "Each message proposes visiting on the plan date at the given time, references the project, and stays under 4 sentences in each language. " +
+          "Professional, concise, one factory supplier tone.",
+      },
       {
         role: "user",
         content: `Visit plan date: ${plan.travel_date}. Region: ${plan.region}.\nStops to write:\n${JSON.stringify(
@@ -111,7 +114,7 @@ export async function draftProposalsForVisitPlan(
     ],
   });
 
-  const text = res.content[0]?.type === "text" ? res.content[0].text : "[]";
+  const text = res.choices[0]?.message?.content ?? "[]";
   let arr: Array<{ match_id: string; en: string; zh: string }> = [];
   try {
     arr = JSON.parse(text.replace(/```json\n?/g, "").replace(/```/g, "").trim());
@@ -256,19 +259,22 @@ export async function sendVisitProposalsToSuppliers(
     };
   });
 
-  const anthropic = getAnthropicClient();
-  const res = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+  const client = getOpenAIClient();
+  const res = await client.chat.completions.create({
+    model: MODEL_HEAVY,
     max_tokens: 4096,
-    system:
-      "You help buyers message factory suppliers on Airsup. Return ONLY a JSON array: " +
-      "[{ \"match_id\": string (UUID), \"en\": string, \"zh\": string }]. " +
-      "For each item, write a short message asking the factory to **confirm the proposed visit time(s) or suggest a better time** via the platform. " +
-      "Mention the buyer company, project, date " +
-      plan.travel_date +
-      ", and each proposed time. Professional, 3–4 sentences per language. " +
-      "Do not add markdown.",
     messages: [
+      {
+        role: "system",
+        content:
+          "You help buyers message factory suppliers on Airsup. Return ONLY a JSON array: " +
+          "[{ \"match_id\": string (UUID), \"en\": string, \"zh\": string }]. " +
+          "For each item, write a short message asking the factory to **confirm the proposed visit time(s) or suggest a better time** via the platform. " +
+          "Mention the buyer company, project, date " +
+          plan.travel_date +
+          ", and each proposed time. Professional, 3–4 sentences per language. " +
+          "Do not add markdown.",
+      },
       {
         role: "user",
         content: `Buyer company: ${buyerCo}.\nRegion: ${plan.region}.\nItems:\n${JSON.stringify(
@@ -280,7 +286,7 @@ export async function sendVisitProposalsToSuppliers(
     ],
   });
 
-  const text = res.content[0]?.type === "text" ? res.content[0].text : "[]";
+  const text = res.choices[0]?.message?.content ?? "[]";
   let arr: Array<{ match_id: string; en: string; zh: string }> = [];
   try {
     arr = JSON.parse(text.replace(/```json\n?/g, "").replace(/```/g, "").trim());

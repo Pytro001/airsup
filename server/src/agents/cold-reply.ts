@@ -4,11 +4,10 @@
  * stop when they sign up, opt out, or go cold.
  */
 
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_FAST } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { fetchUnreadEmails, sendEmail, type InboundEmail } from "../services/email.js";
 
-const MODEL = "claude-sonnet-4-6";
 const ONBOARD_URL = "https://airsup.dev/start";
 
 type ThreadMsg = { direction: "outbound" | "inbound"; subject: string | null; body: string };
@@ -36,7 +35,7 @@ async function loadThread(targetId: string): Promise<ThreadMsg[]> {
 }
 
 async function draftReply(targetId: string, lastInboundSubject: string): Promise<{ subject: string; body: string } | null> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
   const thread = await loadThread(targetId);
   const { data: tgtRaw } = await supabaseAdmin
     .from("cold_targets")
@@ -70,16 +69,15 @@ async function draftReply(targetId: string, lastInboundSubject: string): Promise
     `Draft my next reply. JSON only.`;
 
   try {
-    const response = await anthropic.messages.create({
-      model: MODEL,
+    const response = await client.chat.completions.create({
+      model: MODEL_FAST,
       max_tokens: 1000,
-      system,
-      messages: [{ role: "user", content: user }],
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
     });
-    let text = "";
-    for (const block of response.content) {
-      if (block.type === "text") text += block.text;
-    }
+    let text = response.choices[0]?.message?.content ?? "";
     text = text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");

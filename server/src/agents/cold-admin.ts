@@ -10,11 +10,9 @@
  *   3. Returns a log of what was sent.
  */
 
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_HEAVY, MODEL_FAST } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 import { sendEmail } from "../services/email.js";
-
-const MODEL = "claude-sonnet-4-6";
 
 type Parsed = {
   count: number;
@@ -54,7 +52,7 @@ function fallbackParse(instruction: string): Parsed {
 }
 
 async function parseInstruction(instruction: string): Promise<Parsed> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
   const system =
     "Parse an admin instruction for a cold outreach run. Return JSON only with fields: " +
     "count (integer, 1-30), region ('CN','US','EU','OTHER'), country (string or null, like 'Hong Kong'), " +
@@ -64,14 +62,12 @@ async function parseInstruction(instruction: string): Promise<Parsed> {
     "Default count is 10 if unspecified. If a city is named (Hong Kong, Shenzhen, Berlin), set country to that. " +
     "Return ONLY JSON, no prose.";
   try {
-    const r = await anthropic.messages.create({
-      model: MODEL,
+    const r = await client.chat.completions.create({
+      model: MODEL_FAST,
       max_tokens: 600,
-      system,
-      messages: [{ role: "user", content: instruction }],
+      messages: [{ role: "system", content: system }, { role: "user", content: instruction }],
     });
-    let txt = "";
-    for (const b of r.content) if (b.type === "text") txt += b.text;
+    let txt = r.choices[0]?.message?.content ?? "";
     txt = txt.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const s = txt.indexOf("{");
     const e = txt.lastIndexOf("}");
@@ -92,7 +88,7 @@ async function parseInstruction(instruction: string): Promise<Parsed> {
 }
 
 async function discoverLeads(p: Parsed, skipEmails: string[]): Promise<Lead[]> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
   const where = p.country ? `in ${p.country}` : `in region ${p.region}`;
 
   const skipLine = skipEmails.length > 0
@@ -116,24 +112,13 @@ async function discoverLeads(p: Parsed, skipEmails: string[]): Promise<Lead[]> {
     `Context for the outreach: ${p.angle}. ` +
     `Return JSON array only.`;
 
-  const webSearchTool = {
-    type: "web_search_20250305",
-    name: "web_search",
-    max_uses: 25,
-  } as unknown;
-
   try {
-    const r = await (anthropic as unknown as { messages: { create: (p: unknown, o: unknown) => Promise<{ content: Array<{ type: string; text?: string }> }> } }).messages.create({
-      model: MODEL,
+    const r = await client.chat.completions.create({
+      model: MODEL_HEAVY,
       max_tokens: 8000,
-      system,
-      tools: [webSearchTool],
-      messages: [{ role: "user", content: user }],
-    }, {
-      headers: { "anthropic-beta": "web-search-2025-03-05" },
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
     });
-    let txt = "";
-    for (const b of r.content) if (b.type === "text") txt += b.text;
+    let txt = r.choices[0]?.message?.content ?? "";
     console.log("[cold-admin] discover raw (first 500):", txt.slice(0, 500));
     txt = txt.replace(/```json\n?/g, "").replace(/```/g, "").trim();
     const s = txt.indexOf("[");
@@ -180,7 +165,7 @@ function normalizeUrl(u: string): string {
 }
 
 async function draftCustomEmail(lead: Lead, p: Parsed): Promise<{ subject: string; body: string } | null> {
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
 
   const system =
     "You write very short, friendly cold outreach emails from Konstantin, founder of Airsup (airsup.dev). " +
@@ -202,14 +187,12 @@ async function draftCustomEmail(lead: Lead, p: Parsed): Promise<{ subject: strin
     `CTA: ${p.cta}`;
 
   try {
-    const r = await anthropic.messages.create({
-      model: MODEL,
+    const r = await client.chat.completions.create({
+      model: MODEL_FAST,
       max_tokens: 600,
-      system,
-      messages: [{ role: "user", content: user }],
+      messages: [{ role: "system", content: system }, { role: "user", content: user }],
     });
-    let txt = "";
-    for (const b of r.content) if (b.type === "text") txt += b.text;
+    let txt = r.choices[0]?.message?.content ?? "";
     txt = txt.trim();
     console.log(`[cold-admin] draft raw for ${lead.email}:`, txt.slice(0, 300));
 

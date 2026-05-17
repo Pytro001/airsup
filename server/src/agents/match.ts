@@ -1,4 +1,4 @@
-import { getAnthropicClient } from "../services/anthropic.js";
+import { getOpenAIClient, MODEL_FAST } from "../services/openai.js";
 import { supabaseAdmin } from "../services/supabase.js";
 
 export async function processMatch(matchId: string): Promise<void> {
@@ -25,12 +25,15 @@ export async function processMatch(matchId: string): Promise<void> {
     .eq("id", project.user_id)
     .single();
 
-  const anthropic = getAnthropicClient();
+  const client = getOpenAIClient();
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+  const response = await client.chat.completions.create({
+    model: MODEL_FAST,
     max_tokens: 512,
-    system: `Generate a concise context summary and next steps for a buyer-to-engineer introduction. This is NOT a sales introduction. The buyer is being connected directly to the designer or engineer at the factory who will work on their product.
+    messages: [
+      {
+        role: "system",
+        content: `Generate a concise context summary and next steps for a buyer-to-engineer introduction. This is NOT a sales introduction. The buyer is being connected directly to the designer or engineer at the factory who will work on their product.
 
 The AI has already briefed the factory's technical team with full project context, so the engineer can start working immediately. The goal is fast iteration: getting a first drawing, design, or sample back quickly.
 
@@ -39,7 +42,7 @@ Respond with JSON: { "summary": "...", "next_steps": "...", "key_context_for_buy
 - key_context_for_engineer: everything the engineer needs to start working (specs, materials, quantities, constraints, design files mentioned)
 - first_deliverable: what the buyer should expect first (e.g. "initial CAD drawing", "pattern sample", "3D render")
 - expected_turnaround: when the buyer can expect the first deliverable`,
-    messages: [
+      },
       {
         role: "user",
         content: `Project: ${project.title}. ${project.description}
@@ -54,7 +57,7 @@ Generate the introduction context.`,
     ],
   });
 
-  const text = response.content[0]?.type === "text" ? response.content[0].text : "";
+  const text = response.choices[0]?.message?.content ?? "";
   let intro;
   try {
     intro = JSON.parse(text.replace(/```json\n?/g, "").replace(/```/g, "").trim());

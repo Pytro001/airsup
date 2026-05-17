@@ -38,7 +38,7 @@
     }
     .pricing-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 16px;
       width: 100%;
       max-width: 680px;
@@ -106,7 +106,8 @@
                   height 0.5s cubic-bezier(0.25,0.8,0.25,1);
       transition-delay: 0.05s;
     }
-    @media (max-width: 560px) { .pricing-grid { grid-template-columns: 1fr; } .page-title { font-size: 28px; } }
+    @media (max-width: 860px) { .pricing-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) { .page-title { font-size: 28px; } }
     @media (max-width: 480px) {
       body { height: auto; overflow: auto; padding-bottom: 160px; }
       .pricing-footer { position: static; transform: none; margin-top: 24px; white-space: normal; text-align: center; }
@@ -123,26 +124,38 @@
   <div class="pricing-grid">
 
     <div class="plan">
-      <div class="plan-name">Beta</div>
-      <div class="plan-price">Free</div>
-      <div class="plan-price-note">No credit card required</div>
+      <div class="plan-name">Build</div>
+      <div class="plan-price">$30</div>
+      <div class="plan-price-note">per month</div>
       <a href="/start" class="plan-btn">Get started</a>
       <ul class="plan-features">
-        <li>Access to Manufacturers in United States China Europe</li>
-        <li>Your brief is sent to matched suppliers</li>
+        <li>Connect your project with the right manufacturers across the world</li>
+        <li>We match your brief to verified suppliers and hand over direct contact once they accept</li>
+        <li>24/7 customer support</li>
       </ul>
     </div>
 
     <div class="plan">
-      <div class="plan-name">Enterprise</div>
-      <div class="plan-price">Custom</div>
-      <div class="plan-price-note">Talk to us about your needs</div>
-      <a href="https://calendly.com/konstantin-airsup/onboarding-airsup" target="_blank" rel="noopener" class="plan-btn">Schedule a call</a>
+      <div class="plan-name">Manufacture</div>
+      <div class="plan-price">$100</div>
+      <div class="plan-price-note">per month</div>
+      <a href="/start" class="plan-btn">Get started</a>
       <ul class="plan-features">
-        <li>Everything in Beta</li>
-        <li>Dedicated sourcing manager</li>
-        <li>NDA-protected sourcing</li>
-        <li>Priority support</li>
+        <li>Everything in Build</li>
+        <li>Hands-on quality assurance at the factory</li>
+        <li>HD video documentation of your production run sent directly to you</li>
+      </ul>
+    </div>
+
+    <div class="plan">
+      <div class="plan-name">Scale</div>
+      <div class="plan-price">$200</div>
+      <div class="plan-price-note">per month</div>
+      <a href="/start" class="plan-btn">Get started</a>
+      <ul class="plan-features">
+        <li>Everything in Manufacture</li>
+        <li>Dedicated sourcing manager from first contact to final delivery</li>
+        <li>Factory visits arranged and coordinated on your behalf</li>
       </ul>
     </div>
 
