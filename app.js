@@ -838,7 +838,7 @@
     const { data } = await supabaseClient.auth.getSession();
     const pathname = window.location.pathname.replace(/\/+$/, "");
     const isAdmin = pathname === "/admin";
-    const isOnboard = pathname === "/onboard";
+    const isOnboard = pathname === "/onboard" || pathname === "/onboarding" || pathname === "/supplier";
 
     // On the onboard path, always show the signup flow regardless of existing session
     if (isOnboard) {
@@ -4345,11 +4345,16 @@
   /* ── Init ── */
   updateAuthUI();
   setupAuthListener();
-  // Pre-select role when arriving from the landing page (/workspace?role=startup|supplier)
+  // Pre-select role based on path or query param — skip the "who are you?" screen
+  const _initPath = window.location.pathname.replace(/\/+$/, "");
   const roleParam = new URLSearchParams(window.location.search).get("role");
-  if (roleParam === "startup" || roleParam === "supplier") {
-    onboardData.role = roleParam;
-    onboardStep = 1; // skip the "who are you?" choice screen
+  const _autoRole = _initPath === "/supplier" ? "supplier"
+    : _initPath === "/onboarding" ? "startup"
+    : (roleParam === "startup" || roleParam === "supplier") ? roleParam
+    : null;
+  if (_autoRole) {
+    onboardData.role = _autoRole;
+    onboardStep = 1;
     window.history.replaceState(null, "", window.location.pathname);
   }
 

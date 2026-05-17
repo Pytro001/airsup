@@ -264,12 +264,11 @@ export async function runXReplier(): Promise<void> {
     }
   }
 
-  console.log(`[XReplier] Found ${tweets.length} candidate tweets`);
+  console.log(`[XReplier] Found ${tweets.length} unique tweets across all queries`);
 
   let replied = 0;
   for (const tweet of tweets) {
     if (hasRepliedTo(tweet.id)) continue;
-    if (!isRelevant(tweet.text)) continue;
 
     // Every 5th reply on a manufacturing topic → mention Airsup
     const mentionAirsup = (replied + 1) % 5 === 0 && isManufacturingTweet(tweet.text);
