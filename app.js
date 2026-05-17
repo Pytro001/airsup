@@ -77,7 +77,7 @@
     onboardData = {
       role: "", fullName: "", phone: "", whatsapp1: "", companyName: "", location: "", website: "",
       briefUrl: "", briefPastedText: "", briefText: "", briefSource: "", briefFileName: "",
-      capabilities: "", priceRange: "", moqMin: "", moqMax: "", specialization: "",
+      capabilities: "", priceRange: "", specialization: "",
     };
   }
   resetOnboardData();
@@ -947,8 +947,6 @@
       fields: [
         { key: "capabilities", label: "Detailed description of what you can produce", type: "textarea", compact: true, withFiles: true },
         { key: "priceRange", label: "Project price range" },
-        { key: "moqMin", label: "Minimal order quantity", type: "digits" },
-        { key: "moqMax", label: "Maximal order quantity", type: "digits" },
       ] },
   ];
 
@@ -1297,9 +1295,6 @@
       const cap = {
         description: fullDesc,
         project_price_range: (d.priceRange || "").trim(),
-        moq_min: phoneDigits(d.moqMin || ""),
-        moq_max: phoneDigits(d.moqMax || ""),
-        moq: [phoneDigits(d.moqMin), phoneDigits(d.moqMax)].filter(Boolean).join(" – ") || "",
       };
       if (siteV.ok && siteV.normalized) cap.website = siteV.normalized;
       const facPayload = {
