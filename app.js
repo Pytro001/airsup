@@ -77,7 +77,7 @@
     onboardData = {
       role: "", fullName: "", phone: "", whatsapp1: "", companyName: "", location: "", website: "",
       briefUrl: "", briefPastedText: "", briefText: "", briefSource: "", briefFileName: "",
-      capabilities: "", priceRange: "", specialization: "",
+      capabilities: "", specialization: "",
     };
   }
   resetOnboardData();
@@ -946,7 +946,6 @@
     { id: "capabilities", type: "form", title: "What can you produce?", sub: "This helps Supi match you with the right projects. Be specific about what your team excels at.",
       fields: [
         { key: "capabilities", label: "Detailed description of what you can produce", type: "textarea", compact: true, withFiles: true },
-        { key: "priceRange", label: "Project price range" },
       ] },
   ];
 
@@ -1294,7 +1293,6 @@
         : baseDesc;
       const cap = {
         description: fullDesc,
-        project_price_range: (d.priceRange || "").trim(),
       };
       if (siteV.ok && siteV.normalized) cap.website = siteV.normalized;
       const facPayload = {
