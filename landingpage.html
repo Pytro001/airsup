@@ -738,6 +738,20 @@
         });
       }
 
+      function drawStar(cx, cy, r) {
+        var spikes = 4, outer = r, inner = r * 0.38;
+        var rot = -Math.PI / 2;
+        var step = Math.PI / spikes;
+        ctx.beginPath();
+        for (var j = 0; j < spikes * 2; j++) {
+          var radius = j % 2 === 0 ? outer : inner;
+          var angle = rot + j * step;
+          if (j === 0) ctx.moveTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+          else ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+        }
+        ctx.closePath();
+      }
+
       function tick(t) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         var ts = t * 0.001;
@@ -745,9 +759,8 @@
           var d = dots[i];
           var s = Math.sin(ts * d.speed + d.phase);
           var a = Math.max(0, s * s * s) * d.peak;
-          ctx.beginPath();
-          ctx.arc(d.x * canvas.width, d.y * canvas.height, d.r, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(255,255,255,' + a + ')';
+          drawStar(d.x * canvas.width, d.y * canvas.height, d.r * 2.2);
           ctx.fill();
         }
         requestAnimationFrame(tick);
