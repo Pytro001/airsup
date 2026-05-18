@@ -42,6 +42,8 @@
     { "source": "/supi/", "destination": "/supi.html" },
     { "source": "/support", "destination": "/support.html" },
     { "source": "/support/", "destination": "/support.html" },
+    { "source": "/docs-suppliers", "destination": "/docs-suppliers.html" },
+    { "source": "/docs-suppliers/", "destination": "/docs-suppliers.html" },
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/privacy/", "destination": "/privacy.html" },
     { "source": "/terms", "destination": "/terms.html" },

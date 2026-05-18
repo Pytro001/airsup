@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>For Suppliers · Airsup</title>
+  <link rel="icon" type="image/png" href="assets/brand/logo-air-sup.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 300;
+      background: #000;
+      color: #f2f2f3;
+      min-height: 100dvh;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 64px 24px 120px;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .logo-wrap {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 56px;
+    }
+    .logo-wrap img { width: 28px; height: 28px; border-radius: 7px; }
+    .logo-wrap span { font-size: 17px; font-weight: 500; }
+
+    .page-title {
+      font-size: 36px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .page-title-cn {
+      font-size: 24px;
+      font-weight: 400;
+      color: #555;
+      text-align: center;
+      margin-bottom: 56px;
+    }
+
+    .sections {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #444;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: #0d0d0d;
+      border: 1px solid #1e1e1e;
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .row {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .item-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #444;
+      margin-top: 7px;
+      flex-shrink: 0;
+    }
+    .item-en {
+      font-size: 15px;
+      font-weight: 400;
+      color: #f2f2f3;
+      line-height: 1.4;
+    }
+    .item-cn {
+      font-size: 13px;
+      font-weight: 400;
+      color: #555;
+      line-height: 1.5;
+      margin-top: 2px;
+    }
+
+    .free-banner {
+      width: 100%;
+      max-width: 560px;
+      background: #0d0d0d;
+      border: 1px solid #1e1e1e;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+    .free-banner-en {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    .free-banner-cn {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .cta-wrap {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .cta-btn {
+      display: inline-block;
+      padding: 13px 36px;
+      border-radius: 100px;
+      background: #f2f2f3;
+      color: #111;
+      font-size: 15px;
+      font-weight: 400;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .cta-btn:hover { opacity: 0.85; }
+    .cta-note {
+      font-size: 12px;
+      color: #444;
+    }
+
+    @media (max-width: 480px) {
+      .page-title { font-size: 26px; }
+      .page-title-cn { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="logo-wrap">
+    <img src="assets/brand/logo-air-sup.png" alt="" />
+    <span>Airsup</span>
+  </div>
+
+  <h1 class="page-title">For Suppliers</h1>
+  <div class="page-title-cn">供应商说明</div>
+
+  <div class="sections">
+
+    <!-- FREE -->
+    <div class="free-banner">
+      <div class="free-banner-en">Free for suppliers. Always.</div>
+      <div class="free-banner-cn">供应商完全免费，永久免费</div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div>
+      <div class="section-label">How it works &nbsp;·&nbsp; 流程说明</div>
+      <div class="card">
+        <div class="row">
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">We send you project briefs from buyers</div>
+              <div class="item-cn">我们将买家的项目需求发给您</div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">You review and accept or decline</div>
+              <div class="item-cn">您查看后决定是否接受</div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">If you accept, we connect you directly with the buyer</div>
+              <div class="item-cn">如果接受，我们直接将您与买家对接</div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">You negotiate terms, pricing, and samples directly</div>
+              <div class="item-cn">您直接与买家谈条款、价格和样品</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHAT WE NEED -->
+    <div>
+      <div class="section-label">What we need from you &nbsp;·&nbsp; 我们需要您提供</div>
+      <div class="card">
+        <div class="row">
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">What you can produce (materials, product types)</div>
+              <div class="item-cn">您能生产什么（材料、产品类型）</div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">Your location and factory size</div>
+              <div class="item-cn">您的工厂位置和规模</div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">A contact person who responds fast</div>
+              <div class="item-cn">一位回复及时的联系人</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHAT YOU GET -->
+    <div>
+      <div class="section-label">What you get &nbsp;·&nbsp; 您将获得</div>
+      <div class="card">
+        <div class="row">
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">Matched with buyers who fit your capabilities</div>
+              <div class="item-cn">与符合您生产能力的买家精准匹配</div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">Direct access — no middlemen, no commissions</div>
+              <div class="item-cn">直接对接，无中间商，无佣金</div>
+            </div>
+          </div>
+          <div class="item">
+            <div class="item-dot"></div>
+            <div>
+              <div class="item-en">New international customers without marketing costs</div>
+              <div class="item-cn">无需营销费用即可获得国际客户</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta-wrap">
+      <a href="/supplier" class="cta-btn">Join as Supplier &nbsp;·&nbsp; 立即加入</a>
+      <div class="cta-note">Takes 2 minutes &nbsp;·&nbsp; 仅需2分钟</div>
+    </div>
+
+  </div>
+
+</body>
+</html>
