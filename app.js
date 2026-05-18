@@ -936,7 +936,7 @@
     if (isSupplier) {
       sub = '<p class="thankyou-sub">Supi will reach out as soon as a customer wants to manufacture with you.</p>';
     } else if (!hasSubscription) {
-      sub = '<p class="thankyou-sub">You need an active subscription to get access. As soon as you have one we will message you.</p>';
+      sub = '<p class="thankyou-sub">You need an active subscription to get access. As soon as you have one we will message you.</p><a href="/pricing" class="btn-primary" style="display:inline-block;margin-top:16px;text-decoration:none;">Select a subscription</a>';
     }
     root.innerHTML = `
       <div class="thankyou-card">
