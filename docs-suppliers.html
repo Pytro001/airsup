@@ -25,26 +25,51 @@
     }
     a { color: inherit; text-decoration: none; }
 
+    .top-bar {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 56px;
+    }
     .logo-wrap {
       display: flex; align-items: center; gap: 10px;
-      margin-bottom: 56px;
     }
     .logo-wrap img { width: 28px; height: 28px; border-radius: 7px; }
     .logo-wrap span { font-size: 17px; font-weight: 500; }
+
+    .lang-toggle {
+      display: flex;
+      gap: 2px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 100px;
+      padding: 3px;
+    }
+    .lang-btn {
+      padding: 5px 12px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 400;
+      font-family: inherit;
+      color: #555;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .lang-btn.active {
+      background: #222;
+      color: #f2f2f3;
+    }
 
     .page-title {
       font-size: 36px;
       font-weight: 500;
       letter-spacing: -0.02em;
       text-align: center;
-      margin-bottom: 8px;
-    }
-    .page-title-cn {
-      font-size: 24px;
-      font-weight: 400;
-      color: #555;
-      text-align: center;
-      margin-bottom: 56px;
+      margin-bottom: 48px;
     }
 
     .sections {
@@ -87,40 +112,25 @@
       height: 6px;
       border-radius: 50%;
       background: #444;
-      margin-top: 7px;
+      margin-top: 8px;
       flex-shrink: 0;
     }
-    .item-en {
+    .item-text {
       font-size: 15px;
       font-weight: 400;
       color: #f2f2f3;
       line-height: 1.4;
     }
-    .item-cn {
-      font-size: 13px;
-      font-weight: 400;
-      color: #555;
-      line-height: 1.5;
-      margin-top: 2px;
-    }
 
     .free-banner {
       width: 100%;
-      max-width: 560px;
       background: #0d0d0d;
       border: 1px solid #1e1e1e;
       border-radius: 16px;
       padding: 24px;
       text-align: center;
-    }
-    .free-banner-en {
       font-size: 18px;
       font-weight: 500;
-      margin-bottom: 6px;
-    }
-    .free-banner-cn {
-      font-size: 14px;
-      color: #555;
     }
 
     .cta-wrap {
@@ -150,132 +160,92 @@
 
     @media (max-width: 480px) {
       .page-title { font-size: 26px; }
-      .page-title-cn { font-size: 18px; }
     }
   </style>
 </head>
 <body>
 
-  <div class="logo-wrap">
-    <img src="assets/brand/logo-air-sup.png" alt="" />
-    <span>Airsup</span>
+  <div class="top-bar">
+    <a href="/" class="logo-wrap">
+      <img src="assets/brand/logo-air-sup.png" alt="" />
+      <span>Airsup</span>
+    </a>
+    <div class="lang-toggle">
+      <button class="lang-btn active" data-lang="en">ENG</button>
+      <button class="lang-btn" data-lang="cn">中文</button>
+    </div>
   </div>
 
-  <h1 class="page-title">For Suppliers</h1>
-  <div class="page-title-cn">供应商说明</div>
+  <h1 class="page-title" data-en="For Suppliers" data-cn="供应商说明">For Suppliers</h1>
 
   <div class="sections">
 
-    <!-- FREE -->
-    <div class="free-banner">
-      <div class="free-banner-en">Free for suppliers. Always.</div>
-      <div class="free-banner-cn">供应商完全免费，永久免费</div>
+    <div class="free-banner" data-en="Free for suppliers. Always." data-cn="供应商完全免费，永久免费。">
+      Free for suppliers. Always.
     </div>
 
-    <!-- HOW IT WORKS -->
     <div>
-      <div class="section-label">How it works &nbsp;·&nbsp; 流程说明</div>
+      <div class="section-label" data-en="How it works" data-cn="流程说明">How it works</div>
       <div class="card">
         <div class="row">
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">We send you project briefs from buyers</div>
-              <div class="item-cn">我们将买家的项目需求发给您</div>
-            </div>
-          </div>
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">You review and accept or decline</div>
-              <div class="item-cn">您查看后决定是否接受</div>
-            </div>
-          </div>
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">If you accept, we connect you directly with the buyer</div>
-              <div class="item-cn">如果接受，我们直接将您与买家对接</div>
-            </div>
-          </div>
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">You negotiate terms, pricing, and samples directly</div>
-              <div class="item-cn">您直接与买家谈条款、价格和样品</div>
-            </div>
-          </div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="We send you project briefs from buyers" data-cn="我们将买家的项目需求发给您">We send you project briefs from buyers</div></div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="You review and accept or decline" data-cn="您查看后决定是否接受">You review and accept or decline</div></div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="If you accept, we connect you directly with the buyer" data-cn="如果接受，我们直接将您与买家对接">If you accept, we connect you directly with the buyer</div></div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="You negotiate terms, pricing, and samples directly" data-cn="您直接与买家谈条款、价格和样品">You negotiate terms, pricing, and samples directly</div></div>
         </div>
       </div>
     </div>
 
-    <!-- WHAT WE NEED -->
     <div>
-      <div class="section-label">What we need from you &nbsp;·&nbsp; 我们需要您提供</div>
+      <div class="section-label" data-en="What we need from you" data-cn="我们需要您提供">What we need from you</div>
       <div class="card">
         <div class="row">
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">What you can produce (materials, product types)</div>
-              <div class="item-cn">您能生产什么（材料、产品类型）</div>
-            </div>
-          </div>
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">Your location and factory size</div>
-              <div class="item-cn">您的工厂位置和规模</div>
-            </div>
-          </div>
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">A contact person who responds fast</div>
-              <div class="item-cn">一位回复及时的联系人</div>
-            </div>
-          </div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="What you can produce (materials, product types)" data-cn="您能生产什么（材料、产品类型）">What you can produce (materials, product types)</div></div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="Your location and factory size" data-cn="您的工厂位置和规模">Your location and factory size</div></div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="A contact person who responds fast" data-cn="一位回复及时的联系人">A contact person who responds fast</div></div>
         </div>
       </div>
     </div>
 
-    <!-- WHAT YOU GET -->
     <div>
-      <div class="section-label">What you get &nbsp;·&nbsp; 您将获得</div>
+      <div class="section-label" data-en="What you get" data-cn="您将获得">What you get</div>
       <div class="card">
         <div class="row">
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">Matched with buyers who fit your capabilities</div>
-              <div class="item-cn">与符合您生产能力的买家精准匹配</div>
-            </div>
-          </div>
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">Direct access — no middlemen, no commissions</div>
-              <div class="item-cn">直接对接，无中间商，无佣金</div>
-            </div>
-          </div>
-          <div class="item">
-            <div class="item-dot"></div>
-            <div>
-              <div class="item-en">New international customers without marketing costs</div>
-              <div class="item-cn">无需营销费用即可获得国际客户</div>
-            </div>
-          </div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="Matched with buyers who fit your capabilities" data-cn="与符合您生产能力的买家精准匹配">Matched with buyers who fit your capabilities</div></div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="Direct access — no middlemen, no commissions" data-cn="直接对接，无中间商，无佣金">Direct access — no middlemen, no commissions</div></div>
+          <div class="item"><div class="item-dot"></div><div class="item-text" data-en="New international customers without marketing costs" data-cn="无需营销费用即可获得国际客户">New international customers without marketing costs</div></div>
         </div>
       </div>
     </div>
 
-    <!-- CTA -->
     <div class="cta-wrap">
-      <a href="/supplier" class="cta-btn">Join as Supplier &nbsp;·&nbsp; 立即加入</a>
-      <div class="cta-note">Takes 2 minutes &nbsp;·&nbsp; 仅需2分钟</div>
+      <a href="/supplier" class="cta-btn" data-en="Join as Supplier" data-cn="立即加入">Join as Supplier</a>
+      <div class="cta-note" data-en="Takes 2 minutes" data-cn="仅需2分钟">Takes 2 minutes</div>
     </div>
 
   </div>
+
+  <script>
+    (function () {
+      var lang = 'en';
+      var btns = document.querySelectorAll('.lang-btn');
+      var els = document.querySelectorAll('[data-en]');
+
+      function applyLang(l) {
+        lang = l;
+        els.forEach(function (el) {
+          el.textContent = el.dataset[l];
+        });
+        btns.forEach(function (b) {
+          b.classList.toggle('active', b.dataset.lang === l);
+        });
+      }
+
+      btns.forEach(function (b) {
+        b.addEventListener('click', function () { applyLang(b.dataset.lang); });
+      });
+    })();
+  </script>
 
 </body>
 </html>
