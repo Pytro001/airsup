@@ -1028,11 +1028,11 @@
           const result = await saveOnboardingToSupabase() || {};
           userRole = isSupplier ? "supplier" : "startup";
           buildNav();
-          // Auto-register phone+UUID password so user can log back in via landing page
+          // Auto-register phone+UUID password so user can log back in via landing page (background)
           const autoPhone = isSupplier ? (onboardData.whatsapp1 || onboardData.phone || "").trim() : (onboardData.phone || "").trim();
           if (autoPhone) {
             const autoPass = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-            await applyPhonePinSignIn(autoPhone, autoPass, autoPass).catch(() => {});
+            applyPhonePinSignIn(autoPhone, autoPass, autoPass).catch(() => {});
           }
           // Send welcome WhatsApp
           const waPhone = isSupplier ? (onboardData.whatsapp1 || onboardData.phone || "").trim() : (onboardData.phone || "").trim();
@@ -1373,24 +1373,29 @@
       return {};
     }
 
+    // Bootstrap a project ID immediately so we can navigate to thankyou without waiting
     var projectId = null;
-    if (hasUrl || hasTextImport) {
-      const importBody = hasUrl
-        ? { sourceType: "url", url: String(d.briefUrl).trim(), text: hasTextImport ? textForImport : "" }
-        : { sourceType: "file", text: textForImport };
-      const data = await apiCall("/api/intake/import", { method: "POST", body: JSON.stringify(importBody) });
-      projectId = data.projectId || null;
-    } else {
-      const data = await apiCall("/api/projects/bootstrap", { method: "POST", body: JSON.stringify({}) });
-      projectId = data.projectId || null;
-    }
-    if (hasFiles && projectId) {
-      const up = await uploadFilesToProject(projectId, files);
-      if (up.err) throw new Error(up.err);
+    const bootstrapData = await apiCall("/api/projects/bootstrap", { method: "POST", body: JSON.stringify({}) });
+    projectId = bootstrapData.projectId || null;
+
+    // Process brief and files in the background — don't block navigation
+    (async () => {
       try {
-        await apiCall("/api/projects/" + encodeURIComponent(projectId) + "/reingest-files", { method: "POST", body: "{}" });
-      } catch (_) { /* each register-file may have already ingested */ }
-    }
+        if ((hasUrl || hasTextImport) && projectId) {
+          const importBody = hasUrl
+            ? { sourceType: "url", url: String(d.briefUrl).trim(), text: hasTextImport ? textForImport : "", projectId }
+            : { sourceType: "file", text: textForImport, projectId };
+          await apiCall("/api/intake/import", { method: "POST", body: JSON.stringify(importBody) });
+        }
+        if (hasFiles && projectId) {
+          const up = await uploadFilesToProject(projectId, files);
+          if (!up.err) {
+            await apiCall("/api/projects/" + encodeURIComponent(projectId) + "/reingest-files", { method: "POST", body: "{}" }).catch(() => {});
+          }
+        }
+      } catch (_) {}
+    })();
+
     if (projectId) latestProjectId = projectId;
     onboardingProjectFiles = [];
     currentUser.displayName = displayName;
