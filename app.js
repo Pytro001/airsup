@@ -938,7 +938,7 @@
     { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers hate talking to sales. Supi briefs your designers and engineers directly. Less overhead, faster iterations.",
       fields: [
         { key: "companyName", label: "Company name", required: true },
-        { key: "whatsapp1", label: "Phone / WhatsApp", type: "phone", required: true },
+        { key: "whatsapp1", label: "Phone / WhatsApp (must be on WhatsApp, English-speaking)", type: "phone", required: true },
         { key: "location", label: "Location", required: true },
         { key: "website", label: "Website", type: "url" },
         { key: "specialization", label: "What do you manufacture?", required: true },
