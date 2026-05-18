@@ -53,68 +53,18 @@
       max-width: 560px;
       display: flex;
       flex-direction: column;
-      gap: 0;
+      gap: 32px;
     }
-
-    .step {
-      display: flex;
-      gap: 20px;
-      align-items: stretch;
-    }
-
-    .step-left {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex-shrink: 0;
-      width: 36px;
-    }
-    .step-left::after {
-      content: '';
-      flex: 1;
-      width: 1px;
-      min-height: 20px;
-      background: repeating-linear-gradient(
-        to bottom,
-        #444 0px,
-        #444 4px,
-        transparent 4px,
-        transparent 9px
-      );
-    }
-    .step:last-child .step-left::after { display: none; }
-
-    .step-num {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 1.5px solid #282828;
-      background: #0a0a0a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 500;
-      color: #8a8a8a;
-      flex-shrink: 0;
-      position: relative;
-      z-index: 1;
-    }
-
-    .step-body {
-      padding-top: 6px;
-      padding-bottom: 24px;
-    }
-    .step:last-child .step-body { padding-bottom: 0; }
 
     .step-title {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 500;
+      color: #f2f2f3;
       margin-bottom: 6px;
       line-height: 1.3;
     }
     .step-desc {
-      font-size: 14px;
+      font-size: 15px;
       font-weight: 400;
       color: #8a8a8a;
       line-height: 1.6;
@@ -193,56 +143,27 @@
 <body>
   <h1 class="page-title">How it Works</h1>
 
-  <div style="width:100%;max-width:560px;margin-bottom:40px;border-radius:16px;overflow:hidden;">
-    <video src="assets/airsup.mp4" autoplay loop muted playsinline style="width:100%;display:block;pointer-events:none;"></video>
-  </div>
-
   <div class="steps">
 
     <div class="step">
-      <div class="step-left">
-        <div class="step-num">1</div>
-
-      </div>
-      <div class="step-body">
-        <div class="step-title">Describe what you need</div>
-        <div class="step-desc">Tell us what you're building: product type, materials, quantities, target manufacturing region. Upload drawings or files if you have them.</div>
-      </div>
+      <div class="step-title">Describe what you need</div>
+      <div class="step-desc">Tell us what you're building: product type, materials, quantities, target manufacturing region. Upload drawings or files if you have them.</div>
     </div>
 
     <div class="step">
-      <div class="step-left">
-        <div class="step-num">2</div>
-
-      </div>
-      <div class="step-body">
-        <div class="step-title">We find suppliers</div>
-        <div class="step-desc">We search manufacturers across China, the US, and Europe and contact the best ones based on your project requirements.</div>
-      </div>
+      <div class="step-title">We find suppliers</div>
+      <div class="step-desc">We have a network of handpicked, verified manufacturers across China, the US, and Europe. We contact the best match for your project.</div>
     </div>
 
     <div class="step">
-      <div class="step-left">
-        <div class="step-num">3</div>
-
-      </div>
-      <div class="step-body">
-        <div class="step-title">Supplier review</div>
-        <div class="step-desc">The supplier reviews your request and either accepts, declines, or asks clarifying questions. When they accept, we hand you their direct contact.</div>
-      </div>
+      <div class="step-title">Supplier review</div>
+      <div class="step-desc">The supplier reviews your request and either accepts, declines, or asks clarifying questions. When they accept, we hand you their direct contact.</div>
     </div>
 
     <div class="step">
-      <div class="step-left">
-        <div class="step-num">4</div>
-
-      </div>
-      <div class="step-body">
-        <div class="step-title">Towards production</div>
-        <div class="step-desc">Once connected, you negotiate terms, samples, and pricing directly with the manufacturer.</div>
-      </div>
+      <div class="step-title">Towards production</div>
+      <div class="step-desc">Once connected, you negotiate terms, samples, and pricing directly with the manufacturer.</div>
     </div>
-
 
   </div>
 
