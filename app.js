@@ -936,12 +936,12 @@
     if (isSupplier) {
       sub = '<p class="thankyou-sub">Supi will reach out as soon as a customer wants to manufacture with you.</p>';
     } else if (!hasSubscription) {
-      sub = '<p class="thankyou-sub">You need an active subscription to get access. As soon as you have one we will message you.</p><a href="/pricing" class="btn-primary" style="display:inline-block;margin-top:16px;text-decoration:none;">Select a subscription</a>';
+      sub = '<p class="thankyou-sub">You need an active subscription to get access.<br>As soon as you have one we will message you.</p><a href="/pricing" class="btn-primary" style="display:inline-block;margin-top:16px;text-decoration:none;">Select a subscription</a>';
     }
     root.innerHTML = `
       <div class="thankyou-card">
         <img src="assets/brand/logo-air-sup.png" alt="Supi" class="thankyou-supi-img" />
-        <h1 class="thankyou-title">Supi is on it.</h1>
+        <h1 class="thankyou-title">Supi is ready when you are.</h1>
         ${sub}
       </div>`;
   }
