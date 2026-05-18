@@ -861,7 +861,25 @@
         } catch (_) {}
       }
 
-      if (data?.session?.user) await syncUserProfileFromAuth(data.session.user);
+      if (data?.session?.user) {
+        await syncUserProfileFromAuth(data.session.user);
+        // If already onboarded, skip straight to thankyou
+        const { data: existingProfile } = await supabaseClient
+          .from("profiles")
+          .select("company, headline, role")
+          .eq("id", currentUser.id)
+          .maybeSingle();
+        if (existingProfile?.company || existingProfile?.headline) {
+          onboardData.role = existingProfile.role || "startup";
+          // If coming from Stripe, mark subscribed on profile
+          const newPlan = sessionStorage.getItem("airsup_plan");
+          if (newPlan) {
+            await supabaseClient.from("profiles").update({ subscribed: true, plan: newPlan }).eq("id", currentUser.id).catch(() => {});
+          }
+          setView("thankyou");
+          return;
+        }
+      }
       setView("onboarding");
       return;
     }
