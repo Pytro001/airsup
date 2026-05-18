@@ -840,8 +840,38 @@
     const isAdmin = pathname === "/admin";
     const isOnboard = pathname === "/onboard" || pathname === "/onboarding" || pathname === "/supplier";
 
-    // On the onboard path, always show the signup flow regardless of existing session
+    // On the onboard path, verify Stripe session before showing signup flow
     if (isOnboard) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get("session_id");
+      const planParam = urlParams.get("plan");
+
+      if (sessionId && planParam) {
+        // Verify with backend and store plan
+        try {
+          const vRes = await fetch((API_BASE || "") + "/api/subscriptions/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sessionId, plan: planParam }),
+          });
+          const vData = await vRes.json();
+          if (vData.valid) {
+            sessionStorage.setItem("airsup_plan", vData.plan);
+            sessionStorage.setItem("airsup_session_id", sessionId);
+          } else {
+            window.location.href = "/pricing";
+            return;
+          }
+        } catch (_) {
+          window.location.href = "/pricing";
+          return;
+        }
+      } else if (!sessionStorage.getItem("airsup_plan") && pathname !== "/supplier") {
+        // No valid session — block direct access
+        window.location.href = "/pricing";
+        return;
+      }
+
       if (data?.session?.user) await syncUserProfileFromAuth(data.session.user);
       setView("onboarding");
       return;
@@ -1265,12 +1295,14 @@
       : (d.fullName || currentUser.displayName);
     const letter = (displayName || "?").charAt(0).toUpperCase();
 
+    const subscribedPlan = sessionStorage.getItem("airsup_plan") || null;
     await supabaseClient.from("profiles").upsert({
       id: currentUser.id, display_name: displayName, avatar_letter: letter,
       company: d.companyName, location: d.location,
       headline: d.role === "supplier" ? "supplier" : d.role,
       role: d.role === "supplier" ? "supplier" : "customer",
       phone: d.role === "supplier" ? (d.whatsapp1 || d.phone || "") : d.phone,
+      ...(subscribedPlan ? { plan: subscribedPlan } : {}),
     }, { onConflict: "id" });
 
     await supabaseClient.from("user_settings").upsert({
