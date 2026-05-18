@@ -935,7 +935,7 @@
   ];
 
   const SUPPLIER_STEPS = [
-    { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers hate talking to sales. Supi briefs your designers and engineers directly. Less overhead, faster iterations.",
+    { id: "factory", type: "form", title: "Tell us about your factory.", sub: "Buyers hate talking to sales. If you have a project manager who can speed up communication add his WhatsApp number.",
       fields: [
         { key: "companyName", label: "Company name", required: true },
         { key: "whatsapp1", label: "WhatsApp number of an English-speaking person who can move projects fast", type: "phone", required: true },
