@@ -48,10 +48,46 @@ stripeWebhookRouter.post("/", async (req: Request, res: Response) => {
 
       case "checkout.session.completed": {
         const session = event.data.object as any;
+
+        // Legacy handover flow
         const outreachId = session.metadata?.outreach_id;
         if (outreachId) {
           const { triggerSkill } = await import("../../skills/index.js");
           await triggerSkill("handover", { outreachId });
+        }
+
+        // Subscription activation: find profile by email, mark subscribed, message them
+        if (session.mode === "subscription" || session.mode === "payment") {
+          const email = session.customer_details?.email as string | undefined;
+          if (email) {
+            // Derive plan from amount
+            const amount = session.amount_total as number;
+            const plan = amount <= 3000 ? "build" : amount <= 10000 ? "manufacture" : "scale";
+
+            const { data: profile } = await supabaseAdmin
+              .from("profiles")
+              .select("id, phone, display_name, subscribed")
+              .eq("email", email)
+              .maybeSingle();
+
+            if (profile && !profile.subscribed) {
+              await supabaseAdmin
+                .from("profiles")
+                .update({ subscribed: true, plan })
+                .eq("id", profile.id);
+
+              // Send WhatsApp notification
+              const phone = (profile as any).phone as string | undefined;
+              if (phone) {
+                const { sendWhatsAppMessage } = await import("../../services/whatsapp.js");
+                const name = (profile as any).display_name as string | undefined;
+                await sendWhatsAppMessage(
+                  phone,
+                  `Hi${name ? " " + name : ""}! I'm Supi, your Airsup sourcing agent. 🔍\n\nYour subscription is now active. I'm starting my search for the right suppliers now. Feel free to reply with more files or details about your project.`
+                );
+              }
+            }
+          }
         }
         break;
       }

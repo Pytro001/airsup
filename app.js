@@ -75,7 +75,7 @@
     onboardingProjectFiles = [];
     onboardingSupplierFiles = [];
     onboardData = {
-      role: "", fullName: "", phone: "", whatsapp1: "", companyName: "", location: "", website: "",
+      role: "", fullName: "", email: "", phone: "", whatsapp1: "", companyName: "", location: "", website: "",
       briefUrl: "", briefPastedText: "", briefText: "", briefSource: "", briefFileName: "",
       capabilities: "", specialization: "",
     };
@@ -840,14 +840,13 @@
     const isAdmin = pathname === "/admin";
     const isOnboard = pathname === "/onboard" || pathname === "/onboarding" || pathname === "/supplier";
 
-    // On the onboard path, verify Stripe session before showing signup flow
+    // On the onboard path, silently verify Stripe session if present
     if (isOnboard) {
       const urlParams = new URLSearchParams(window.location.search);
       const sessionId = urlParams.get("session_id");
       const planParam = urlParams.get("plan");
 
       if (sessionId && planParam) {
-        // Verify with backend and store plan
         try {
           const vRes = await fetch((API_BASE || "") + "/api/subscriptions/verify", {
             method: "POST",
@@ -858,18 +857,8 @@
           if (vData.valid) {
             sessionStorage.setItem("airsup_plan", vData.plan);
             sessionStorage.setItem("airsup_session_id", sessionId);
-          } else {
-            window.location.href = "/pricing";
-            return;
           }
-        } catch (_) {
-          window.location.href = "/pricing";
-          return;
-        }
-      } else if (!sessionStorage.getItem("airsup_plan") && pathname !== "/supplier") {
-        // No valid session — block direct access
-        window.location.href = "/pricing";
-        return;
+        } catch (_) {}
       }
 
       if (data?.session?.user) await syncUserProfileFromAuth(data.session.user);
@@ -942,11 +931,18 @@
     const root = $("thankyou-root");
     if (!root) return;
     const isSupplier = onboardData.role === "supplier";
+    const hasSubscription = !!sessionStorage.getItem("airsup_plan");
+    let sub = "";
+    if (isSupplier) {
+      sub = '<p class="thankyou-sub">Supi will reach out as soon as a customer wants to manufacture with you.</p>';
+    } else if (!hasSubscription) {
+      sub = '<p class="thankyou-sub">You need an active subscription to get access. As soon as you have one we will message you.</p>';
+    }
     root.innerHTML = `
       <div class="thankyou-card">
         <img src="assets/brand/logo-air-sup.png" alt="Supi" class="thankyou-supi-img" />
         <h1 class="thankyou-title">Supi is on it.</h1>
-        ${isSupplier ? '<p class="thankyou-sub">Supi will reach out as soon as a customer wants to manufacture with you.</p>' : ""}
+        ${sub}
       </div>`;
   }
 
@@ -957,6 +953,7 @@
     { id: "company", type: "form", title: "Tell us about your project", sub: "Your info is stored securely and only shared when we find a real match.",
       fields: [
         { key: "fullName", label: "Full name", required: true },
+        { key: "email", label: "Email", type: "email", required: true },
         { key: "phone", label: "Phone / WhatsApp", type: "phone", required: true },
         { key: "companyName", label: "Company name", required: true },
         { key: "location", label: "Location" },
@@ -1302,7 +1299,8 @@
       headline: d.role === "supplier" ? "supplier" : d.role,
       role: d.role === "supplier" ? "supplier" : "customer",
       phone: d.role === "supplier" ? (d.whatsapp1 || d.phone || "") : d.phone,
-      ...(subscribedPlan ? { plan: subscribedPlan } : {}),
+      ...(d.email ? { email: d.email } : {}),
+      ...(subscribedPlan ? { plan: subscribedPlan, subscribed: true } : {}),
     }, { onConflict: "id" });
 
     await supabaseClient.from("user_settings").upsert({

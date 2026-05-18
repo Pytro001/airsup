@@ -769,21 +769,5 @@
       requestAnimationFrame(tick);
     })();
   </script>
-  <div id="sub-toast" style="position:fixed;top:24px;right:24px;background:#1a3a1a;border:1px solid #2d6e2d;color:#6fcf6f;font-family:inherit;font-size:13px;font-weight:400;padding:12px 18px;border-radius:10px;z-index:9999;opacity:0;pointer-events:none;transition:opacity 0.2s;white-space:nowrap;">You need an active subscription to get access</div>
-  <script>
-    (function() {
-      var toast = document.getElementById('sub-toast');
-      var btn = document.querySelector('.site-floatnav-cta[href="/onboarding"]');
-      if (!btn || !toast) return;
-      btn.addEventListener('click', function(e) {
-        if (sessionStorage.getItem('airsup_plan')) return;
-        e.preventDefault();
-        toast.style.opacity = '1';
-        toast.style.pointerEvents = 'auto';
-        clearTimeout(toast._t);
-        toast._t = setTimeout(function() { toast.style.opacity = '0'; toast.style.pointerEvents = 'none'; }, 5000);
-      });
-    })();
-  </script>
 </body>
 </html>
